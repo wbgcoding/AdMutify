@@ -1,0 +1,36 @@
+# see the stack-specific section below
+.tmp/
+.env
+.env.*
+!.env.example
+*.log
+*.bak
+*.tmp
+*.orig
+__pycache__/
+*.pyc
+.venv/
+venv/
+node_modules/
+dist/
+build/
+coverage/
+*.user
+.signing/
+.DS_Store
+Thumbs.db
+
+# C++ / CMake / Visual Studio
+out/
+.vs/
+*.aps
+CMakeUserPresets.json
+
+# Runtime files of a portable run in the repo folder
+settings.ini
+state.ini
+portable.txt
+logs/
+*.dmp
+crashed.flag
+.shipclean-needles

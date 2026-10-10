@@ -1,0 +1,42 @@
+#pragma code_page(65001)
+#include <windows.h>
+#include "resource.h"
+#include "version.h"
+
+IDI_APP ICON "../assets/app.ico"
+IDI_TRAY_MUTED ICON "../assets/tray_muted.ico"
+IDI_TRAY_OFF ICON "../assets/tray_off.ico"
+
+1 RT_MANIFEST "app.manifest"
+
+#define ADMUTIFY_STR2(x) #x
+#define ADMUTIFY_STR(x) ADMUTIFY_STR2(x)
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION ADMUTIFY_VERSION_MAJOR, ADMUTIFY_VERSION_MINOR, ADMUTIFY_VERSION_PATCH, 0
+ PRODUCTVERSION ADMUTIFY_VERSION_MAJOR, ADMUTIFY_VERSION_MINOR, ADMUTIFY_VERSION_PATCH, 0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_APP
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "BGCoding"
+            VALUE "FileDescription", "AdMutify"
+            VALUE "FileVersion", ADMUTIFY_VERSION_STR
+            VALUE "InternalName", "AdMutify"
+            VALUE "LegalCopyright", ADMUTIFY_COPYRIGHT
+            VALUE "OriginalFilename", "AdMutify.exe"
+            VALUE "ProductName", "AdMutify"
+            VALUE "ProductVersion", ADMUTIFY_VERSION_STR
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

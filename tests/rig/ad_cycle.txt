@@ -1,0 +1,6 @@
+# <duration_ms>|<title>: each title stays for its duration, then the next one follows.
+4000|Daft Punk - One More Time
+1000|Spotify Free
+5000|Advertisement
+3000|Zalando
+4000|Daft Punk - One More Time
