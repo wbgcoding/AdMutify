@@ -1,0 +1,60 @@
+name: Bug report
+description: Something does not work as expected.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start Spotify
+        2. Wait for an ad
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: AdMutify version
+      description: Shown in the settings window.
+      placeholder: "1.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: edition
+    attributes:
+      label: Installed or portable?
+      options:
+        - Installer
+        - Portable
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: "Windows 11 24H2"
+    validations:
+      required: true
+  - type: dropdown
+    id: spotify
+    attributes:
+      label: Spotify version
+      options:
+        - Spotify from spotify.com
+        - Spotify from the Microsoft Store
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log file
+      description: Optional. The log is in %LOCALAPPDATA%\AdMutify\logs (portable: the logs folder next to AdMutify.exe). It contains no song titles.
+      render: text
