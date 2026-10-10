@@ -102,17 +102,11 @@ if not exist "installer\AdMutify.iss" (
 )
 
 rem --- checksums
+rem LF line endings and no BOM, so "sha256sum -c" works on Linux and macOS too.
 set "SUMS=dist\SHA256SUMS.txt"
 if exist "%SUMS%" del /f /q "%SUMS%" >nul 2>&1
-for %%f in (dist\*) do (
-    set "NAME=%%~nxf"
-    if /i not "!NAME!"=="SHA256SUMS.txt" (
-        set "HASH="
-        for /f "skip=1 tokens=* delims=" %%h in ('certutil -hashfile "%%f" SHA256') do if not defined HASH set "HASH=%%h"
-        set "HASH=!HASH: =!"
-        >> "%SUMS%" echo !HASH! *!NAME!
-    )
-)
+powershell -NoProfile -Command "$l = Get-ChildItem dist -File | Where-Object Name -ne 'SHA256SUMS.txt' | Sort-Object Name | ForEach-Object { (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower() + ' *' + $_.Name }; [IO.File]::WriteAllText((Resolve-Path dist).Path + '\SHA256SUMS.txt', (($l -join \"`n\") + \"`n\"), (New-Object Text.UTF8Encoding $false))"
+if errorlevel 1 ( set "RC=1" & goto :end )
 
 for %%f in ("dist\AdMutify.exe") do echo AdMutify.exe: %%~zf bytes
 echo Build %VER% done.
