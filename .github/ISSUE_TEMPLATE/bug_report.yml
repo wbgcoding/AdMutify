@@ -56,5 +56,5 @@ body:
     id: log
     attributes:
       label: Log file
-      description: Optional. The log is in %LOCALAPPDATA%\AdMutify\logs (portable: the logs folder next to AdMutify.exe). It contains no song titles.
+      description: Optional. The log is in %LOCALAPPDATA%\AdMutify\logs (portable: the logs folder next to AdMutify.exe). It contains no song titles unless AdMutify was started with --trace.
       render: text
