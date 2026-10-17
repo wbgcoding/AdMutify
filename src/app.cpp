@@ -6,6 +6,7 @@
 #include <cstdio>
 
 #include "ad_detector.h"
+#include "ad_music.h"
 #include "app_messages.h"
 #include "audio_control.h"
 #include "crash.h"
@@ -23,6 +24,7 @@ namespace {
 constexpr UINT_PTR kTimerExit = 1;
 constexpr UINT_PTR kTimerProbe = 2;
 constexpr UINT_PTR kTimerMedia = 3;
+constexpr UINT_PTR kTimerMusic = 4;
 constexpr UINT kMediaPollMs = 500;
 constexpr int kMaxProbes = 5;
 enum class Reason { None, Ad, Media };
@@ -40,6 +42,7 @@ struct App {
     int appliedPercent = 0;
     Reason appliedReason = Reason::None;
     MediaDetector media;
+    AdMusicPlayer music;
     bool mediaTimerRunning = false;
     std::wstring lastMediaExe;
     // "Pause Spotify": we paused it for the running video / this video was already dealt with.
@@ -257,6 +260,9 @@ void ReevaluateOnce() {
         g.probes = 0;
     }
 
+    // Own music plays while an ad is muted or lowered; video reactions stay quiet.
+    g.music.SetActive(g.applied && g.appliedReason == Reason::Ad);
+
     if (TraceEnabled()) Log("trace callbacks=%lu", g.watch.CallbackCount());
     UpdateTray();
 }
@@ -300,6 +306,7 @@ void Shutdown(bool endSession = false) {
     g.pausedByUs = false;
     SetCrashResumeWindow(nullptr);
     if (g.applied) DoRestore();
+    g.music.Shutdown();
     g.tray.Hide();
     g.watch.Stop();
     if (TraceEnabled()) Log("trace callbacks=%lu", g.watch.CallbackCount());
@@ -349,6 +356,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
             return 0;
         case WM_APP_AUDIO_STATE: Reevaluate(); return 0;
+        case WM_APP_MUSIC: g.music.OnEvent(wParam, lParam); return 0;
         case WM_APP_SESSION_CREATED:
             g.watch.RescanIfUnknown();
             g.audio.WatchSessions();
@@ -375,6 +383,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     Log("trace media_exe \"%s\"", WideToUtf8(exe).c_str());
                 }
                 Reevaluate();
+            } else if (wParam == kTimerMusic) {
+                g.music.OnTimer();
             } else if (wParam == kTimerProbe) {
                 if (++g.probes >= kMaxProbes) {
                     KillTimer(hwnd, kTimerProbe);
@@ -458,6 +468,7 @@ void ApplyCommit(const Settings& requested) {
 
     if (s.enabled != old.enabled) Log("enabled=%d", s.enabled ? 1 : 0);
     if (s.darkMenus != old.darkMenus) ApplyMenuAppMode(s.darkMenus ? 1 : 3);
+    g.music.Configure(s.adMusic, s.adMusicPath, s.adMusicVolume);
     // Reevaluate re-applies a changed mode or level and drops a reaction that is no longer wanted.
     Reevaluate();
 }
@@ -522,6 +533,8 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
     CrashStartupBegin();
 
     g.audio.Init(g.hwnd);
+    g.music.Init(g.hwnd, kTimerMusic);
+    g.music.Configure(g.settings.adMusic, g.settings.adMusicPath, g.settings.adMusicVolume);
     bool stateIgnored = false;
     int recovered = g.audio.RestoreFromStateFile(&stateIgnored);
     if (stateIgnored) Log("state_file_ignored");

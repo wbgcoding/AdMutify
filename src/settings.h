@@ -5,6 +5,8 @@
 
 enum class Mode { Mute, Lower };
 enum class MediaMode { Off, Lower, Mute, Pause };
+// Own music during ads: off, one file (looped), a folder shuffled or in name order.
+enum class AdMusic { Off, File, Shuffle, Order };
 enum class Language { System, English, German, Spanish, Portuguese, Italian, Dutch, Polish, Turkish, Japanese, Chinese };
 constexpr int kLanguageCount = 11;
 // ini code of a language ("system", "en", "de", ...) and the reverse; unknown text gives System.
@@ -22,6 +24,10 @@ struct Settings {
     MediaMode media = MediaMode::Off;
     // Level of the video reaction "Lower"; independent of the ad level.
     int mediaPercent = 20;
+    // Music played while an ad is muted or lowered; path is a file (File) or a folder (Shuffle, Order).
+    AdMusic adMusic = AdMusic::Off;
+    std::wstring adMusicPath;
+    int adMusicVolume = 50;
 };
 
 struct LoadResult {
@@ -37,6 +43,8 @@ struct LoadResult {
 
 // Pure parts
 int ClampLowerPercent(int value);
+// 0-100 in steps of 5.
+int ClampVolumePercent(int value);
 std::string FormatSettings(const Settings& s);
 // Returns false only when the text carries an unknown (newer) version.
 bool ParseSettings(std::string_view text, Settings& out);

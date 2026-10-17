@@ -34,6 +34,20 @@ constexpr const wchar_t* kEn[] = {
     L"Pause Spotify",                                                                   // MediaPause
     L"Reacts only to sound from browsers and video players that lasts a few seconds. Short sounds, games and calls are ignored.",  // MediaHint
     L"Lower to",                                                                        // MediaPercentLabel
+    L"Music during ads",  // MusicLabel
+    L"Off",  // MusicOff
+    L"One file",  // MusicFile
+    L"Folder, shuffled",  // MusicShuffle
+    L"Folder, in order",  // MusicOrder
+    L"Plays your own music during ads. When the ad ends, the music pauses and continues at the same spot during the next ad.",  // MusicHint
+    L"No file chosen",  // MusicNoFile
+    L"No folder chosen",  // MusicNoFolder
+    L"Choose",  // MusicPick
+    L"Volume",  // MusicVolumeLabel
+    L"Choose a music file",  // MusicPickFileTitle
+    L"Choose a music folder",  // MusicPickFolderTitle
+    L"Music files",  // MusicFilterName
+    L"This folder has no playable music files (MP3, M4A, AAC, WMA, WAV, FLAC). Choose another folder.",  // ErrMusicEmpty
     L"Language",                                                                        // LanguageLabel
     L"System",                                                                          // LangSystem
     L"Reset settings",                                                                  // ResetButton
@@ -79,6 +93,20 @@ constexpr const wchar_t* kDe[] = {
     L"Spotify pausieren",                                                               // MediaPause
     L"Reagiert nur auf Ton von Browsern und Videoplayern, der einige Sekunden anhält. Kurze Töne, Spiele und Anrufe zählen nicht.",  // MediaHint
     L"Leiser auf",                                                                      // MediaPercentLabel
+    L"Musik bei Werbung",  // MusicLabel
+    L"Aus",  // MusicOff
+    L"Eine Datei",  // MusicFile
+    L"Ordner, zufällig",  // MusicShuffle
+    L"Ordner, der Reihe nach",  // MusicOrder
+    L"Spielt während der Werbung eigene Musik ab. Endet die Werbung, pausiert die Musik und läuft bei der nächsten Werbung an derselben Stelle weiter.",  // MusicHint
+    L"Keine Datei gewählt",  // MusicNoFile
+    L"Kein Ordner gewählt",  // MusicNoFolder
+    L"Auswählen",  // MusicPick
+    L"Lautstärke",  // MusicVolumeLabel
+    L"Musikdatei auswählen",  // MusicPickFileTitle
+    L"Musikordner auswählen",  // MusicPickFolderTitle
+    L"Musikdateien",  // MusicFilterName
+    L"In diesem Ordner sind keine abspielbaren Musikdateien (MP3, M4A, AAC, WMA, WAV, FLAC). Wähle einen anderen Ordner.",  // ErrMusicEmpty
     L"Sprache",                                                                         // LanguageLabel
     L"System",                                                                          // LangSystem
     L"Einstellungen zurücksetzen",                                                 // ResetButton
@@ -130,6 +158,20 @@ constexpr const wchar_t* kEs[] = {  // Spanish
     L"Pausar Spotify",  // MediaPause
     L"Solo reacciona al sonido de navegadores y reproductores de vídeo que dura unos segundos. Se ignoran los sonidos breves, los juegos y las llamadas.",  // MediaHint
     L"Reducir a",  // MediaPercentLabel
+    L"Música durante los anuncios",  // MusicLabel
+    L"Desactivada",  // MusicOff
+    L"Un archivo",  // MusicFile
+    L"Carpeta, aleatorio",  // MusicShuffle
+    L"Carpeta, en orden",  // MusicOrder
+    L"Reproduce tu propia música durante los anuncios. Cuando termina el anuncio, la música se pausa y continúa en el mismo punto en el siguiente anuncio.",  // MusicHint
+    L"Ningún archivo elegido",  // MusicNoFile
+    L"Ninguna carpeta elegida",  // MusicNoFolder
+    L"Elegir",  // MusicPick
+    L"Volumen",  // MusicVolumeLabel
+    L"Elegir un archivo de música",  // MusicPickFileTitle
+    L"Elegir una carpeta de música",  // MusicPickFolderTitle
+    L"Archivos de música",  // MusicFilterName
+    L"Esta carpeta no tiene archivos de música reproducibles (MP3, M4A, AAC, WMA, WAV, FLAC). Elige otra carpeta.",  // ErrMusicEmpty
     L"Idioma",  // LanguageLabel
     L"Sistema",  // LangSystem
     L"Restablecer configuración",  // ResetButton
@@ -176,6 +218,20 @@ constexpr const wchar_t* kPt[] = {  // Brazilian Portuguese
     L"Pausar Spotify",  // MediaPause
     L"Reage apenas ao som de navegadores e players de vídeo que dura alguns segundos. Sons curtos, jogos e chamadas são ignorados.",  // MediaHint
     L"Reduzir para",  // MediaPercentLabel
+    L"Música durante anúncios",  // MusicLabel
+    L"Desligada",  // MusicOff
+    L"Um arquivo",  // MusicFile
+    L"Pasta, aleatória",  // MusicShuffle
+    L"Pasta, em ordem",  // MusicOrder
+    L"Toca sua própria música durante os anúncios. Quando o anúncio termina, a música pausa e continua do mesmo ponto no próximo anúncio.",  // MusicHint
+    L"Nenhum arquivo escolhido",  // MusicNoFile
+    L"Nenhuma pasta escolhida",  // MusicNoFolder
+    L"Escolher",  // MusicPick
+    L"Volume",  // MusicVolumeLabel
+    L"Escolher um arquivo de música",  // MusicPickFileTitle
+    L"Escolher uma pasta de música",  // MusicPickFolderTitle
+    L"Arquivos de música",  // MusicFilterName
+    L"Esta pasta não tem arquivos de música reproduzíveis (MP3, M4A, AAC, WMA, WAV, FLAC). Escolha outra pasta.",  // ErrMusicEmpty
     L"Idioma",  // LanguageLabel
     L"Sistema",  // LangSystem
     L"Redefinir configurações",  // ResetButton
@@ -222,6 +278,20 @@ constexpr const wchar_t* kIt[] = {  // Italian
     L"Metti Spotify in pausa",  // MediaPause
     L"Reagisce solo all'audio di browser e lettori video che dura alcuni secondi. I suoni brevi, i giochi e le chiamate vengono ignorati.",  // MediaHint
     L"Riduci a",  // MediaPercentLabel
+    L"Musica durante la pubblicità",  // MusicLabel
+    L"Disattivata",  // MusicOff
+    L"Un file",  // MusicFile
+    L"Cartella, casuale",  // MusicShuffle
+    L"Cartella, in ordine",  // MusicOrder
+    L"Riproduce la tua musica durante la pubblicità. Quando la pubblicità finisce, la musica va in pausa e riprende dallo stesso punto alla pubblicità successiva.",  // MusicHint
+    L"Nessun file scelto",  // MusicNoFile
+    L"Nessuna cartella scelta",  // MusicNoFolder
+    L"Scegli",  // MusicPick
+    L"Volume",  // MusicVolumeLabel
+    L"Scegli un file musicale",  // MusicPickFileTitle
+    L"Scegli una cartella musicale",  // MusicPickFolderTitle
+    L"File musicali",  // MusicFilterName
+    L"Questa cartella non contiene file musicali riproducibili (MP3, M4A, AAC, WMA, WAV, FLAC). Scegli un'altra cartella.",  // ErrMusicEmpty
     L"Lingua",  // LanguageLabel
     L"Sistema",  // LangSystem
     L"Reimposta impostazioni",  // ResetButton
@@ -268,6 +338,20 @@ constexpr const wchar_t* kNl[] = {  // Dutch
     L"Spotify pauzeren",  // MediaPause
     L"Reageert alleen op geluid van browsers en videospelers dat enkele seconden aanhoudt. Korte geluiden, games en oproepen worden genegeerd.",  // MediaHint
     L"Verlagen tot",  // MediaPercentLabel
+    L"Muziek tijdens advertenties",  // MusicLabel
+    L"Uit",  // MusicOff
+    L"Eén bestand",  // MusicFile
+    L"Map, willekeurig",  // MusicShuffle
+    L"Map, op volgorde",  // MusicOrder
+    L"Speelt je eigen muziek af tijdens advertenties. Als de advertentie eindigt, pauzeert de muziek en gaat bij de volgende advertentie verder op hetzelfde punt.",  // MusicHint
+    L"Geen bestand gekozen",  // MusicNoFile
+    L"Geen map gekozen",  // MusicNoFolder
+    L"Kiezen",  // MusicPick
+    L"Volume",  // MusicVolumeLabel
+    L"Muziekbestand kiezen",  // MusicPickFileTitle
+    L"Muziekmap kiezen",  // MusicPickFolderTitle
+    L"Muziekbestanden",  // MusicFilterName
+    L"Deze map bevat geen afspeelbare muziekbestanden (MP3, M4A, AAC, WMA, WAV, FLAC). Kies een andere map.",  // ErrMusicEmpty
     L"Taal",  // LanguageLabel
     L"Systeem",  // LangSystem
     L"Instellingen herstellen",  // ResetButton
@@ -314,6 +398,20 @@ constexpr const wchar_t* kPl[] = {  // Polish
     L"Wstrzymaj Spotify",  // MediaPause
     L"Reaguje tylko na dźwięk z przeglądarek i odtwarzaczy wideo, który trwa kilka sekund. Krótkie dźwięki, gry i połączenia są ignorowane.",  // MediaHint
     L"Zmniejsz do",  // MediaPercentLabel
+    L"Muzyka podczas reklam",  // MusicLabel
+    L"Wyłączona",  // MusicOff
+    L"Jeden plik",  // MusicFile
+    L"Folder, losowo",  // MusicShuffle
+    L"Folder, po kolei",  // MusicOrder
+    L"Odtwarza Twoją muzykę podczas reklam. Gdy reklama się kończy, muzyka zatrzymuje się i przy następnej reklamie gra dalej od tego samego miejsca.",  // MusicHint
+    L"Nie wybrano pliku",  // MusicNoFile
+    L"Nie wybrano folderu",  // MusicNoFolder
+    L"Wybierz",  // MusicPick
+    L"Głośność",  // MusicVolumeLabel
+    L"Wybierz plik muzyczny",  // MusicPickFileTitle
+    L"Wybierz folder z muzyką",  // MusicPickFolderTitle
+    L"Pliki muzyczne",  // MusicFilterName
+    L"Ten folder nie zawiera plików muzycznych do odtworzenia (MP3, M4A, AAC, WMA, WAV, FLAC). Wybierz inny folder.",  // ErrMusicEmpty
     L"Język",  // LanguageLabel
     L"System",  // LangSystem
     L"Resetuj ustawienia",  // ResetButton
@@ -360,6 +458,20 @@ constexpr const wchar_t* kTr[] = {  // Turkish
     L"Spotify'ı duraklat",  // MediaPause
     L"Yalnızca tarayıcılardan ve video oynatıcılardan gelen ve birkaç saniye süren sese tepki verir. Kısa sesler, oyunlar ve aramalar yok sayılır.",  // MediaHint
     L"Şuna düşür",  // MediaPercentLabel
+    L"Reklamlar sırasında müzik",  // MusicLabel
+    L"Kapalı",  // MusicOff
+    L"Tek dosya",  // MusicFile
+    L"Klasör, karışık",  // MusicShuffle
+    L"Klasör, sırayla",  // MusicOrder
+    L"Reklamlar sırasında kendi müziğini çalar. Reklam bitince müzik duraklar ve sonraki reklamda aynı yerden devam eder.",  // MusicHint
+    L"Dosya seçilmedi",  // MusicNoFile
+    L"Klasör seçilmedi",  // MusicNoFolder
+    L"Seç",  // MusicPick
+    L"Ses düzeyi",  // MusicVolumeLabel
+    L"Müzik dosyası seç",  // MusicPickFileTitle
+    L"Müzik klasörü seç",  // MusicPickFolderTitle
+    L"Müzik dosyaları",  // MusicFilterName
+    L"Bu klasörde çalınabilir müzik dosyası yok (MP3, M4A, AAC, WMA, WAV, FLAC). Başka bir klasör seç.",  // ErrMusicEmpty
     L"Dil",  // LanguageLabel
     L"Sistem",  // LangSystem
     L"Ayarları sıfırla",  // ResetButton
@@ -406,6 +518,20 @@ constexpr const wchar_t* kJa[] = {  // Japanese
     L"Spotify を一時停止",  // MediaPause
     L"ブラウザーや動画プレーヤーから数秒間続く音声だけに反応します。短い音、ゲーム、通話は無視されます。",  // MediaHint
     L"下げる音量",  // MediaPercentLabel
+    L"広告中の音楽",  // MusicLabel
+    L"オフ",  // MusicOff
+    L"1 つのファイル",  // MusicFile
+    L"フォルダー、シャッフル",  // MusicShuffle
+    L"フォルダー、順番どおり",  // MusicOrder
+    L"広告の再生中に自分の音楽を流します。広告が終わると音楽は一時停止し、次の広告で同じ位置から再開します。",  // MusicHint
+    L"ファイルが選択されていません",  // MusicNoFile
+    L"フォルダーが選択されていません",  // MusicNoFolder
+    L"選択",  // MusicPick
+    L"音量",  // MusicVolumeLabel
+    L"音楽ファイルを選択",  // MusicPickFileTitle
+    L"音楽フォルダーを選択",  // MusicPickFolderTitle
+    L"音楽ファイル",  // MusicFilterName
+    L"このフォルダーには再生できる音楽ファイル (MP3、M4A、AAC、WMA、WAV、FLAC) がありません。別のフォルダーを選択してください。",  // ErrMusicEmpty
     L"言語",  // LanguageLabel
     L"システム",  // LangSystem
     L"設定をリセット",  // ResetButton
@@ -452,6 +578,20 @@ constexpr const wchar_t* kZh[] = {  // Simplified Chinese
     L"暂停 Spotify",  // MediaPause
     L"仅响应浏览器和视频播放器中持续数秒的声音。短促声音、游戏和通话将被忽略。",  // MediaHint
     L"降至",  // MediaPercentLabel
+    L"广告期间的音乐",  // MusicLabel
+    L"关闭",  // MusicOff
+    L"单个文件",  // MusicFile
+    L"文件夹，随机",  // MusicShuffle
+    L"文件夹，按顺序",  // MusicOrder
+    L"在广告期间播放你自己的音乐。广告结束时音乐暂停，下一个广告时从同一位置继续播放。",  // MusicHint
+    L"未选择文件",  // MusicNoFile
+    L"未选择文件夹",  // MusicNoFolder
+    L"选择",  // MusicPick
+    L"音量",  // MusicVolumeLabel
+    L"选择音乐文件",  // MusicPickFileTitle
+    L"选择音乐文件夹",  // MusicPickFolderTitle
+    L"音乐文件",  // MusicFilterName
+    L"此文件夹中没有可播放的音乐文件（MP3、M4A、AAC、WMA、WAV、FLAC）。请选择其他文件夹。",  // ErrMusicEmpty
     L"语言",  // LanguageLabel
     L"系统",  // LangSystem
     L"重置设置",  // ResetButton

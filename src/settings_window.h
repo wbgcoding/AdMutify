@@ -21,6 +21,13 @@ enum SettingsControlId {
     IDC_MEDIA_PERCENT_LABEL = 116,
     IDC_MEDIA_PERCENT = 117,
     IDC_MEDIA_PERCENT_VALUE = 118,
+    IDC_MUSIC_LABEL = 119,
+    IDC_MUSIC = 120,
+    IDC_MUSIC_PATH = 121,
+    IDC_MUSIC_PICK = 122,
+    IDC_MUSIC_VOLUME_LABEL = 123,
+    IDC_MUSIC_VOLUME = 124,
+    IDC_MUSIC_VOLUME_VALUE = 125,
 };
 
 // Opens the settings window, or brings the open one to the front.

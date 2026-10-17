@@ -22,7 +22,7 @@ using Microsoft::WRL::ComPtr;
 
 namespace {
 
-const wchar_t* const kSurfaces[] = {L"menu", L"menu-ad", L"menu-off", L"menu-lang", L"settings", L"settings-lower", L"settings-media"};
+const wchar_t* const kSurfaces[] = {L"menu", L"menu-ad", L"menu-off", L"menu-lang", L"settings", L"settings-lower", L"settings-media", L"settings-music"};
 
 void Print(const std::string& text) {
     HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -170,6 +170,11 @@ bool Shoot(const std::wstring& id, Language language, bool dark, const std::wstr
     s.mode = id == L"settings-lower" ? Mode::Lower : Mode::Mute;
     s.media = id == L"settings-media" ? MediaMode::Lower : MediaMode::Off;
     s.mediaPercent = id == L"settings-media" ? 45 : 20;
+    if (id == L"settings-music") {
+        s.adMusic = AdMusic::Shuffle;
+        s.adMusicPath = L"D:\\Music\\Break music";
+        s.adMusicVolume = 60;
+    }
     AppUseInMemorySettings(s);
     SetLanguage(s.language);
 

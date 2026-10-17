@@ -52,6 +52,26 @@ int ClampLowerPercent(int value) {
     return (value + 2) / 5 * 5;
 }
 
+int ClampVolumePercent(int value) {
+    if (value < 0) value = 0;
+    if (value > 100) value = 100;
+    return (value + 2) / 5 * 5;
+}
+
+namespace {
+const char* AdMusicCode(AdMusic m) {
+    switch (m) {
+        case AdMusic::File: return "file";
+        case AdMusic::Shuffle: return "shuffle";
+        case AdMusic::Order: return "order";
+        default: return "off";
+    }
+}
+
+// Line breaks would end the value early; a path cannot contain them anyway.
+bool IniSafe(std::wstring_view s) { return s.find_first_of(L"\r\n") == std::wstring_view::npos; }
+}  // namespace
+
 namespace {
 constexpr const char* kLanguageCodes[kLanguageCount] = {"system", "en", "de", "es", "pt", "it", "nl", "pl", "tr", "ja", "zh"};
 }
@@ -77,7 +97,16 @@ std::string FormatSettings(const Settings& s) {
                   s.darkMenus ? 1 : 0, s.media == MediaMode::Lower ? "lower"
                   : (s.media == MediaMode::Mute ? "mute" : (s.media == MediaMode::Pause ? "pause" : "off")),
                   s.mediaPercent);
-    return buf;
+    std::string out = buf;
+    // The path may be long (long paths are allowed), so it is appended outside the fixed buffer.
+    out += "ad_music=";
+    out += AdMusicCode(s.adMusic);
+    out += "\r\nad_music_path=";
+    if (IniSafe(s.adMusicPath)) out += WideToUtf8(s.adMusicPath);
+    out += "\r\nad_music_volume=";
+    out += std::to_string(s.adMusicVolume);
+    out += "\r\n";
+    return out;
 }
 
 bool ParseSettings(std::string_view text, Settings& out) {
@@ -123,6 +152,15 @@ bool ParseSettings(std::string_view text, Settings& out) {
             else s.media = MediaMode::Off;
         } else if (key == "media_percent") {
             if (ParseInt(val, n)) s.mediaPercent = ClampLowerPercent(n);
+        } else if (key == "ad_music") {
+            if (val == "file") s.adMusic = AdMusic::File;
+            else if (val == "shuffle") s.adMusic = AdMusic::Shuffle;
+            else if (val == "order") s.adMusic = AdMusic::Order;
+            else s.adMusic = AdMusic::Off;
+        } else if (key == "ad_music_path") {
+            s.adMusicPath = Utf8ToWide(val);
+        } else if (key == "ad_music_volume") {
+            if (ParseInt(val, n)) s.adMusicVolume = ClampVolumePercent(n);
         }
     }
     if (newer) {
@@ -306,5 +344,8 @@ Settings MergeSettingsChange(const Settings& fromFile, const Settings& shown, co
     if (current.darkMenus != shown.darkMenus) out.darkMenus = current.darkMenus;
     if (current.media != shown.media) out.media = current.media;
     if (current.mediaPercent != shown.mediaPercent) out.mediaPercent = current.mediaPercent;
+    if (current.adMusic != shown.adMusic) out.adMusic = current.adMusic;
+    if (current.adMusicPath != shown.adMusicPath) out.adMusicPath = current.adMusicPath;
+    if (current.adMusicVolume != shown.adMusicVolume) out.adMusicVolume = current.adMusicVolume;
     return out;
 }
