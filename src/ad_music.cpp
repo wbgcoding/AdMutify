@@ -274,6 +274,12 @@ struct AdMusicPlayer::Impl {
             engine = nullptr;
             ++generation;
         }
+        // Between ads Media Foundation is let go too, so the idle footprint stays as small as without music.
+        if (mfStarted) {
+            MFShutdown();
+            mfStarted = false;
+            CoFreeUnusedLibrariesEx(0, 0);
+        }
         loaded = false;
         fade = 0;
     }
@@ -436,10 +442,6 @@ void AdMusicPlayer::Shutdown() {
     Impl& m = *impl_;
     m.active = false;
     m.ReleaseEngine(false);
-    if (m.mfStarted) {
-        MFShutdown();
-        m.mfStarted = false;
-    }
 }
 
 bool AdMusicPlayer::IsPlaying() const { return impl_->engine && impl_->loaded; }
