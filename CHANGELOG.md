@@ -7,6 +7,16 @@ All notable changes to this project are documented here. The format follows Keep
 ### Added
 - Own music during ads: play one file, or a folder shuffled or in name order, at a volume you choose. The music fades in when the ad starts, fades out when it ends and continues at the same spot during the next ad.
 
+### Fixed
+- Spotify no longer stays quiet after an ad when it opens a new audio session during the ad, and a failed restore is retried within seconds instead of at the next ad.
+- A failed mute during an ad is retried instead of showing "muted" while the ad plays.
+- Old recovery records no longer undo a volume you set yourself later; locked recovery files are handled.
+- Signing out while Spotify is being paused no longer leaves it paused.
+- After a crash the report and dump are written even when restoring the volume hangs.
+- The tray icon shows reliably when AdMutify is started twice in a row; unplugging an audio device updates at once.
+- Setup: cancelling keeps AdMutify running, a silent update starts it again, an all-users setup notices AdMutify running for another user, and uninstalling only removes the autostart entry of the installed copy.
+- Settings: concurrent saves are not lost, the window follows a changed Windows text size, and a settings file from a newer version is reported.
+
 ## [1.1.0] - 2026-10-10
 
 ### Added
