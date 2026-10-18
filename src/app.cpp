@@ -107,6 +107,8 @@ void UpdateTray() {
 }
 
 void DoApply(Mode mode, int percent, Reason reason) {
+    // Init is idempotent: it only does work when an earlier start failed to set up Core Audio.
+    g.audio.Init(g.hwnd);
     int n = g.audio.Apply(mode, percent);
     g.applied = true;
     g.appliedMode = mode;
@@ -286,6 +288,10 @@ void ReevaluateOnce() {
         int n = g.audio.ChangeLevel(wantPercent);
         g.appliedPercent = wantPercent;
         Log("level percent=%d sessions=%d", g.appliedPercent, n);
+    } else if (!g.audio.HasAppliedSessions()) {
+        // The first apply touched nothing (write failed, session not up yet): try again, logged only on success.
+        int n = g.audio.Apply(wantMode, wantPercent);
+        if (n > 0) Log("apply_retry sessions=%d", n);
     }
     if (g.applied && g.appliedReason != want && want != Reason::None) {
         Log("reason %s -> %s", ReasonName(g.appliedReason), ReasonName(want));
