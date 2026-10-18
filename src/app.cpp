@@ -25,6 +25,9 @@ constexpr UINT_PTR kTimerExit = 1;
 constexpr UINT_PTR kTimerProbe = 2;
 constexpr UINT_PTR kTimerMedia = 3;
 constexpr UINT_PTR kTimerMusic = 4;
+constexpr UINT_PTR kTimerRestoreRetry = 5;
+constexpr UINT kRestoreRetryMs = 2000;
+constexpr int kMaxRestoreRetries = 15;
 constexpr UINT kMediaPollMs = 500;
 constexpr int kMaxProbes = 5;
 enum class Reason { None, Ad, Media };
@@ -54,6 +57,9 @@ struct App {
     bool reevaluateAgain = false;
     bool probeRunning = false;
     int probes = 0;
+    // Records of sessions whose restore failed are retried on a slow timer until they resolve or give up.
+    bool restoreRetryRunning = false;
+    int restoreRetries = 0;
     UINT taskbarCreated = 0;
     std::wstring status;
     std::wstring lastTraceTitle;
@@ -116,6 +122,36 @@ void DoRestore() {
         ReasonName(g.appliedReason));
     g.applied = false;
     g.appliedReason = Reason::None;
+    if (g.audio.PendingCount() > 0 && !g.closing && !g.restoreRetryRunning) {
+        g.restoreRetryRunning = true;
+        g.restoreRetries = 0;
+        SetTimer(g.hwnd, kTimerRestoreRetry, kRestoreRetryMs, nullptr);
+    }
+}
+
+void StopRestoreRetry() {
+    KillTimer(g.hwnd, kTimerRestoreRetry);
+    g.restoreRetryRunning = false;
+}
+
+void OnRestoreRetry() {
+    if (g.closing) {
+        StopRestoreRetry();
+        return;
+    }
+    const int before = g.audio.PendingCount();
+    g.audio.WatchSessions();
+    const int after = g.audio.PendingCount();
+    ++g.restoreRetries;
+    if (after == 0) {
+        Log("restore_retry n=%d", g.restoreRetries);
+        StopRestoreRetry();
+    } else if (g.restoreRetries >= kMaxRestoreRetries) {
+        Log("restore_retry n=%d gave_up pending=%d", g.restoreRetries, after);
+        StopRestoreRetry();
+    } else if (after < before) {
+        Log("restore_retry n=%d pending=%d", g.restoreRetries, after);
+    }
 }
 
 // The media poll runs only while it can matter; stopping it also forgets any half-built detection.
@@ -311,6 +347,7 @@ void Shutdown(bool endSession = false) {
     KillTimer(g.hwnd, kTimerProbe);
     KillTimer(g.hwnd, kTimerMedia);
     g.mediaTimerRunning = false;
+    StopRestoreRetry();
     // Spotify must not stay paused because of AdMutify.
     // Still showing the song title shortly after our pause means the pause has not shown in the title yet.
     const AdState current = g.machine.Current();
@@ -400,6 +437,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 Reevaluate();
             } else if (wParam == kTimerMusic) {
                 g.music.OnTimer();
+            } else if (wParam == kTimerRestoreRetry) {
+                OnRestoreRetry();
             } else if (wParam == kTimerProbe) {
                 if (++g.probes >= kMaxProbes) {
                     KillTimer(hwnd, kTimerProbe);
