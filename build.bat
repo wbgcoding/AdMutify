@@ -75,10 +75,15 @@ if errorlevel 1 ( set "RC=1" & goto :end )
 
 set "VER="
 set /p VER=<"build\x64\version.txt"
-set "YEAR=2026"
+set "YEAR="
 if exist "build\x64\copyright_year.txt" set /p YEAR=<"build\x64\copyright_year.txt"
 if not defined VER (
     echo version.txt missing.
+    set "RC=1"
+    goto :end
+)
+if not defined YEAR (
+    echo copyright_year.txt missing.
     set "RC=1"
     goto :end
 )
