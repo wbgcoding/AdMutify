@@ -26,6 +26,9 @@ constexpr UINT_PTR kTimerProbe = 2;
 constexpr UINT_PTR kTimerMedia = 3;
 constexpr UINT_PTR kTimerMusic = 4;
 constexpr UINT_PTR kTimerRestoreRetry = 5;
+// --trace only: records Spotify's window set, so popups and overlays (surveys, banners) can be told apart later.
+constexpr UINT_PTR kTimerTraceWindows = 6;
+constexpr UINT kTraceWindowsMs = 1000;
 constexpr UINT kRestoreRetryMs = 2000;
 constexpr int kMaxRestoreRetries = 15;
 constexpr UINT kMediaPollMs = 500;
@@ -65,6 +68,7 @@ struct App {
     UINT taskbarCreated = 0;
     std::wstring status;
     std::wstring lastTraceTitle;
+    std::wstring lastTraceWindows;
     bool closing = false;
     // Windows is signing out: nothing may start playing any more.
     bool closingEndSession = false;
@@ -450,6 +454,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 g.music.OnTimer();
             } else if (wParam == kTimerRestoreRetry) {
                 OnRestoreRetry();
+            } else if (wParam == kTimerTraceWindows) {
+                std::wstring windows = SpotifyWatch::DescribeTargetWindows();
+                if (windows != g.lastTraceWindows) {
+                    g.lastTraceWindows = std::move(windows);
+                    Log("trace windows %s", WideToUtf8(g.lastTraceWindows).c_str());
+                }
             } else if (wParam == kTimerProbe) {
                 if (++g.probes >= kMaxProbes) {
                     KillTimer(hwnd, kTimerProbe);
@@ -628,6 +638,7 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
 
     g.tray.Init(g.hwnd, inst);
     g.trayReady = true;
+    if (TraceEnabled()) SetTimer(g.hwnd, kTimerTraceWindows, kTraceWindowsMs, nullptr);
     UpdateTray();
     // "Start without tray icon" applies to the Windows autostart only; a manual start always shows the icon.
     if (!g.settings.hideTray || !options.autostart) {

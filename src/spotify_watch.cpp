@@ -123,6 +123,26 @@ bool SpotifyWatch::Start(ChangeCallback onChange) {
     return true;
 }
 
+std::wstring SpotifyWatch::DescribeTargetWindows() {
+    std::vector<HWND> all;
+    EnumWindows(&EnumProc, reinterpret_cast<LPARAM>(&all));
+    std::wstring out;
+    for (HWND w : all) {
+        if (!IsWindowVisible(w)) continue;
+        DWORD pid = 0;
+        GetWindowThreadProcessId(w, &pid);
+        if (!IsTargetProcess(pid)) continue;
+        wchar_t cls[64] = {};
+        GetClassNameW(w, cls, static_cast<int>(std::size(cls)));
+        RECT r{};
+        GetWindowRect(w, &r);
+        if (!out.empty()) out += L" | ";
+        out += std::wstring(cls) + L" " + std::to_wstring(r.right - r.left) + L"x" + std::to_wstring(r.bottom - r.top) + L" \"" +
+               WindowTitle(w) + L"\"";
+    }
+    return out;
+}
+
 void SpotifyWatch::RescanIfUnknown() {
     if (hookRange_ && !main_) Rescan(true);
 }

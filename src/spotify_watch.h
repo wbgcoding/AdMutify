@@ -31,6 +31,8 @@ public:
     HWND MainWindow() const { return main_; }
     // Number of hook callbacks seen (for the trace option).
     unsigned long CallbackCount() const { return callbacks_; }
+    // Every visible top-level window of the target process with class, size and title, for the trace option.
+    static std::wstring DescribeTargetWindows();
 
 private:
     static void CALLBACK HookProc(HWINEVENTHOOK, DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD, DWORD);
