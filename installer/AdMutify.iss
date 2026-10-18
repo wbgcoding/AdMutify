@@ -96,6 +96,16 @@ polish.CloseFailed=AdMutify nadal działa i nie można go zamknąć. Zamknij go 
 turkish.CloseFailed=AdMutify hâlâ çalışıyor ve kapatılamadı. Bildirim alanı simgesinden kapatın ve yeniden deneyin.
 japanese.CloseFailed=AdMutify はまだ実行中で、終了できませんでした。通知領域のアイコンから終了して、もう一度お試しください。
 chinesesimplified.CloseFailed=AdMutify 仍在运行，无法关闭。请通过通知区域图标将其关闭，然后重试。
+english.RunningOtherSession=AdMutify is still running in another user's session. Close it there and try again.
+german.RunningOtherSession=AdMutify läuft noch in der Sitzung eines anderen Benutzers. Beende es dort und versuche es erneut.
+spanish.RunningOtherSession=AdMutify sigue en ejecución en la sesión de otro usuario. Ciérralo allí e inténtalo de nuevo.
+brazilianportuguese.RunningOtherSession=O AdMutify ainda está em execução na sessão de outro usuário. Feche-o lá e tente novamente.
+italian.RunningOtherSession=AdMutify è ancora in esecuzione nella sessione di un altro utente. Chiudilo lì e riprova.
+dutch.RunningOtherSession=AdMutify draait nog in de sessie van een andere gebruiker. Sluit het daar af en probeer het opnieuw.
+polish.RunningOtherSession=AdMutify nadal działa w sesji innego użytkownika. Zamknij go tam i spróbuj ponownie.
+turkish.RunningOtherSession=AdMutify hâlâ başka bir kullanıcının oturumunda çalışıyor. Orada kapatın ve yeniden deneyin.
+japanese.RunningOtherSession=AdMutify は別のユーザーのセッションでまだ実行中です。そちらで終了して、もう一度お試しください。
+chinesesimplified.RunningOtherSession=AdMutify 仍在其他用户的会话中运行。请在那里将其关闭，然后重试。
 english.DeleteDataQuestion=Also delete AdMutify's settings and logs?%n%nFolder: %1
 german.DeleteDataQuestion=Auch die Einstellungen und Logs von AdMutify löschen?%n%nOrdner: %1
 spanish.DeleteDataQuestion=¿Eliminar también la configuración y los registros de AdMutify?%n%nCarpeta: %1
@@ -154,6 +164,7 @@ const
   RunKey = 'Software\Microsoft\Windows\CurrentVersion\Run';
   StartupApprovedKey = 'Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run';
   AppMutexName = 'Local\AdMutify.SingleInstance';
+  RunningMutexName = 'Global\AdMutify.Running';
 
 var
   InstalledVersion: String;
@@ -191,6 +202,15 @@ function ReadUninstallValue(const Name: String; var Value: String): Boolean;
 begin
   Result := RegQueryStringValue(HKCU, UninstallKey, Name, Value) or
             RegQueryStringValue(HKLM64, UninstallKey, Name, Value);
+end;
+
+// The app also holds a machine-wide mutex that only says "running somewhere". A copy in this session is closed by
+// CloseRunningApp; one in another user's session cannot be reached from here, so an all-users setup stops.
+// CloseRunningApp never waits on the machine-wide mutex.
+function RunningInOtherSession: Boolean;
+begin
+  Result := IsAdminInstallMode and CheckForMutexes(RunningMutexName) and not CheckForMutexes(AppMutexName) and
+            (FindWindowByClassName('AdMutify.Msg') = 0);
 end;
 
 function CloseRunningApp: Boolean;
@@ -233,6 +253,12 @@ begin
   if not IsPortableMode and OtherModeInstalled then
   begin
     MsgBox(CustomMessage('OtherModeInstalled'), mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
+  if not IsPortableMode and RunningInOtherSession then
+  begin
+    MsgBox(CustomMessage('RunningOtherSession'), mbError, MB_OK);
     Result := False;
     Exit;
   end;
@@ -392,6 +418,13 @@ end;
 
 function InitializeUninstall: Boolean;
 begin
+  if RunningInOtherSession then
+  begin
+    if not UninstallSilent then
+      MsgBox(CustomMessage('RunningOtherSession'), mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
   Result := CloseRunningApp;
   if not Result then
   begin

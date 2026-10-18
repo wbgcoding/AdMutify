@@ -573,6 +573,10 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
         return 0;
     }
 
+    // Lets an all-users setup see a copy running in another user's session (the single-instance mutex is per
+    // session). No ownership or single-instance meaning; a failure is ignored.
+    HANDLE runningMutex = CreateMutexW(nullptr, FALSE, L"Global\\AdMutify.Running");
+
     // Only the instance that stays gets a crash handler and a log folder.
     InstallCrashHandler();
     ReserveStackGuarantee();
@@ -636,5 +640,6 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
         }
     }
     if (mutex) CloseHandle(mutex);
+    if (runningMutex) CloseHandle(runningMutex);
     return static_cast<int>(msg.wParam);
 }
