@@ -369,6 +369,8 @@ bool RetrySettingsRead(Settings& fromFile, unsigned long* error) {
     return true;
 }
 
+bool SettingsNewerVersion() { return g_newerVersionSeen; }
+
 Settings MergeSettingsChange(const Settings& fromFile, const Settings& shown, const Settings& current) {
     Settings out = fromFile;
     if (current.enabled != shown.enabled) out.enabled = current.enabled;

@@ -74,6 +74,8 @@ bool SettingsReadFailed();
 // (defaults when the file is gone; a newer-version file keeps being protected). On failure returns false and
 // sets error.
 bool RetrySettingsRead(Settings& fromFile, unsigned long* error);
+// True when the settings file was found to be from a newer version (it is then never overwritten).
+bool SettingsNewerVersion();
 // Three-way merge for the first change after a failed read: a field the user changed (current differs from
 // shown) takes the new value, every other field keeps the value from the file.
 Settings MergeSettingsChange(const Settings& fromFile, const Settings& shown, const Settings& current);

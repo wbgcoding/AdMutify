@@ -514,7 +514,13 @@ void ApplyCommit(const Settings& requested) {
         Settings fromFile;
         if (RetrySettingsRead(fromFile, &err)) {
             s = MergeSettingsChange(fromFile, old, requested);
-            Log("settings_read_recovered");
+            if (SettingsNewerVersion()) {
+                // The file turned out to be from a newer version: it is left alone, so tell the user once.
+                Log("settings_read_newer");
+                MessageBoxW(owner, Str(StrId::ErrSettingsNewer), L"AdMutify", MB_OK | MB_ICONWARNING);
+            } else {
+                Log("settings_read_recovered");
+            }
         } else {
             ShowSaveError(owner, err, SettingsPath());
         }

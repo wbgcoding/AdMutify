@@ -210,6 +210,32 @@ TEST(settings_unreadable_file_is_kept) {
     LoadOrCreateSettings();
 }
 
+TEST(settings_retry_finds_newer_version) {
+    RemoveSettingsFile();
+    const std::string original = "version=2\r\nenabled=0\r\nfuture_key=1\r\n";
+    CHECK(WriteFileAtomic(SettingsPath(), original));
+    HANDLE lock = CreateFileW(SettingsPath().c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    CHECK(lock != INVALID_HANDLE_VALUE);
+    LoadResult r = LoadOrCreateSettings();
+    CHECK(r.readFailed);
+    CHECK(!SettingsNewerVersion());
+    CloseHandle(lock);
+    Settings fromFile;
+    unsigned long err = 0;
+    CHECK(RetrySettingsRead(fromFile, &err));
+    CHECK(SettingsNewerVersion());
+    // The newer file is not overwritten.
+    Settings other;
+    other.mode = Mode::Lower;
+    CHECK(SaveSettings(other));
+    std::string after;
+    CHECK(ReadFileUtf8(SettingsPath(), after));
+    CHECK(after == original);
+    RemoveSettingsFile();
+    LoadOrCreateSettings();
+    CHECK(!SettingsNewerVersion());
+}
+
 TEST(settings_percent_clamped) {
     Settings s;
     CHECK(ParseSettings("version=1\nlower_percent=97\n", s));
