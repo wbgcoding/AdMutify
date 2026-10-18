@@ -281,6 +281,7 @@ struct AudioControl::Impl {
     CrashSlot slots[kMaxCrashSlots];
     bool crashSlotsFull = false;
     bool registerFailedLogged = false;
+    bool stateWriteFailing = false;
     wchar_t statePath[MAX_PATH * 2] = {};
     // Activating a session manager per endpoint is slow, so the list is kept until a device change
     // (set from the notification thread) or a failed read marks it stale.
@@ -464,16 +465,22 @@ struct AudioControl::Impl {
         else statePath[0] = 0;
     }
 
-    // Writes applied entries plus pending records; no records left means no file.
-    void WriteState() {
+    // Writes applied entries plus pending records; no records left means no file. A failed write is logged once per
+    // streak; the caller goes on (the crash slots still cover a crash), only a kill would lose the record.
+    bool WriteState() {
         std::vector<SavedSession> list;
         for (auto& e : entries)
             if (e->applied) list.push_back(Saved(*e));
         for (const SavedSession& p : pending) list.push_back(p);
         std::wstring path = StatePath();
         SetStatePath(path);
+        bool ok = true;
+        unsigned long err = 0;
         if (list.empty()) DeleteFileW(path.c_str());
-        else WriteFileAtomic(path, FormatStateFile(list));
+        else ok = WriteFileAtomic(path, FormatStateFile(list), &err);
+        if (!ok && !stateWriteFailing) Log("state_write_failed err=%lu", err);
+        stateWriteFailing = !ok;
+        return ok;
     }
 
     void AddPending(const SavedSession& rec) {
