@@ -580,8 +580,9 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
     }
 
     // Lets an all-users setup see a copy running in another user's session (the single-instance mutex is per
-    // session). No ownership or single-instance meaning; a failure is ignored.
-    HANDLE runningMutex = CreateMutexW(nullptr, FALSE, L"Global\\AdMutify.Running");
+    // session). No ownership or single-instance meaning; a failure is ignored. A portable copy does not use the
+    // installed files, so it must not block the setup.
+    HANDLE runningMutex = IsPortable() ? nullptr : CreateMutexW(nullptr, FALSE, L"Global\\AdMutify.Running");
 
     // Only the instance that stays gets a crash handler and a log folder.
     InstallCrashHandler();

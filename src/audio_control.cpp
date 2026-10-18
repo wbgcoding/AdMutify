@@ -817,9 +817,9 @@ AudioControl::~AudioControl() { Shutdown(); }
 bool AudioControl::Init(HWND notifyWindow) {
     if (impl_->enumerator) return true;
     impl_->hwnd = notifyWindow;
-    HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    impl_->comInited = SUCCEEDED(hr);
-    if (CoIncrementMTAUsage(&impl_->mtaCookie) == S_OK) impl_->mtaInited = true;
+    // A retry after a failed start must not take COM or the MTA a second time.
+    if (!impl_->comInited) impl_->comInited = SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
+    if (!impl_->mtaInited && CoIncrementMTAUsage(&impl_->mtaCookie) == S_OK) impl_->mtaInited = true;
     if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&impl_->enumerator))))
         return false;
     impl_->notify.Attach(new SessionNotify(notifyWindow));
