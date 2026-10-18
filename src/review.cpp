@@ -310,6 +310,69 @@ int RunDpiTest(const std::wstring& outDir) {
     return failures ? 1 : 0;
 }
 
+// With every row shown (music folder, video level) and the longest language, the settings window is scaled to 150,
+// 175 and 200 % as after a move to such a monitor. Up to 175 % it must fit the work area with the Close button
+// on screen, and no two visible controls may overlap at any scale. 200 % is only reported.
+int RunFitTest(const std::wstring& outDir) {
+    SetThemeOverride(1);
+    int failures = 0;
+    for (Language language : {Language::German, Language::Polish}) {
+        for (UINT dpi : {144u, 168u, 192u}) {
+            Settings s;
+            s.language = language;
+            s.mode = Mode::Lower;
+            s.media = MediaMode::Lower;
+            s.adMusic = AdMusic::Shuffle;
+            s.adMusicPath = L"D:\\Music\\Break music";
+            AppUseInMemorySettings(s);
+            SetLanguage(s.language);
+            OpenSettingsWindow();
+            PumpFor(600);
+            HWND hwnd = SettingsWindowHandle();
+            if (!hwnd) return 2;
+            MONITORINFO mi{};
+            mi.cbSize = sizeof(mi);
+            GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &mi);
+            RECT cur;
+            GetWindowRect(hwnd, &cur);
+            const UINT d0 = GetDpiForWindow(hwnd);
+            RECT up{mi.rcWork.left + 40, mi.rcWork.top + 40, 0, 0};
+            up.right = up.left + MulDiv(cur.right - cur.left, dpi, d0);
+            up.bottom = up.top + MulDiv(cur.bottom - cur.top, dpi, d0);
+            SendMessageW(hwnd, WM_DPICHANGED, MAKEWPARAM(dpi, dpi), reinterpret_cast<LPARAM>(&up));
+            PumpFor(300);
+            const LayoutSnap snap = TakeSnap(hwnd);
+            RECT close{};
+            GetWindowRect(GetDlgItem(hwnd, IDC_CLOSE), &close);
+            const bool strict = dpi <= 168;
+            const std::string tag = std::string(LanguageCode(language)) + " " + std::to_string(dpi * 100 / 96) + "%: ";
+            Print(tag + "window " + RectText(snap.window) + " work " + RectText(mi.rcWork) + "\n");
+            if (snap.window.top < mi.rcWork.top || snap.window.bottom > mi.rcWork.bottom || close.bottom > mi.rcWork.bottom) {
+                Print(tag + (strict ? "does not fit\n" : "does not fit (reported only)\n"));
+                if (strict) ++failures;
+            }
+            for (size_t i = 0; i < snap.children.size(); ++i) {
+                for (size_t j = i + 1; j < snap.children.size(); ++j) {
+                    const RECT& a = snap.children[i];
+                    const RECT& b = snap.children[j];
+                    if (a.left < 0 || b.left < 0) continue;
+                    RECT both;
+                    if (IntersectRect(&both, &a, &b)) {
+                        Print(tag + "overlap " + std::to_string(i) + " " + RectText(a) + " and " + std::to_string(j) + " " +
+                              RectText(b) + "\n");
+                        ++failures;
+                    }
+                }
+            }
+            CaptureWindow(hwnd, outDir + L"\\fit_" + Utf8ToWide(LanguageCode(language)) + L"_" + std::to_wstring(dpi) + L".png");
+            DestroyWindow(hwnd);
+            PumpFor(100);
+        }
+    }
+    Print(failures ? "fit test failed\n" : "fit test ok\n");
+    return failures ? 1 : 0;
+}
+
 }  // namespace
 
 bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
@@ -321,6 +384,7 @@ bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
     bool shot = false;
     bool crash = false;
     bool dpiTest = false;
+    bool fitTest = false;
     for (int i = 1; i < argc; ++i) {
         std::wstring_view a = argv[i];
         if (a == L"--review" && i + 1 < argc && std::wstring_view(argv[i + 1]) == L"ids") {
@@ -340,6 +404,8 @@ bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
             g_menuHoldMs = static_cast<UINT>(std::wcstoul(argv[++i], nullptr, 10));
         } else if (a == L"--dpi-test") {
             dpiTest = true;
+        } else if (a == L"--fit-test") {
+            fitTest = true;
         } else if (a == L"--crash-test") {
             crash = true;
         }
@@ -367,6 +433,14 @@ bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
         SetAutostartKeyOverride(L"Software\\AdMutifyReview\\Run");
         EnsureDirectory(out);
         exitCode = RunDpiTest(out);
+        return true;
+    }
+
+    if (fitTest) {
+        CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        SetAutostartKeyOverride(L"Software\\AdMutifyReview\\Run");
+        EnsureDirectory(out);
+        exitCode = RunFitTest(out);
         return true;
     }
 
