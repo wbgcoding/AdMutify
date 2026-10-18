@@ -28,6 +28,12 @@ struct SavedSession {
     float appliedVolume = 1.0f;
 };
 
+// A session created while a reaction is applied can come up already carrying AdMutify's mute or level
+// (Windows remembers it per app). When a sibling record (same device, same sessionId, same mode) shows that the live
+// state is AdMutify's own, the sibling's old values are the real ones. Returns false when the live state is not
+// the applied one, so the live values are the old ones.
+bool InheritedOld(Mode mode, const SavedSession& sibling, bool liveMute, float liveVolume, bool& oldMute, float& oldVolume);
+
 std::string FormatStateFile(const std::vector<SavedSession>& sessions);
 bool ParseStateFile(std::string_view text, std::vector<SavedSession>& out);
 

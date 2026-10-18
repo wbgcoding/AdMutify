@@ -23,6 +23,42 @@ TEST(audio_lowered_volume) {
     CHECK(std::fabs(LoweredVolume(0.5f, 150) - 0.5f) < 1e-6f);
 }
 
+TEST(audio_inherited_old_values) {
+    SavedSession sib;
+    sib.mode = Mode::Mute;
+    sib.oldMute = false;
+    sib.oldVolume = 0.6f;
+    sib.appliedVolume = 0.6f;
+    bool m = true;
+    float v = 0.0f;
+    // Mute: a new session that already reads muted carries our mute, the sibling knows the real values.
+    CHECK(InheritedOld(Mode::Mute, sib, true, 0.6f, m, v));
+    CHECK(!m);
+    CHECK(v == 0.6f);
+    // Not muted: the user's own state, nothing to inherit.
+    m = true;
+    v = 0.0f;
+    CHECK(!InheritedOld(Mode::Mute, sib, false, 0.9f, m, v));
+    CHECK(m && v == 0.0f);
+    // Another mode never matches.
+    CHECK(!InheritedOld(Mode::Lower, sib, true, 0.6f, m, v));
+
+    // Lower: live volume 0.12 equals the sibling's applied level 0.12 (old 0.6 at 20 percent).
+    sib.mode = Mode::Lower;
+    sib.oldMute = true;
+    sib.oldVolume = 0.6f;
+    sib.appliedVolume = 0.12f;
+    CHECK(InheritedOld(Mode::Lower, sib, false, 0.1205f, m, v));
+    CHECK(m);
+    CHECK(v == 0.6f);
+    // Live volume 0.5 differs from 0.12: the user's value.
+    m = false;
+    v = 0.0f;
+    CHECK(!InheritedOld(Mode::Lower, sib, false, 0.5f, m, v));
+    CHECK(!m && v == 0.0f);
+    CHECK(!InheritedOld(Mode::Mute, sib, true, 0.12f, m, v));
+}
+
 TEST(audio_state_file_roundtrip) {
     std::vector<SavedSession> in(2);
     in[0].deviceId = L"{0.0.0.00000000}.{abc|def}";

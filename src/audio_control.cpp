@@ -6,6 +6,7 @@
 #include <mmdeviceapi.h>
 #include <wrl/client.h>
 
+#include <algorithm>
 #include <atomic>
 #include <charconv>
 #include <cstdio>
@@ -517,6 +518,33 @@ struct AudioControl::Impl {
         return restored;
     }
 
+    // A session opened during a reaction (new stream, process restart) can inherit the applied mute or level.
+    // Its live values are then not the user's: take them from a sibling that was applied before this call.
+    void InheritOld(Entry& e, Mode mode, const std::vector<Entry*>& fresh) {
+        if (e.sessionId.empty()) return;
+        const bool liveMute = e.oldMute != FALSE;
+        bool m = false;
+        float v = 1.0f;
+        for (auto& o : entries) {
+            if (o.get() == &e || !o->applied || o->appliedMode != mode) continue;
+            if (o->deviceId != e.deviceId || o->sessionId != e.sessionId) continue;
+            if (std::find(fresh.begin(), fresh.end(), o.get()) != fresh.end()) continue;
+            if (InheritedOld(mode, Saved(*o), liveMute, e.oldVolume, m, v)) {
+                e.oldMute = m ? TRUE : FALSE;
+                e.oldVolume = v;
+                return;
+            }
+        }
+        for (const SavedSession& p : pending) {
+            if (p.deviceId != e.deviceId || p.sessionId != e.sessionId) continue;
+            if (InheritedOld(mode, p, liveMute, e.oldVolume, m, v)) {
+                e.oldMute = m ? TRUE : FALSE;
+                e.oldVolume = v;
+                return;
+            }
+        }
+    }
+
     void AddCrashSlot(Entry& e) {
         for (int i = 0; i < kMaxCrashSlots; ++i) {
             if (slots[i].vol) continue;
@@ -610,6 +638,15 @@ struct AudioControl::Impl {
 bool UserOverrode(Mode mode, bool expectedMute, float expectedVolume, bool newMute, float newVolume) {
     if (mode == Mode::Mute) return newMute != expectedMute;
     return std::fabs(newVolume - expectedVolume) > 0.001f;
+}
+
+bool InheritedOld(Mode mode, const SavedSession& sibling, bool liveMute, float liveVolume, bool& oldMute, float& oldVolume) {
+    if (sibling.mode != mode) return false;
+    bool same = mode == Mode::Mute ? liveMute : std::fabs(liveVolume - sibling.appliedVolume) <= 0.001f;
+    if (!same) return false;
+    oldMute = sibling.oldMute;
+    oldVolume = sibling.oldVolume;
+    return true;
 }
 
 float LoweredVolume(float oldVolume, int percent) {
@@ -752,6 +789,7 @@ int AudioControl::Apply(Mode mode, int percent) {
             Entry* e = impl_->GetOrAdd(dev.id, s);
             if (e->applied || e->overridden) continue;
             if (FAILED(e->vol->GetMute(&e->oldMute)) || FAILED(e->vol->GetMasterVolume(&e->oldVolume))) continue;
+            impl_->InheritOld(*e, mode, fresh);
             e->applied = true;
             e->appliedMode = mode;
             e->appliedVolume = mode == Mode::Mute ? e->oldVolume : LoweredVolume(e->oldVolume, percent);
