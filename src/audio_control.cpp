@@ -617,6 +617,8 @@ struct AudioControl::Impl {
         if (userChanged) *userChanged = changed;
         WriteState();
         Prune();
+        // A session that expired while restoring may already be back (Spotify restarted in between).
+        if (!keepOverrides) ResolvePending();
         return restored;
     }
 
