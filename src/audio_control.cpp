@@ -176,10 +176,7 @@ public:
 
     STDMETHODIMP OnDeviceStateChanged(LPCWSTR, DWORD) override { return Poke(); }
     STDMETHODIMP OnDeviceAdded(LPCWSTR) override { return Poke(); }
-    STDMETHODIMP OnDeviceRemoved(LPCWSTR) override {
-        *dirty_ = true;
-        return S_OK;
-    }
+    STDMETHODIMP OnDeviceRemoved(LPCWSTR) override { return Poke(); }
     STDMETHODIMP OnDefaultDeviceChanged(EDataFlow, ERole, LPCWSTR) override { return Poke(); }
     STDMETHODIMP OnPropertyValueChanged(LPCWSTR, const PROPERTYKEY) override { return S_OK; }
 
