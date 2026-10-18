@@ -441,6 +441,8 @@ struct AudioControl::Impl {
 
     void ReleaseSlot(Entry& e) {
         if (e.slot < 0) return;
+        // The dump thread may be about to use this slot; a leak during a crash is harmless.
+        if (CrashInProgress()) return;
         CrashSlot& s = slots[e.slot];
         ISimpleAudioVolume* vol = s.vol;
         // Unpublish first so the crash thread never sees a half-reset slot.
