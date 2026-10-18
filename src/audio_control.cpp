@@ -970,7 +970,7 @@ bool AudioControl::IsSpotifyAudioActive() {
 }
 
 bool AudioControl::IsSpotifyAudible() {
-    // Watched sessions are asked directly, without enumerating the devices.
+    // Watched sessions are asked directly first; a new session not watched yet is found by the device scan.
     if (!impl_->entries.empty()) {
         for (auto& e : impl_->entries) {
             AudioSessionState st = AudioSessionStateInactive;
@@ -979,7 +979,6 @@ bool AudioControl::IsSpotifyAudible() {
             float peak = 0.0f;
             if (SUCCEEDED(e->ctrl.As(&meter)) && SUCCEEDED(meter->GetPeakValue(&peak)) && peak > 0.001f) return true;
         }
-        return false;
     }
     for (auto& dev : impl_->Devices()) {
         for (auto& s : impl_->SessionsOf(dev, true, false, false)) {
