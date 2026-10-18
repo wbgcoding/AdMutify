@@ -7,3 +7,4 @@
 #define WM_APP_AUDIO_STATE (WM_APP + 3)
 #define WM_APP_SESSION_CREATED (WM_APP + 4)
 #define WM_APP_MUSIC (WM_APP + 5)
+#define WM_APP_MEDIA_SESSION (WM_APP + 6)

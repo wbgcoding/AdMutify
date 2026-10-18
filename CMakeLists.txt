@@ -45,7 +45,7 @@ endfunction()
 
 add_library(admutify_core STATIC ${CORE_SOURCES})
 admutify_common(admutify_core)
-target_link_libraries(admutify_core PUBLIC dbghelp ole32 mfplat mfuuid shlwapi delayimp comctl32 uxtheme dwmapi shell32 advapi32 user32 gdi32 gdiplus shcore windowscodecs)
+target_link_libraries(admutify_core PUBLIC dbghelp ole32 mfplat mfuuid shlwapi delayimp comctl32 uxtheme dwmapi shell32 advapi32 user32 gdi32 gdiplus shcore windowscodecs runtimeobject)
 # Media Foundation loads only when ad music first plays, so the idle footprint stays small.
 target_link_options(admutify_core INTERFACE /DELAYLOAD:mfplat.dll)
 
