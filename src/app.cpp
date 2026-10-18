@@ -11,6 +11,7 @@
 #include "audio_control.h"
 #include "crash.h"
 #include "media_detector.h"
+#include "media_session.h"
 #include "settings_window.h"
 #include "spotify_watch.h"
 #include "strings.h"
@@ -29,6 +30,8 @@ constexpr UINT_PTR kTimerRestoreRetry = 5;
 // --trace only: records Spotify's window set, so popups and overlays (surveys, banners) can be told apart later.
 constexpr UINT_PTR kTimerTraceWindows = 6;
 constexpr UINT kTraceWindowsMs = 1000;
+// One-shot: re-checks once the media session had its settle time after a window title change.
+constexpr UINT_PTR kTimerMediaSettle = 7;
 constexpr UINT kRestoreRetryMs = 2000;
 constexpr int kMaxRestoreRetries = 15;
 constexpr UINT kMediaPollMs = 500;
@@ -49,6 +52,10 @@ struct App {
     int appliedPercent = 0;
     Reason appliedReason = Reason::None;
     MediaDetector media;
+    MediaSession mediaSession;
+    std::wstring lastSeenTitle;
+    uint64_t titleChangedAt = 0;
+    MediaTrack lastTraceTrack;
     AdMusicPlayer music;
     bool mediaTimerRunning = false;
     std::wstring lastMediaExe;
@@ -239,7 +246,24 @@ void HandlePause(AdState state, uint64_t now) {
 
 void ReevaluateOnce() {
     uint64_t now = GetTickCount64();
-    TitleKind kind = ClassifyTitle(g.watch.Title());
+    const std::wstring& windowTitle = g.watch.Title();
+    if (windowTitle != g.lastSeenTitle) {
+        g.lastSeenTitle = windowTitle;
+        g.titleChangedAt = now;
+    }
+    const TitleKind titleKind = ClassifyTitle(windowTitle);
+    // The media session is a second signal: it unmasks ads titled like a song and holds a running ad mute until
+    // it has caught up with a new window title. Without a session this changes nothing.
+    const MediaTrack track = g.mediaSession.Snapshot();
+    TitleKind kind = MergeMediaTrack(titleKind, g.machine.Current(), track, windowTitle, now - g.titleChangedAt);
+    const bool heldForSession = titleKind == TitleKind::Music && kind == TitleKind::Ad && !TrackMatchesTitle(track, windowTitle);
+    if (heldForSession) {
+        const uint64_t since = now - g.titleChangedAt;
+        const uint64_t left = since < kMediaSettleMs ? kMediaSettleMs - since : 0;
+        SetTimer(g.hwnd, kTimerMediaSettle, static_cast<UINT>(left + 20), nullptr);
+    } else {
+        KillTimer(g.hwnd, kTimerMediaSettle);
+    }
     if (TraceEnabled() && g.watch.Title() != g.lastTraceTitle) {
         // Titles stay out of the normal log; only an explicit --trace run records them.
         g.lastTraceTitle = g.watch.Title();
@@ -360,8 +384,10 @@ void Shutdown(bool endSession = false) {
     KillTimer(g.hwnd, kTimerExit);
     KillTimer(g.hwnd, kTimerProbe);
     KillTimer(g.hwnd, kTimerMedia);
+    KillTimer(g.hwnd, kTimerMediaSettle);
     g.mediaTimerRunning = false;
     StopRestoreRetry();
+    g.mediaSession.Stop();
     // Spotify must not stay paused because of AdMutify.
     // Still showing the song title shortly after our pause means the pause has not shown in the title yet.
     const AdState current = g.machine.Current();
@@ -422,6 +448,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
             return 0;
         case WM_APP_AUDIO_STATE: Reevaluate(); return 0;
+        case WM_APP_MEDIA_SESSION:
+            if (g.closing) return 0;
+            if (TraceEnabled()) {
+                const MediaTrack t = g.mediaSession.Snapshot();
+                if (!(t == g.lastTraceTrack)) {
+                    g.lastTraceTrack = t;
+                    // Titles stay out of the normal log; only an explicit --trace run records them.
+                    Log("trace media title=\"%s\" artist=\"%s\" album=\"%s\" track=%u next=%d prev=%d",
+                        WideToUtf8(t.title).c_str(), WideToUtf8(t.artist).c_str(), WideToUtf8(t.album).c_str(),
+                        t.trackNumber, t.nextEnabled ? 1 : 0, t.prevEnabled ? 1 : 0);
+                }
+            }
+            Reevaluate();
+            return 0;
         case WM_APP_MUSIC: g.music.OnEvent(wParam, lParam); return 0;
         case WM_APP_SESSION_CREATED:
             if (g.closing) return 0;
@@ -438,6 +478,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_TIMER:
             if (wParam == kTimerExit) {
                 KillTimer(hwnd, kTimerExit);
+                Reevaluate();
+            } else if (wParam == kTimerMediaSettle) {
+                KillTimer(hwnd, kTimerMediaSettle);
                 Reevaluate();
             } else if (wParam == kTimerMedia) {
                 bool before = g.media.Active();
@@ -650,6 +693,7 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
     }
 
     g.watch.Start([](const std::wstring&) { Reevaluate(); });
+    g.mediaSession.Start(g.hwnd, WM_APP_MEDIA_SESSION);
     Reevaluate();
 
     // The message window exists and a leftover mute is already undone: the dialogs may wait for the user now.
