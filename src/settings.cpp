@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <shlobj.h>
 
+#include <atomic>
 #include <charconv>
 #include <cstdio>
 
@@ -243,8 +244,38 @@ bool ReadFileUtf8(const std::wstring& path, std::string& out) {
 
 bool EnsureDirectory(const std::wstring& path) {
     int r = SHCreateDirectoryExW(nullptr, path.c_str(), nullptr);
-    return r == ERROR_SUCCESS || r == ERROR_ALREADY_EXISTS || r == ERROR_FILE_EXISTS;
+    if (r == ERROR_SUCCESS || r == ERROR_ALREADY_EXISTS || r == ERROR_FILE_EXISTS) return true;
+    // The shell call returns the error code without setting the thread's last error.
+    SetLastError(static_cast<DWORD>(r));
+    return false;
 }
+
+namespace {
+
+// Temp files of writers that died between create and rename; a live writer finishes within moments.
+void RemoveStaleTempFiles() {
+    std::wstring dir = DataDir();
+    WIN32_FIND_DATAW fd;
+    HANDLE h = FindFirstFileW((dir + L"\\settings.ini.*tmp").c_str(), &fd);
+    if (h == INVALID_HANDLE_VALUE) return;
+    FILETIME nowFt;
+    GetSystemTimeAsFileTime(&nowFt);
+    ULARGE_INTEGER now;
+    now.LowPart = nowFt.dwLowDateTime;
+    now.HighPart = nowFt.dwHighDateTime;
+    const ULONGLONG kOneHour = 36000000000ULL;  // 100 ns units
+    do {
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+        ULARGE_INTEGER written;
+        written.LowPart = fd.ftLastWriteTime.dwLowDateTime;
+        written.HighPart = fd.ftLastWriteTime.dwHighDateTime;
+        if (now.QuadPart > written.QuadPart && now.QuadPart - written.QuadPart > kOneHour)
+            DeleteFileW((dir + L"\\" + fd.cFileName).c_str());
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+}
+
+}  // namespace
 
 bool WriteFileAtomic(const std::wstring& path, std::string_view data, unsigned long* lastError) {
     auto fail = [&](DWORD err) {
@@ -254,7 +285,10 @@ bool WriteFileAtomic(const std::wstring& path, std::string_view data, unsigned l
     size_t slash = path.find_last_of(L'\\');
     if (slash != std::wstring::npos && !EnsureDirectory(path.substr(0, slash))) return fail(GetLastError());
 
-    std::wstring tmp = path + L".tmp";
+    // Unique per call so two writers (threads or processes) never share a temp file.
+    static std::atomic<unsigned> counter{0};
+    std::wstring tmp = path + L"." + std::to_wstring(GetCurrentProcessId()) + L"." + std::to_wstring(GetTickCount64()) +
+                       L"." + std::to_wstring(counter.fetch_add(1)) + L".tmp";
     HANDLE h = CreateFileW(tmp.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (h == INVALID_HANDLE_VALUE) return fail(GetLastError());
     DWORD written = 0;
@@ -294,6 +328,7 @@ LoadResult LoadOrCreateSettings() {
     LoadResult r;
     g_newerVersionSeen = false;
     g_readFailedSeen = false;
+    RemoveStaleTempFiles();
     std::string text;
     if (!ReadFileUtf8(SettingsPath(), text)) {
         DWORD err = GetLastError();

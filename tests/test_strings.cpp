@@ -115,6 +115,14 @@ TEST(strings_tables_are_translated) {
 TEST(strings_tooltip) {
     CHECK(TooltipText(L"Ad: muted") == L"AdMutify\nAd: muted");
     CHECK(TooltipText(std::wstring(300, L'x').c_str()).size() == 127);
+    // "AdMutify\n" is 9 units; an emoji (surrogate pair) straddling unit 127 is cut whole.
+    std::wstring emoji = std::wstring(117, L'x') + L"\xD83D\xDE00" + L"tail";
+    std::wstring cut = TooltipText(emoji.c_str());
+    CHECK(cut.size() == 126);
+    CHECK(cut.back() == L'x');
+    emoji = std::wstring(116, L'x') + L"\xD83D\xDE00" + L"tail";
+    cut = TooltipText(emoji.c_str());
+    CHECK(cut.size() == 127 && cut.back() == 0xDE00);
 }
 
 TEST(strings_language_switch) {

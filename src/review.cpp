@@ -4,6 +4,7 @@
 #include <wrl/client.h>
 
 #include <cwchar>
+#include <iterator>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -67,14 +68,24 @@ bool CaptureWindow(HWND hwnd, const std::wstring& path) {
     int w = rc.right - rc.left;
     int h = rc.bottom - rc.top;
     HDC windowDc = GetWindowDC(hwnd);
+    if (!windowDc) {
+        Log("capture: GetWindowDC failed (%lu)", GetLastError());
+        return false;
+    }
     HDC mem = CreateCompatibleDC(windowDc);
-    HBITMAP bmp = CreateCompatibleBitmap(windowDc, w, h);
-    HGDIOBJ old = SelectObject(mem, bmp);
-    bool ok = PrintWindow(hwnd, mem, 0x2 /* PW_RENDERFULLCONTENT */) != FALSE;
-    SelectObject(mem, old);
-    if (ok) ok = SavePng(bmp, path);
-    DeleteObject(bmp);
-    DeleteDC(mem);
+    HBITMAP bmp = mem ? CreateCompatibleBitmap(windowDc, w, h) : nullptr;
+    bool ok = false;
+    if (!mem || !bmp) {
+        Log("capture: no bitmap for %dx%d (%lu)", w, h, GetLastError());
+    } else {
+        HGDIOBJ old = SelectObject(mem, bmp);
+        ok = PrintWindow(hwnd, mem, 0x2 /* PW_RENDERFULLCONTENT */) != FALSE;
+        SelectObject(mem, old);
+        if (!ok) Log("capture: PrintWindow failed (%lu)", GetLastError());
+        else if (!(ok = SavePng(bmp, path))) Log("capture: PNG encode failed");
+    }
+    if (bmp) DeleteObject(bmp);
+    if (mem) DeleteDC(mem);
     ReleaseDC(hwnd, windowDc);
     return ok;
 }
@@ -93,6 +104,24 @@ void PumpFor(DWORD ms) {
     }
 }
 
+// The first popup menu window of this process; another program's open menu must not be photographed.
+HWND FindOwnMenuWindow() {
+    HWND found = nullptr;
+    EnumWindows(
+        [](HWND hwnd, LPARAM lp) -> BOOL {
+            wchar_t cls[16] = L"";
+            GetClassNameW(hwnd, cls, static_cast<int>(std::size(cls)));
+            if (wcscmp(cls, L"#32768") != 0) return TRUE;
+            DWORD pid = 0;
+            GetWindowThreadProcessId(hwnd, &pid);
+            if (pid != GetCurrentProcessId()) return TRUE;
+            *reinterpret_cast<HWND*>(lp) = hwnd;
+            return FALSE;
+        },
+        reinterpret_cast<LPARAM>(&found));
+    return found;
+}
+
 struct MenuShot {
     std::wstring path;
     int tries = 0;
@@ -105,7 +134,7 @@ LRESULT CALLBACK MenuOwnerProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
     if (msg == WM_MEASUREITEM && TrayMenuMeasure(reinterpret_cast<MEASUREITEMSTRUCT*>(lParam))) return TRUE;
     if (msg == WM_DRAWITEM && TrayMenuDraw(reinterpret_cast<const DRAWITEMSTRUCT*>(lParam))) return TRUE;
     if (msg == WM_TIMER && wParam == 1) {
-        HWND menu = FindWindowW(L"#32768", nullptr);
+        HWND menu = FindOwnMenuWindow();
         if (menu) {
             g_menuShot.saved = CaptureWindow(menu, g_menuShot.path);
             KillTimer(hwnd, 1);

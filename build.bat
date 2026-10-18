@@ -37,6 +37,11 @@ rem An open settings window takes the first close request, so ask again each rou
 for /l %%i in (1,1,20) do (
     tasklist /fi "imagename eq AdMutify.exe" /nh 2>nul | find /i "AdMutify.exe" >nul && (taskkill /im AdMutify.exe >nul 2>&1 & ping -n 2 127.0.0.1 >nul)
 )
+tasklist /fi "imagename eq AdMutify.exe" /nh 2>nul | find /i "AdMutify.exe" >nul && (
+    echo AdMutify is still running ^(elevated or hung^). Close it and build again.
+    set "RC=1"
+    goto :end
+)
 if not exist dist mkdir dist
 for /f "delims=" %%f in ('dir /b /a-d dist 2^>nul') do del /f /q "dist\%%f" >nul 2>&1
 for /d %%d in (dist\*) do rd /s /q "%%d" >nul 2>&1
@@ -92,6 +97,8 @@ popd
 rem --- installer
 set "ISCC=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
 if not exist "%ISCC%" set "ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
+if not exist "%ISCC%" for %%k in ("HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1" "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1") do if not exist "%ISCC%" for /f "tokens=2,*" %%a in ('reg query %%k /v InstallLocation 2^>nul ^| find "InstallLocation"') do set "ISCC=%%b\ISCC.exe"
+if not exist "%ISCC%" for /f "delims=" %%p in ('where ISCC.exe 2^>nul') do set "ISCC=%%p"
 if not exist "installer\AdMutify.iss" (
     echo Warning: installer skipped, installer\AdMutify.iss is missing.
 ) else if not exist "%ISCC%" (

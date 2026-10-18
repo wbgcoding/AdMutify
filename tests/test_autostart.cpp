@@ -81,6 +81,37 @@ TEST(autostart_disabled_in_task_manager) {
     RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\AdMutifyTest");
 }
 
+namespace {
+
+bool RunValueExists(const wchar_t* name) {
+    HKEY key = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, kTestKey, 0, KEY_QUERY_VALUE, &key) != ERROR_SUCCESS) return false;
+    bool found = RegQueryValueExW(key, name, nullptr, nullptr, nullptr, nullptr) == ERROR_SUCCESS;
+    RegCloseKey(key);
+    return found;
+}
+
+}  // namespace
+
+TEST(autostart_portable_uses_own_name) {
+    UseTestKey();
+    SetAutostartPortableOverride(0);
+    CHECK(SetAutostart(true));
+    CHECK(RunValueExists(L"AdMutify"));
+    SetAutostartPortableOverride(1);
+    // The installed entry points at this same exe, so it counts for a portable copy and is migrated.
+    CHECK(IsAutostartEnabled());
+    CHECK(SetAutostart(true));
+    CHECK(RunValueExists(L"AdMutify Portable"));
+    CHECK(!RunValueExists(L"AdMutify"));
+    CHECK(IsAutostartEnabled());
+    CHECK(SetAutostart(false));
+    CHECK(!RunValueExists(L"AdMutify Portable"));
+    CHECK(!IsAutostartEnabled());
+    SetAutostartPortableOverride(-1);
+    RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\AdMutifyTest");
+}
+
 TEST(autostart_guard_fixture) {
     UseTestKey();
     CHECK(HasAutostartGuardViolation("void f() { SetAutostart(true); }"));

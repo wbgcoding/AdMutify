@@ -7,3 +7,5 @@ bool SetAutostart(bool enable);
 bool StartupApprovedMeansDisabled(const unsigned char* data, unsigned long size);
 // Test seam: use another key path below HKCU instead of the real Run key.
 void SetAutostartKeyOverride(const wchar_t* subKey);
+// Test seam: 1 or 0 forces portable or installed naming, -1 follows the real exe.
+void SetAutostartPortableOverride(int portable);

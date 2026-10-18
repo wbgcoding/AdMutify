@@ -686,6 +686,11 @@ std::wstring FormatPercent(StrId id, int percent) {
 std::wstring TooltipText(const wchar_t* status) {
     std::wstring t = L"AdMutify\n";
     t += status;
-    if (t.size() > 127) t.resize(127);
+    if (t.size() > 127) {
+        // Never end on a lone high surrogate: the shell would show a broken character.
+        size_t keep = 127;
+        if (t[keep - 1] >= 0xD800 && t[keep - 1] <= 0xDBFF) --keep;
+        t.resize(keep);
+    }
     return t;
 }
