@@ -16,6 +16,11 @@ All notable changes to this project are documented here. The format follows Keep
 - The tray icon shows reliably when AdMutify is started twice in a row; unplugging an audio device updates at once.
 - Setup: cancelling keeps AdMutify running, a silent update starts it again, an all-users setup notices AdMutify running for another user, and uninstalling only removes the autostart entry of the installed copy.
 - Settings: concurrent saves are not lost, the window follows a changed Windows text size, and a settings file from a newer version is reported.
+- A silent update closes a running AdMutify and starts it again instead of stopping; a silent portable setup needs its own folder and never turns an installed copy portable.
+- The settings window fits the screen at high scaling or large text, and arrow keys, typed letters or the mouse wheel on a choice box no longer switch the choice by themselves.
+- A large or sleeping network music folder no longer delays the restore after an ad.
+- Turning off "Start with Windows" also clears Task Manager's entry; a recovery file from a newer version is kept.
+- Translation details in German, Turkish, Japanese and Polish.
 
 ## [1.1.0] - 2026-10-10
 

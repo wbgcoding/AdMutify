@@ -57,7 +57,7 @@ AdMutify does not modify Spotify in any way: no patching, no code injection, no 
 | During videos in other apps | Do nothing, lower Spotify, mute Spotify or pause Spotify while a browser or video player plays sound for a few seconds. Off by default. Lowering uses its own "Lower to" level (0 to 90 percent). Pausing continues playback when the video ends. |
 | Language | System (follows Windows), or one of English, Deutsch, Español, Português (Brasil), Italiano, Nederlands, Polski, Türkçe, 日本語 and 简体中文. The installer speaks the same languages. |
 
-Settings are stored in `%APPDATA%\AdMutify` (portable: next to the exe), logs in `%LOCALAPPDATA%\AdMutify\logs`. Uninstalling asks whether these should be deleted too.
+Settings are stored in `%APPDATA%\AdMutify` (portable: next to the exe), logs in `%LOCALAPPDATA%\AdMutify\logs` (portable: in `logs` next to the exe). Uninstalling asks whether these should be deleted too.
 
 ## Privacy
 

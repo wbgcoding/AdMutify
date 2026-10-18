@@ -7,7 +7,7 @@
 ;
 ; Two rules from the original worth repeating: a message that has no full stop at the end must
 ; not gain one, because Setup appends it itself; and the "&" marks a keyboard accelerator, in
-; Chinese written as a suffix in parentheses - 下一步(&N).
+; Chinese written as a suffix in parentheses, for example 下一步(&N).
 
 [LangOptions]
 ; The following three entries are very important. Be sure to read and
