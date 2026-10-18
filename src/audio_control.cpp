@@ -49,7 +49,7 @@ std::wstring UnescapeField(std::string_view s) {
         if (s[i] == '%' && i + 2 < s.size()) {
             unsigned v = 0;
             auto r = std::from_chars(s.data() + i + 1, s.data() + i + 3, v, 16);
-            if (r.ec == std::errc()) {
+            if (r.ec == std::errc() && r.ptr == s.data() + i + 3) {
                 utf8 += static_cast<char>(v);
                 i += 2;
                 continue;

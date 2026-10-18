@@ -127,6 +127,16 @@ TEST(audio_record_freshness) {
     CHECK(RecordFresh(now + 5000, now));
 }
 
+TEST(audio_state_file_keeps_invalid_escapes) {
+    std::vector<SavedSession> out;
+    CHECK(ParseStateFile("version=2\r\nsession=d|i%4G|s%|l|0|0.5|0.25\r\n", out));
+    CHECK(out.size() == 1);
+    if (out.size() == 1) {
+        CHECK(out[0].instanceId == L"i%4G");
+        CHECK(out[0].sessionId == L"s%");
+    }
+}
+
 TEST(audio_state_file_skips_bad_lines) {
     std::vector<SavedSession> out;
     const char* text =
