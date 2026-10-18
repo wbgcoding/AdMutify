@@ -76,6 +76,8 @@ TEST(audio_state_file_roundtrip) {
     in[1].oldMute = false;
     in[1].oldVolume = 1.0f;
     in[1].appliedVolume = 0.2f;
+    in[0].savedAt = 1790000000;
+    in[1].savedAt = 0;
 
     std::string text = FormatStateFile(in);
     std::vector<SavedSession> out;
@@ -90,6 +92,7 @@ TEST(audio_state_file_roundtrip) {
             CHECK(out[i].oldMute == in[i].oldMute);
             CHECK(out[i].oldVolume == in[i].oldVolume);
             CHECK(out[i].appliedVolume == in[i].appliedVolume);
+            CHECK(out[i].savedAt == in[i].savedAt);
         }
     }
 }
@@ -105,6 +108,25 @@ TEST(audio_state_file_rejects_other_versions) {
     CHECK(!ParseStateFile("", out));
 }
 
+TEST(audio_state_file_accepts_files_without_saved_time) {
+    std::vector<SavedSession> out;
+    CHECK(ParseStateFile("version=2\r\nsession=d|i|s|l|0|0.5|0.25\r\nsession=d|j|t|m|1|0.5|0.5|1790000000\r\n", out));
+    CHECK(out.size() == 2);
+    if (out.size() == 2) {
+        CHECK(out[0].savedAt == 0);
+        CHECK(out[1].savedAt == 1790000000);
+    }
+}
+
+TEST(audio_record_freshness) {
+    const uint64_t now = 1790000000;
+    CHECK(!RecordFresh(0, now));
+    CHECK(RecordFresh(now, now));
+    CHECK(RecordFresh(now - kPendingMaxAgeSeconds, now));
+    CHECK(!RecordFresh(now - kPendingMaxAgeSeconds - 1, now));
+    CHECK(RecordFresh(now + 5000, now));
+}
+
 TEST(audio_state_file_skips_bad_lines) {
     std::vector<SavedSession> out;
     const char* text =
@@ -117,7 +139,7 @@ TEST(audio_state_file_skips_bad_lines) {
         "session=d|i|s|l|0|0.5x|0.5\r\n"       // trailing garbage
         "session=d|i|s|l|0|0.5|\r\n"           // empty volume
         "session=d|i|l|0|0.5|0.5\r\n"          // six fields
-        "session=d|i|s|l|0|0.5|0.5|extra\r\n"  // eight fields
+        "session=d|i|s|l|0|0.5|0.5|extra\r\n"  // non numeric eighth field
         "session=d|i|s|l|0|0.5|0.25\r\n";      // valid
     CHECK(ParseStateFile(text, out));
     CHECK(out.size() == 1);

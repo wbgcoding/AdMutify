@@ -2,6 +2,7 @@
 
 #include <windows.h>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -26,7 +27,14 @@ struct SavedSession {
     float oldVolume = 1.0f;
     // Lower mode: the volume AdMutify set. Mute mode: unused, the applied state is mute on.
     float appliedVolume = 1.0f;
+    // Unix seconds when the state was applied; 0 = unknown (a file from before this field), treated as old.
+    uint64_t savedAt = 0;
 };
+
+// Records older than this are no longer matched by session id and are dropped when unmatched.
+inline constexpr uint64_t kPendingMaxAgeSeconds = 24 * 60 * 60;
+// True when a record saved at savedAt (unix seconds) is still young enough to match by session id.
+bool RecordFresh(uint64_t savedAt, uint64_t nowUnix);
 
 // A session created while a reaction is applied can come up already carrying AdMutify's mute or level
 // (Windows remembers it per app). When a sibling record (same device, same sessionId, same mode) shows that the live

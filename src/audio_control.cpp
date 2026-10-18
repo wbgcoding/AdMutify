@@ -223,6 +223,7 @@ struct Entry {
     float oldVolume = 1.0f;
     float appliedVolume = 1.0f;
     int slot = -1;
+    uint64_t appliedAt = 0;
     // The user changed this session during the current reaction: Apply skips it until the next full Restore.
     bool overridden = false;
 };
@@ -248,6 +249,16 @@ bool PutOld(ISimpleAudioVolume* v, Mode mode, bool oldMute, float oldVolume) {
 }
 
 constexpr size_t kMaxPending = 16;
+
+uint64_t NowUnix() {
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    ULARGE_INTEGER u;
+    u.LowPart = ft.dwLowDateTime;
+    u.HighPart = ft.dwHighDateTime;
+    // 100 ns ticks since 1601 to seconds since 1970.
+    return u.QuadPart / 10000000ULL - 11644473600ULL;
+}
 
 // The crash thread reads a slot without locks while the main thread fills it: every field is written first and
 // vol is published last (release), the reader checks vol first (acquire).
@@ -457,6 +468,7 @@ struct AudioControl::Impl {
         s.oldMute = e.oldMute != FALSE;
         s.oldVolume = e.oldVolume;
         s.appliedVolume = e.appliedVolume;
+        s.savedAt = e.appliedAt;
         return s;
     }
 
@@ -507,13 +519,17 @@ struct AudioControl::Impl {
         bool changed = forceWrite;
         if (!pending.empty()) {
             std::vector<bool> done(pending.size(), false);
+            const uint64_t now = NowUnix();
             for (auto& dev : Devices()) {
                 for (auto& s : SessionsOf(dev, false)) {
                     if (IsAppliedEntry(dev.id, s.instanceId)) continue;
                     for (size_t i = 0; i < pending.size(); ++i) {
                         const SavedSession& p = pending[i];
                         if (p.deviceId != dev.id) continue;
-                        bool match = p.instanceId == s.instanceId || (!p.sessionId.empty() && p.sessionId == s.sessionId);
+                        // The instance id is unique to one session; the session id repeats across restarts, so it only
+                        // counts while the record is young.
+                        bool match = p.instanceId == s.instanceId ||
+                                     (!p.sessionId.empty() && p.sessionId == s.sessionId && RecordFresh(p.savedAt, now));
                         if (!match) continue;
                         Cur c = CompareApplied(s.vol.Get(), p.mode, p.appliedVolume);
                         if (c == Cur::Unreadable) continue;
@@ -527,7 +543,7 @@ struct AudioControl::Impl {
             }
             std::vector<SavedSession> keep;
             for (size_t i = 0; i < pending.size(); ++i)
-                if (!done[i]) keep.push_back(std::move(pending[i]));
+                if (!done[i] && RecordFresh(pending[i].savedAt, now)) keep.push_back(std::move(pending[i]));
             if (keep.size() != done.size()) changed = true;
             pending = std::move(keep);
         }
@@ -552,8 +568,9 @@ struct AudioControl::Impl {
                 return;
             }
         }
+        const uint64_t now = NowUnix();
         for (const SavedSession& p : pending) {
-            if (p.deviceId != e.deviceId || p.sessionId != e.sessionId) continue;
+            if (p.deviceId != e.deviceId || p.sessionId != e.sessionId || !RecordFresh(p.savedAt, now)) continue;
             if (InheritedOld(mode, p, liveMute, e.oldVolume, m, v)) {
                 e.oldMute = m ? TRUE : FALSE;
                 e.oldVolume = v;
@@ -669,6 +686,11 @@ bool UserOverrode(Mode mode, bool expectedMute, float expectedVolume, bool newMu
     return std::fabs(newVolume - expectedVolume) > 0.001f;
 }
 
+bool RecordFresh(uint64_t savedAt, uint64_t nowUnix) {
+    // A clock set back leaves savedAt in the future: that still counts as young.
+    return savedAt != 0 && (savedAt >= nowUnix || nowUnix - savedAt <= kPendingMaxAgeSeconds);
+}
+
 bool InheritedOld(Mode mode, const SavedSession& sibling, bool liveMute, float liveVolume, bool& oldMute, float& oldVolume) {
     if (sibling.mode != mode) return false;
     bool same = mode == Mode::Mute ? liveMute : std::fabs(liveVolume - sibling.appliedVolume) <= 0.001f;
@@ -692,7 +714,8 @@ std::string FormatStateFile(const std::vector<SavedSession>& sessions) {
         std::snprintf(oldVol, sizeof(oldVol), "%.9g", static_cast<double>(s.oldVolume));
         std::snprintf(appliedVol, sizeof(appliedVol), "%.9g", static_cast<double>(s.appliedVolume));
         out += "session=" + EscapeField(s.deviceId) + "|" + EscapeField(s.instanceId) + "|" + EscapeField(s.sessionId) + "|" +
-               (s.mode == Mode::Mute ? "m" : "l") + "|" + (s.oldMute ? "1" : "0") + "|" + oldVol + "|" + appliedVol + "\r\n";
+               (s.mode == Mode::Mute ? "m" : "l") + "|" + (s.oldMute ? "1" : "0") + "|" + oldVol + "|" + appliedVol + "|" +
+               std::to_string(s.savedAt) + "\r\n";
     }
     return out;
 }
@@ -744,7 +767,8 @@ bool ParseStateFile(std::string_view text, std::vector<SavedSession>& out) {
             parts[n++] = rest.substr(start, bar - start);
             start = bar + 1;
         }
-        if (n != 7) continue;
+        // The eighth field (saved time) is missing in files from before it existed: 0 = unknown.
+        if (n != 7 && n != 8) continue;
         if (parts[3] != "m" && parts[3] != "l") continue;
         if ((parts[4] != "0" && parts[4] != "1")) continue;
         SavedSession s;
@@ -754,6 +778,10 @@ bool ParseStateFile(std::string_view text, std::vector<SavedSession>& out) {
         s.sessionId = UnescapeField(parts[2]);
         s.mode = parts[3] == "m" ? Mode::Mute : Mode::Lower;
         s.oldMute = parts[4] == "1";
+        if (n == 8) {
+            auto r = std::from_chars(parts[7].data(), parts[7].data() + parts[7].size(), s.savedAt);
+            if (parts[7].empty() || r.ec != std::errc() || r.ptr != parts[7].data() + parts[7].size()) continue;
+        }
         out.push_back(std::move(s));
     }
     if (!sawVersion || !versionOk) {
@@ -821,6 +849,7 @@ int AudioControl::Apply(Mode mode, int percent) {
             if (FAILED(e->vol->GetMute(&e->oldMute)) || FAILED(e->vol->GetMasterVolume(&e->oldVolume))) continue;
             impl_->InheritOld(*e, mode, fresh);
             e->applied = true;
+            e->appliedAt = NowUnix();
             e->appliedMode = mode;
             e->appliedVolume = mode == Mode::Mute ? e->oldVolume : LoweredVolume(e->oldVolume, percent);
             if (mode == Mode::Mute) e->ev->Expect(mode, true, e->oldVolume);
