@@ -394,7 +394,10 @@ enum class Placement { Center, KeepFit, Keep };
 // Center: middle of the monitor under the cursor. KeepFit: same top-left, pulled back into the monitor the window is
 // on. Keep: same top-left untouched, used after a DPI change where Windows already chose the spot; pulling the window
 // back there would move it to the old monitor and flip the scaling again.
-void Layout(Placement placement) {
+// density 0 is the normal layout; 1 and 2 tighten rows and gaps step by step while the window is taller than the
+// monitor's work area (high scaling, large text, small screens).
+constexpr int kMaxDensity = 2;
+void Layout(Placement placement, int density = 0) {
     const bool center = placement == Placement::Center;
     // WM_SETREDRAW TRUE on a hidden window makes it visible (while still being created, before the theme is set).
     const bool pauseRedraw = IsWindowVisible(w.hwnd) != FALSE;
@@ -416,10 +419,18 @@ void Layout(Placement placement) {
 
     const int u = tm.tmHeight;
     const int ave = tm.tmAveCharWidth;
-    const int rowH = u * 2;
-    const int margin = u * 5 / 4;
+    // Per density: row height, outer margin, card padding and the gaps between cards, in quarters or sixths of u.
+    static constexpr int kRowQ[] = {8, 7, 6};
+    static constexpr int kMarginQ[] = {5, 4, 3};
+    static constexpr int kVpadSixths[] = {4, 3, 2};
+    static constexpr int kCardGapQ[] = {3, 2, 1};
+    static constexpr int kSectionGapQ[] = {4, 3, 2};
+    const int rowH = u * kRowQ[density] / 4;
+    const int margin = u * kMarginQ[density] / 4;
     const int pad = u;
-    const int vpad = u * 2 / 3;
+    const int vpad = u * kVpadSixths[density] / 6;
+    const int cardGap = u * kCardGapQ[density] / 4;
+    const int sectionGap = u * kSectionGapQ[density] / 4;
     const int indent = GetSystemMetricsForDpi(SM_CXMENUCHECK, w.dpi) + u / 2;
     const int valW = 6 * ave;
     const int sliderMin = 10 * ave;
@@ -464,10 +475,10 @@ void Layout(Placement placement) {
     Place(IDC_HIDETRAY, x0, y, innerW, hideTrayH);
     y += hideTrayH + vpad;
     w.cards[0].bottom = y;
-    y += u;
+    y += sectionGap;
 
     // Section heading and card 2: what happens during an ad.
-    const int headH = u * 3 / 2;
+    const int headH = density == kMaxDensity ? u * 5 / 4 : u * 3 / 2;
     Place(IDC_GROUP_ADS, margin + u / 4, y, cardW - u / 4, headH);
     y += headH + u / 3;
     w.cards[1] = {margin, y, margin + cardW, 0};
@@ -481,7 +492,7 @@ void Layout(Placement placement) {
     Place(IDC_PERCENT_VALUE, x0 + innerW - valW, y, valW, rowH);
     y += rowH + vpad;
     w.cards[1].bottom = y;
-    y += u * 3 / 4;
+    y += cardGap;
 
     // Cards 3 to 5: ad music, video reaction and language, each one label and one choice box; the music card adds
     // the path and a volume slider below, the video card a level slider, lined up with the ad slider.
@@ -518,14 +529,14 @@ void Layout(Placement placement) {
         card.bottom = y;
     };
     comboRow(w.cards[2], IDC_MUSIC_LABEL, IDC_MUSIC, musicLabelW, musicItemsW, Extra::Music);
-    y += u * 3 / 4;
+    y += cardGap;
     comboRow(w.cards[3], IDC_MEDIA_LABEL, IDC_MEDIA, mediaLabelW, mediaItemsW, Extra::MediaLevel);
-    y += u * 3 / 4;
+    y += cardGap;
     comboRow(w.cards[4], IDC_LANGUAGE_LABEL, IDC_LANGUAGE, labelTextW, languageItemsW, Extra::None);
-    y += u;
+    y += sectionGap;
 
     // Footer: version, reset link, close button.
-    const int editH = u * 3 / 2;
+    const int editH = density == kMaxDensity ? u * 5 / 4 : u * 3 / 2;
     Place(IDC_VERSION, margin, y, cardW, editH);
     y += editH + u / 2;
     const int closeW = std::max(12 * ave, closeTextW + 2 * u);
@@ -549,6 +560,12 @@ void Layout(Placement placement) {
     mi.cbSize = sizeof(mi);
     GetMonitorInfoW(center ? MonitorFromPoint(anchor, MONITOR_DEFAULTTONEAREST) : MonitorFromWindow(w.hwnd, MONITOR_DEFAULTTONEAREST),
                     &mi);
+    const int workH = static_cast<int>(mi.rcWork.bottom - mi.rcWork.top);
+    if (density < kMaxDensity && winH > workH) {
+        if (pauseRedraw) SendMessageW(w.hwnd, WM_SETREDRAW, TRUE, 0);
+        Layout(placement, density + 1);
+        return;
+    }
     int x, yy;
     if (center) {
         x = mi.rcWork.left + (mi.rcWork.right - mi.rcWork.left - winW) / 2;
@@ -562,6 +579,12 @@ void Layout(Placement placement) {
         if (yy + winH > mi.rcWork.bottom) yy = mi.rcWork.bottom - winH;
         if (x < mi.rcWork.left) x = mi.rcWork.left;
         if (yy < mi.rcWork.top) yy = mi.rcWork.top;
+    } else if (yy + winH > mi.rcWork.bottom) {
+        // After a DPI change the window may grow past the bottom: move it up, but only while it stays on the same
+        // monitor (a move onto another one would flip the scaling again).
+        const int up = std::max(static_cast<int>(mi.rcWork.top), static_cast<int>(mi.rcWork.bottom) - winH);
+        RECT moved{x, up, x + winW, up + winH};
+        if (MonitorFromRect(&moved, MONITOR_DEFAULTTONEAREST) == MonitorFromWindow(w.hwnd, MONITOR_DEFAULTTONEAREST)) yy = up;
     }
     SetWindowPos(w.hwnd, nullptr, x, yy, winW, winH, SWP_NOZORDER | SWP_NOACTIVATE);
     if (pauseRedraw) SendMessageW(w.hwnd, WM_SETREDRAW, TRUE, 0);

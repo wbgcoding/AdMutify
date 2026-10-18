@@ -311,8 +311,8 @@ int RunDpiTest(const std::wstring& outDir) {
 }
 
 // With every row shown (music folder, video level) and the longest language, the settings window is scaled to 150,
-// 175 and 200 % as after a move to such a monitor. Up to 175 % it must fit the work area with the Close button
-// on screen, and no two visible controls may overlap at any scale. 200 % is only reported.
+// 175 and 200 % as after a move to such a monitor. It must fit the work area with the Close button on screen, and no
+// two visible controls may overlap.
 int RunFitTest(const std::wstring& outDir) {
     SetThemeOverride(1);
     int failures = 0;
@@ -344,12 +344,11 @@ int RunFitTest(const std::wstring& outDir) {
             const LayoutSnap snap = TakeSnap(hwnd);
             RECT close{};
             GetWindowRect(GetDlgItem(hwnd, IDC_CLOSE), &close);
-            const bool strict = dpi <= 168;
             const std::string tag = std::string(LanguageCode(language)) + " " + std::to_string(dpi * 100 / 96) + "%: ";
             Print(tag + "window " + RectText(snap.window) + " work " + RectText(mi.rcWork) + "\n");
             if (snap.window.top < mi.rcWork.top || snap.window.bottom > mi.rcWork.bottom || close.bottom > mi.rcWork.bottom) {
-                Print(tag + (strict ? "does not fit\n" : "does not fit (reported only)\n"));
-                if (strict) ++failures;
+                Print(tag + "does not fit\n");
+                ++failures;
             }
             for (size_t i = 0; i < snap.children.size(); ++i) {
                 for (size_t j = i + 1; j < snap.children.size(); ++j) {
