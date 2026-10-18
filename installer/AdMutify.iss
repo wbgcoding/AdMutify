@@ -408,17 +408,23 @@ end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
-  RunValue: String;
+  RunValue, RunName: String;
+  I: Integer;
 begin
   if CurUninstallStep = usUninstall then
   begin
     // Only remove the autostart entry when it points at the exe being uninstalled, so a portable copy's
     // entry of the same name survives.
-    if RegQueryStringValue(HKCU, RunKey, 'AdMutify', RunValue) and
-       (Pos(Lowercase(ExpandConstant('{app}\AdMutify.exe')), Lowercase(RunValue)) > 0) then
+    // A portable installation made by this setup uses its own value name.
+    for I := 0 to 1 do
     begin
-      RegDeleteValue(HKCU, RunKey, 'AdMutify');
-      RegDeleteValue(HKCU, StartupApprovedKey, 'AdMutify');
+      if I = 0 then RunName := 'AdMutify' else RunName := 'AdMutify Portable';
+      if RegQueryStringValue(HKCU, RunKey, RunName, RunValue) and
+         (Pos(Lowercase(ExpandConstant('{app}\AdMutify.exe')), Lowercase(RunValue)) > 0) then
+      begin
+        RegDeleteValue(HKCU, RunKey, RunName);
+        RegDeleteValue(HKCU, StartupApprovedKey, RunName);
+      end;
     end;
   end;
   if (CurUninstallStep = usPostUninstall) and DeleteUserData then
