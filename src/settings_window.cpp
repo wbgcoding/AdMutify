@@ -47,6 +47,7 @@ struct Win {
     int menuOpenId = 0;
     // A click on the box that closed its menu must not open it again.
     ULONGLONG ignoreClickUntil = 0;
+    int ignoreClickId = 0;
     RECT cards[4]{};
     bool loading = false;
     bool classRegistered = false;
@@ -683,6 +684,7 @@ void ShowComboMenu(HWND combo) {
         while (PeekMessageW(&pending, combo, WM_LBUTTONDOWN, WM_LBUTTONDBLCLK, PM_REMOVE)) {
         }
         w.ignoreClickUntil = GetTickCount64() + 400;
+        w.ignoreClickId = id;
     }
     InvalidateRect(combo, nullptr, FALSE);
     const int chosen = static_cast<int>(cmd) - 1;
@@ -746,7 +748,8 @@ LRESULT CALLBACK ComboProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_
         case WM_LBUTTONDOWN:
         case WM_LBUTTONDBLCLK:
             SetFocus(h);
-            if (GetTickCount64() < w.ignoreClickUntil) {
+            // Only the box that just closed its menu swallows the click; another box opens normally.
+            if (GetTickCount64() < w.ignoreClickUntil && GetDlgCtrlID(h) == w.ignoreClickId) {
                 w.ignoreClickUntil = 0;
                 return 0;
             }
@@ -998,21 +1001,31 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (wParam == SPI_SETHIGHCONTRAST ||
                 (lParam && wcscmp(reinterpret_cast<const wchar_t*>(lParam), L"ImmersiveColorSet") == 0))
                 RefreshTheme();
+            else if (wParam == SPI_SETNONCLIENTMETRICS) {
+                // Text size or system font changed.
+                MakeFonts();
+                Layout(Placement::KeepFit);
+            }
+            return 0;
+        case WM_THEMECHANGED:
+            MakeFonts();
+            Layout(Placement::KeepFit);
             return 0;
         case WM_SYSCOLORCHANGE: RefreshTheme(); return 0;
         case WM_CLOSE: DestroyWindow(hwnd); return 0;
         case WM_DESTROY:
+            w.tip = nullptr;
+            w.hwnd = nullptr;
+            w.hotId = 0;
+            return 0;
+        case WM_NCDESTROY:
+            // Fonts and brushes go last, after the child windows that still use them are gone.
             if (w.font) DeleteObject(w.font);
             if (w.headFont) DeleteObject(w.headFont);
             if (w.bg) DeleteObject(w.bg);
             if (w.card) DeleteObject(w.card);
             w.font = w.headFont = nullptr;
-            w.tip = nullptr;
             w.bg = w.card = nullptr;
-            w.hwnd = nullptr;
-            w.hotId = 0;
-            return 0;
-        case WM_NCDESTROY:
             if (w.gdiplus) Gdiplus::GdiplusShutdown(w.gdiplus);
             w.gdiplus = 0;
             break;
