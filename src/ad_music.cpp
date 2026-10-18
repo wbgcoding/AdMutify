@@ -6,6 +6,8 @@
 #include <shlwapi.h>
 
 #include <algorithm>
+#include <atomic>
+#include <thread>
 
 #include "app_messages.h"
 #include "crash.h"
@@ -113,6 +115,18 @@ constexpr ULONGLONG kFadeOutMs = 800;
 constexpr UINT kFadeTickMs = 30;
 // Unplayable files in a row before the player gives up for this ad.
 constexpr int kMaxErrors = 10;
+// WM_APP_MUSIC event code of a finished folder scan; Media Foundation's own event codes stay far below it.
+constexpr WORD kEventScanDone = 0xFFFF;
+
+// Unique across players, so a result posted for a player that is gone never matches a newer one.
+std::atomic<UINT> g_scanIds{0};
+
+struct ScanResult {
+    UINT id;
+    std::vector<std::wstring> files;
+};
+
+uint32_t ShuffleSeed() { return static_cast<uint32_t>(GetTickCount64()) ^ GetCurrentProcessId(); }
 
 // Runs on a Media Foundation worker thread: it only forwards the events the player needs to the message window.
 class EngineNotify final : public IMFMediaEngineNotify {
@@ -181,6 +195,59 @@ struct AdMusicPlayer::Impl {
     ULONGLONG lastTick = 0;
     bool timerRunning = false;
     int errors = 0;
+    // A folder is read on a worker thread (it may be large or on a sleeping network drive). The result with the
+    // current id is used; a scan started at a round end waits in nextRound until the round after it begins.
+    UINT scanId = 0;
+    bool scanning = false;
+    bool scanForRound = false;
+    bool haveNextRound = false;
+    std::vector<std::wstring> nextRound;
+
+    void StartScan(bool forRound) {
+        if (scanning || !hwnd) return;
+        scanning = true;
+        scanForRound = forRound;
+        scanId = ++g_scanIds;
+        const UINT id = scanId;
+        const HWND target = hwnd;
+        const std::wstring folder = path;
+        try {
+            std::thread([id, target, folder] {
+                auto* r = new ScanResult{id, ScanMusicFolder(folder)};
+                if (!PostMessageW(target, WM_APP_MUSIC, MAKEWPARAM(kEventScanDone, 0), reinterpret_cast<LPARAM>(r))) delete r;
+            }).detach();
+        } catch (...) {
+            scanning = false;
+            Log("music scan_failed");
+        }
+    }
+
+    void CancelScan() {
+        scanning = false;
+        scanId = 0;
+        haveNextRound = false;
+        nextRound.clear();
+    }
+
+    void OnScanDone(ScanResult& r) {
+        if (!scanning || r.id != scanId) return;
+        scanning = false;
+        // A round scan that finds the list emptied meanwhile (every track failed) serves as a fresh start.
+        if (scanForRound && listLoaded) {
+            haveNextRound = !r.files.empty();
+            nextRound = std::move(r.files);
+            return;
+        }
+        if (r.files.empty()) {
+            // Not remembered: the next ad looks again (the drive may be back by then).
+            Log("music none");
+            return;
+        }
+        list.Reset(std::move(r.files), mode == AdMusic::Shuffle, ShuffleSeed());
+        listLoaded = true;
+        resumeAt = 0;
+        if (active && !engine) StartPlayback();
+    }
 
     void StartTimer() {
         lastTick = GetTickCount64();
@@ -196,24 +263,29 @@ struct AdMusicPlayer::Impl {
         if (engine) engine->SetVolume(volume / 100.0 * fade);
     }
 
+    // False when there is nothing to play yet; a folder is then scanned and playback starts when it is read.
     bool EnsureList() {
         if (listLoaded) return !list.Empty();
-        std::vector<std::wstring> files;
-        if (mode == AdMusic::File) {
-            const DWORD attr = GetFileAttributesW(path.c_str());
-            if (!path.empty() && attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY)) files.push_back(path);
-        } else {
-            files = ScanMusicFolder(path);
+        if (mode != AdMusic::File) {
+            StartScan(false);
+            return false;
         }
-        if (files.empty()) {
-            // Not remembered: the next ad looks again (the drive may be back by then).
+        const DWORD attr = GetFileAttributesW(path.c_str());
+        if (path.empty() || attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY)) {
             Log("music none");
             return false;
         }
-        list.Reset(std::move(files), mode == AdMusic::Shuffle, static_cast<uint32_t>(GetTickCount64()) ^ GetCurrentProcessId());
+        list.Reset({path}, false, ShuffleSeed());
         listLoaded = true;
         resumeAt = 0;
         return true;
+    }
+
+    void StartPlayback() {
+        errors = 0;
+        if (!CreateEngine()) return;
+        fade = 0;
+        Load();
     }
 
     bool CreateEngine() {
@@ -307,10 +379,7 @@ struct AdMusicPlayer::Impl {
             return;
         }
         if (!EnsureList()) return;
-        errors = 0;
-        if (!CreateEngine()) return;
-        fade = 0;
-        Load();
+        StartPlayback();
     }
 
     void End() {
@@ -340,6 +409,7 @@ void AdMusicPlayer::Configure(AdMusic mode, const std::wstring& path, int volume
     if (mode != m.mode || path != m.path) {
         const bool wasPlaying = m.engine != nullptr;
         m.ReleaseEngine(false);
+        m.CancelScan();
         m.mode = mode;
         m.path = path;
         m.listLoaded = false;
@@ -362,6 +432,11 @@ void AdMusicPlayer::SetActive(bool active) {
 
 void AdMusicPlayer::OnEvent(WPARAM wParam, LPARAM lParam) {
     Impl& m = *impl_;
+    if (LOWORD(wParam) == kEventScanDone) {
+        std::unique_ptr<ScanResult> r(reinterpret_cast<ScanResult*>(lParam));
+        if (r) m.OnScanDone(*r);
+        return;
+    }
     if (!m.engine || static_cast<UINT>(lParam) != m.generation) return;
     switch (LOWORD(wParam)) {
         case MF_MEDIA_ENGINE_EVENT_LOADEDMETADATA: {
@@ -389,12 +464,15 @@ void AdMusicPlayer::OnEvent(WPARAM wParam, LPARAM lParam) {
             m.resumeAt = 0;
             const std::wstring last = m.list.Current();
             if (m.list.Next() && m.mode != AdMusic::File) {
-                // A round is over: files added to the folder meanwhile join the next one.
-                std::vector<std::wstring> files = ScanMusicFolder(m.path);
-                if (!files.empty()) {
-                    m.list.Reset(std::move(files), m.mode == AdMusic::Shuffle, static_cast<uint32_t>(GetTickCount64()));
+                // A round is over: files added to the folder meanwhile join the next one. The folder read at the
+                // last round end is used now, and a new read starts in the background for the round after.
+                if (m.haveNextRound) {
+                    m.list.Reset(std::move(m.nextRound), m.mode == AdMusic::Shuffle, ShuffleSeed());
+                    m.nextRound.clear();
+                    m.haveNextRound = false;
                     if (m.list.Size() > 1 && m.list.Current() == last) m.list.Next();
                 }
+                m.StartScan(true);
             }
             Log("music next");
             m.Load();
