@@ -16,6 +16,7 @@ AdMutify is a tiny Windows tray tool that mutes the Spotify desktop app while an
 
 - Detects ads in the Spotify desktop app (regular installer and Microsoft Store version), including Spotify's own promotions for its premium plan.
 - Mutes Spotify during ads, or only lowers it to a percentage you choose.
+- Optionally plays your own music during ads: one file, or a folder shuffled or in name order. When the ad ends the music fades out and continues at the same spot during the next ad.
 - Optionally lowers, mutes or pauses Spotify while a browser or video player plays sound for a few seconds. The lowered level is its own setting. Off by default; short sounds, games and calls are ignored.
 - Restores the exact previous volume afterwards, even if AdMutify was closed or crashed in the middle of an ad.
 - If you change Spotify's volume yourself during an ad, AdMutify leaves it alone.
@@ -52,6 +53,7 @@ AdMutify does not modify Spotify in any way: no patching, no code injection, no 
 | Start with Windows | Adds AdMutify to your Windows startup apps. |
 | No tray icon when starting with Windows | AdMutify runs invisibly after the Windows start. Open it again to show the icon. Starting it yourself always shows the icon. |
 | During ads | Mute Spotify, or lower it to 0 to 90 percent of its current volume. |
+| Music during ads | Off, one file, a folder shuffled or a folder in order (subfolders included; MP3, M4A, AAC, WMA, WAV, FLAC). Choose the file or folder with "Choose"; "Volume" sets how loud it plays (0 to 100 percent). Off by default. |
 | During videos in other apps | Do nothing, lower Spotify, mute Spotify or pause Spotify while a browser or video player plays sound for a few seconds. Off by default. Lowering uses its own "Lower to" level (0 to 90 percent). Pausing continues playback when the video ends. |
 | Language | System (follows Windows), or one of English, Deutsch, Español, Português (Brasil), Italiano, Nederlands, Polski, Türkçe, 日本語 and 简体中文. The installer speaks the same languages. |
 
