@@ -96,16 +96,16 @@ polish.CloseFailed=AdMutify nadal działa i nie można go zamknąć. Zamknij go 
 turkish.CloseFailed=AdMutify hâlâ çalışıyor ve kapatılamadı. Bildirim alanı simgesinden kapatın ve yeniden deneyin.
 japanese.CloseFailed=AdMutify はまだ実行中で、終了できませんでした。通知領域のアイコンから終了して、もう一度お試しください。
 chinesesimplified.CloseFailed=AdMutify 仍在运行，无法关闭。请通过通知区域图标将其关闭，然后重试。
-english.DeleteDataQuestion=Also delete AdMutify's settings and logs?
-german.DeleteDataQuestion=Auch die Einstellungen und Logs von AdMutify löschen?
-spanish.DeleteDataQuestion=¿Eliminar también la configuración y los registros de AdMutify?
-brazilianportuguese.DeleteDataQuestion=Excluir também as configurações e os logs do AdMutify?
-italian.DeleteDataQuestion=Eliminare anche le impostazioni e i log di AdMutify?
-dutch.DeleteDataQuestion=Ook de instellingen en logboeken van AdMutify verwijderen?
-polish.DeleteDataQuestion=Usunąć również ustawienia i dzienniki AdMutify?
-turkish.DeleteDataQuestion=AdMutify ayarları ve günlükleri de silinsin mi?
-japanese.DeleteDataQuestion=AdMutify の設定とログも削除しますか?
-chinesesimplified.DeleteDataQuestion=是否同时删除 AdMutify 的设置和日志？
+english.DeleteDataQuestion=Also delete AdMutify's settings and logs?%n%nFolder: %1
+german.DeleteDataQuestion=Auch die Einstellungen und Logs von AdMutify löschen?%n%nOrdner: %1
+spanish.DeleteDataQuestion=¿Eliminar también la configuración y los registros de AdMutify?%n%nCarpeta: %1
+brazilianportuguese.DeleteDataQuestion=Excluir também as configurações e os logs do AdMutify?%n%nPasta: %1
+italian.DeleteDataQuestion=Eliminare anche le impostazioni e i log di AdMutify?%n%nCartella: %1
+dutch.DeleteDataQuestion=Ook de instellingen en logboeken van AdMutify verwijderen?%n%nMap: %1
+polish.DeleteDataQuestion=Usunąć również ustawienia i dzienniki AdMutify?%n%nFolder: %1
+turkish.DeleteDataQuestion=AdMutify ayarları ve günlükleri de silinsin mi?%n%nKlasör: %1
+japanese.DeleteDataQuestion=AdMutify の設定とログも削除しますか?%n%nフォルダー: %1
+chinesesimplified.DeleteDataQuestion=是否同时删除 AdMutify 的设置和日志？%n%n文件夹: %1
 english.PortableFolderNotWritable=Portable installation needs a folder that can be written to without administrator rights. Choose another folder, for example one in your user folder or on a USB drive.
 german.PortableFolderNotWritable=Die portable Installation braucht einen Ordner, in den ohne Administratorrechte geschrieben werden kann. Wähle einen anderen Ordner, zum Beispiel in deinem Benutzerordner oder auf einem USB-Stick.
 spanish.PortableFolderNotWritable=La instalación portátil necesita una carpeta en la que se pueda escribir sin permisos de administrador. Elige otra carpeta, por ejemplo una de tu carpeta de usuario o de una unidad USB.
@@ -116,6 +116,17 @@ polish.PortableFolderNotWritable=Instalacja przenośna wymaga folderu, do które
 turkish.PortableFolderNotWritable=Taşınabilir kurulum, yönetici hakları olmadan yazılabilen bir klasör gerektirir. Başka bir klasör seçin, örneğin kullanıcı klasörünüzde veya bir USB bellekte.
 japanese.PortableFolderNotWritable=ポータブル インストールには、管理者権限なしで書き込めるフォルダーが必要です。ユーザー フォルダー内や USB メモリー上など、別のフォルダーを選択してください。
 chinesesimplified.PortableFolderNotWritable=便携安装需要一个无需管理员权限即可写入的文件夹。请选择其他文件夹，例如用户文件夹中或 U 盘上的文件夹。
+
+english.OtherModeInstalled=AdMutify is already installed in the other mode (for your account only, or for all users). Install in the existing mode, or uninstall the existing installation first.
+german.OtherModeInstalled=AdMutify ist bereits im anderen Modus installiert (nur für dein Konto oder für alle Benutzer). Installiere im vorhandenen Modus oder deinstalliere die vorhandene Installation zuerst.
+spanish.OtherModeInstalled=AdMutify ya está instalado en el otro modo (solo para tu cuenta o para todos los usuarios). Instálalo en el modo existente o desinstala antes la instalación existente.
+brazilianportuguese.OtherModeInstalled=O AdMutify já está instalado no outro modo (somente para a sua conta ou para todos os usuários). Instale no modo existente ou desinstale antes a instalação existente.
+italian.OtherModeInstalled=AdMutify è già installato nell'altra modalità (solo per il tuo account o per tutti gli utenti). Installa nella modalità esistente oppure disinstalla prima l'installazione esistente.
+dutch.OtherModeInstalled=AdMutify is al in de andere modus geïnstalleerd (alleen voor je account of voor alle gebruikers). Installeer in de bestaande modus of verwijder eerst de bestaande installatie.
+polish.OtherModeInstalled=AdMutify jest już zainstalowany w innym trybie (tylko dla Twojego konta lub dla wszystkich użytkowników). Zainstaluj w istniejącym trybie albo najpierw odinstaluj istniejącą instalację.
+turkish.OtherModeInstalled=AdMutify diğer modda zaten yüklü (yalnızca hesabınız için veya tüm kullanıcılar için). Mevcut modda yükleyin ya da önce mevcut kurulumu kaldırın.
+japanese.OtherModeInstalled=AdMutify は既に別のモード (自分のアカウントのみ、またはすべてのユーザー) でインストールされています。既存のモードでインストールするか、先に既存のインストールをアンインストールしてください。
+chinesesimplified.OtherModeInstalled=AdMutify 已以另一种模式安装（仅当前账户或所有用户）。请使用现有模式安装，或先卸载现有安装。
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Check: not IsPortableMode
@@ -149,6 +160,7 @@ var
   PortableCheck: TNewCheckBox;
   PortableHint: TNewStaticText;
   DeleteUserData: Boolean;
+  WasRunning: Boolean;
 
 function SetForegroundWindow(hWnd: HWND): Boolean; external 'SetForegroundWindow@user32.dll stdcall';
 function AllowSetForegroundWindow(dwProcessId: DWORD): Boolean; external 'AllowSetForegroundWindow@user32.dll stdcall';
@@ -206,9 +218,24 @@ begin
   WizardForm.BringToFront;
 end;
 
+// True when the same app is registered in the install mode this setup is not running in.
+function OtherModeInstalled: Boolean;
+begin
+  if IsAdminInstallMode then
+    Result := RegKeyExists(HKCU, UninstallKey)
+  else
+    Result := RegKeyExists(HKLM64, UninstallKey);
+end;
+
 function InitializeSetup: Boolean;
 begin
   Result := True;
+  if not IsPortableMode and OtherModeInstalled then
+  begin
+    MsgBox(CustomMessage('OtherModeInstalled'), mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
   if ReadUninstallValue('DisplayVersion', InstalledVersion) then
   begin
     if CompareVersions(InstalledVersion, '{#AppVersion}') > 0 then
@@ -220,7 +247,6 @@ begin
   end
   else
     InstalledVersion := '';
-  CloseRunningApp;
 end;
 
 procedure PortableClick(Sender: TObject);
@@ -348,12 +374,18 @@ end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
+  WasRunning := CheckForMutexes(AppMutexName);
   if not CloseRunningApp then
     Result := CustomMessage('CloseFailed');
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Code: Integer;
 begin
+  // A silent upgrade has no finish page to launch from, so bring back an instance that was running.
+  if (CurStep = ssPostInstall) and WizardSilent and WasRunning then
+    ExecAsOriginalUser(ExpandConstant('{app}\AdMutify.exe'), '', '', SW_SHOWNORMAL, ewNoWait, Code);
   if (CurStep = ssPostInstall) and IsPortableMode then
     SaveStringToFile(ExpandConstant('{app}\portable.txt'), 'Settings are stored next to AdMutify.exe.' + #13#10, False);
 end;
@@ -369,15 +401,25 @@ begin
   end;
   DeleteUserData := False;
   if not UninstallSilent then
-    DeleteUserData := MsgBox(CustomMessage('DeleteDataQuestion'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES;
+    // The folder is named so an elevated uninstall shows which account's data it would delete.
+    DeleteUserData := MsgBox(FmtMessage(CustomMessage('DeleteDataQuestion'), [ExpandConstant('{userappdata}\AdMutify')]),
+                             mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  RunValue: String;
 begin
   if CurUninstallStep = usUninstall then
   begin
-    RegDeleteValue(HKCU, RunKey, 'AdMutify');
-    RegDeleteValue(HKCU, StartupApprovedKey, 'AdMutify');
+    // Only remove the autostart entry when it points at the exe being uninstalled, so a portable copy's
+    // entry of the same name survives.
+    if RegQueryStringValue(HKCU, RunKey, 'AdMutify', RunValue) and
+       (Pos(Lowercase(ExpandConstant('{app}\AdMutify.exe')), Lowercase(RunValue)) > 0) then
+    begin
+      RegDeleteValue(HKCU, RunKey, 'AdMutify');
+      RegDeleteValue(HKCU, StartupApprovedKey, 'AdMutify');
+    end;
   end;
   if (CurUninstallStep = usPostUninstall) and DeleteUserData then
   begin
