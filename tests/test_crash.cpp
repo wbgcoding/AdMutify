@@ -46,8 +46,15 @@ TEST(log_last_lines) {
     CleanLogs();
 }
 
-TEST(crash_flag_absent_by_default) {
-    DeleteFileW((LogDir() + L"\\crashed.flag").c_str());
+TEST(crash_flag_follows_the_file) {
+    // The flag is the file the crash path writes: present after a crash, gone once it was handled.
+    const std::wstring flag = LogDir() + L"\\crashed.flag";
+    EnsureDirectory(LogDir());
+    DeleteFileW(flag.c_str());
+    CHECK(!CrashFlagExists());
+    CHECK(WriteFileAtomic(flag, "restored=1\r\n"));
+    CHECK(CrashFlagExists());
+    DeleteFileW(flag.c_str());
     CHECK(!CrashFlagExists());
 }
 

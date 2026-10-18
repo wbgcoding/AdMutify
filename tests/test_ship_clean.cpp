@@ -7,6 +7,7 @@
 
 #include "settings.h"
 #include "test.h"
+#include "util.h"
 
 namespace {
 
@@ -55,7 +56,8 @@ std::vector<std::string> ShipCleanHits(std::string_view text, const std::vector<
 
 std::vector<std::string> TrackedFiles(const std::wstring& root) {
     std::vector<std::string> files;
-    std::wstring cmd = L"git -C \"" + root + L"\" ls-files";
+    // Unquoted UTF-8 names, so a file with non-ASCII characters in its name is read like any other.
+    std::wstring cmd = L"git -C \"" + root + L"\" -c core.quotepath=off ls-files";
     FILE* p = _wpopen(cmd.c_str(), L"rt");
     if (!p) return files;
     char line[1024];
@@ -113,8 +115,11 @@ TEST(ship_clean_tracked_files) {
         if (f == "README.md") sawReadme = true;
         if (f == "CHANGELOG.md") sawChangelog = true;
         std::string data;
-        std::wstring path = root + L"\\" + std::wstring(f.begin(), f.end());
-        if (!ReadFileUtf8(path, data) || IsBinary(data)) continue;
+        std::wstring path = root + L"\\" + Utf8ToWide(f);
+        const bool read = ReadFileUtf8(path, data);
+        if (!read) std::printf("ship-clean could not read %s\n", f.c_str());
+        CHECK(read);
+        if (!read || IsBinary(data)) continue;
         const std::vector<std::string> hits = ShipCleanHits(data, needles);
         if (!hits.empty()) std::printf("ship-clean finding in %s\n", f.c_str());
         CHECK(hits.empty());
