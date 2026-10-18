@@ -249,10 +249,16 @@ bool PutOld(ISimpleAudioVolume* v, Mode mode, bool oldMute, float oldVolume) {
 
 constexpr size_t kMaxPending = 16;
 
+// The crash thread reads a slot without locks while the main thread fills it: every field is written first and
+// vol is published last (release), the reader checks vol first (acquire).
 struct CrashSlot {
     ISimpleAudioVolume* vol = nullptr;
     BOOL mute = FALSE;
     float volume = 1.0f;
+    // Lower mode: the level AdMutify set; the slot restores only while the session still reads that.
+    float appliedVolume = 1.0f;
+    // The level before the last ChangeLevel: it is what the session still reads while a level change is in flight.
+    float previousVolume = 1.0f;
     Mode mode = Mode::Mute;
     SessionEvents* ev = nullptr;
 };
@@ -426,8 +432,12 @@ struct AudioControl::Impl {
 
     void ReleaseSlot(Entry& e) {
         if (e.slot < 0) return;
-        if (slots[e.slot].vol) slots[e.slot].vol->Release();
-        slots[e.slot] = CrashSlot{};
+        CrashSlot& s = slots[e.slot];
+        ISimpleAudioVolume* vol = s.vol;
+        // Unpublish first so the crash thread never sees a half-reset slot.
+        std::atomic_ref<ISimpleAudioVolume*>(s.vol).store(nullptr, std::memory_order_release);
+        s.ev = nullptr;
+        if (vol) vol->Release();
         e.slot = -1;
     }
 
@@ -545,15 +555,24 @@ struct AudioControl::Impl {
         }
     }
 
+    // ChangeLevel: the slot accepts both levels while the write is in flight.
+    void SetSlotLevel(const Entry& e, float previous, float now) {
+        if (e.slot < 0) return;
+        slots[e.slot].previousVolume = previous;
+        slots[e.slot].appliedVolume = now;
+    }
+
     void AddCrashSlot(Entry& e) {
         for (int i = 0; i < kMaxCrashSlots; ++i) {
             if (slots[i].vol) continue;
             e.vol->AddRef();
-            slots[i].vol = e.vol.Get();
             slots[i].mute = e.oldMute;
             slots[i].volume = e.oldVolume;
+            slots[i].appliedVolume = e.appliedVolume;
+            slots[i].previousVolume = e.appliedVolume;
             slots[i].ev = e.ev;
             slots[i].mode = e.appliedMode;
+            std::atomic_ref<ISimpleAudioVolume*>(slots[i].vol).store(e.vol.Get(), std::memory_order_release);
             e.slot = i;
             return;
         }
@@ -590,6 +609,7 @@ struct AudioControl::Impl {
     // Puts the saved values back. keepOverrides (mode switch inside one reaction): a session the user changed stays
     // marked so Apply leaves it alone until a full restore ends the reaction.
     int RestoreEntries(int* userChanged, bool keepOverrides) {
+        if (CrashInProgress()) return 0;
         if (!keepOverrides)
             for (auto& e : entries) e->overridden = false;
         int restored = 0;
@@ -783,6 +803,7 @@ void AudioControl::Shutdown() {
 }
 
 int AudioControl::Apply(Mode mode, int percent) {
+    if (CrashInProgress()) return 0;
     // A restarted app can come back with the mute AdMutify left behind: undo that before reading old values.
     impl_->ResolvePending();
     std::vector<Entry*> fresh;
@@ -826,11 +847,13 @@ int AudioControl::Apply(Mode mode, int percent) {
 int AudioControl::Restore(int* userChanged) { return impl_->RestoreEntries(userChanged, false); }
 
 int AudioControl::SwitchMode(Mode mode, int percent) {
+    if (CrashInProgress()) return 0;
     impl_->RestoreEntries(nullptr, true);
     return Apply(mode, percent);
 }
 
 int AudioControl::ChangeLevel(int percent) {
+    if (CrashInProgress()) return 0;
     int changed = 0;
     struct Item {
         Entry* e;
@@ -845,7 +868,10 @@ int AudioControl::ChangeLevel(int percent) {
     if (items.empty()) return 0;
     // The state file knows the new level before the volume changes, like in Apply: a kill in between must not
     // look like a user change at the next start.
-    for (Item& it : items) it.e->appliedVolume = LoweredVolume(it.e->oldVolume, percent);
+    for (Item& it : items) {
+        it.e->appliedVolume = LoweredVolume(it.e->oldVolume, percent);
+        impl_->SetSlotLevel(*it.e, it.previous, it.e->appliedVolume);
+    }
     impl_->WriteState();
     bool failed = false;
     for (Item& it : items) {
@@ -867,6 +893,7 @@ int AudioControl::ChangeLevel(int percent) {
         } else {
             // The session still sits at the old level: the entry keeps describing that.
             e->appliedVolume = it.previous;
+            impl_->SetSlotLevel(*e, it.previous, it.previous);
             e->ev->Expect(Mode::Lower, e->oldMute != FALSE, it.previous, true);
             failed = true;
         }
@@ -1004,10 +1031,15 @@ bool AudioControl::RestoreUnsafe() {
     bool allRestored = true;
     for (int i = 0; i < kMaxCrashSlots; ++i) {
         CrashSlot& s = impl_->slots[i];
-        if (!s.vol) continue;
+        ISimpleAudioVolume* vol = std::atomic_ref<ISimpleAudioVolume*>(s.vol).load(std::memory_order_acquire);
+        if (!vol) continue;
         if (s.ev && s.ev->userChanged) continue;
-        HRESULT hr = s.mode == Mode::Mute ? s.vol->SetMute(s.mute, &kAdMutifyEventContext)
-                                          : s.vol->SetMasterVolume(s.volume, &kAdMutifyEventContext);
+        // Write only while the session still reads what AdMutify applied: a late user change has no callback yet.
+        Cur cur = CompareApplied(vol, s.mode, s.appliedVolume);
+        if (cur == Cur::Changed && s.mode == Mode::Lower) cur = CompareApplied(vol, s.mode, s.previousVolume);
+        if (cur == Cur::Changed) continue;
+        HRESULT hr = s.mode == Mode::Mute ? vol->SetMute(s.mute, &kAdMutifyEventContext)
+                                          : vol->SetMasterVolume(s.volume, &kAdMutifyEventContext);
         if (FAILED(hr)) allRestored = false;
     }
     // The crash handler never rewrites files: pending records stay on disk for the next start, and so does

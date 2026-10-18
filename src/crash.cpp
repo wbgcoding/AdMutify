@@ -385,6 +385,10 @@ std::string LastLogLines(int n) {
     return text.substr(pos);
 }
 
+bool CrashInProgress() { return g_crashing.load(); }
+
+void SetCrashInProgressForTests(bool on) { g_crashing = on; }
+
 void ReserveStackGuarantee() {
     ULONG size = 64 * 1024;
     SetThreadStackGuarantee(&size);

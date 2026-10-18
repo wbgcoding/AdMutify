@@ -28,6 +28,12 @@ std::string TailBeforeLastStart(std::string_view text, int n);
 // The crashed run's tail from the log files, without trace lines; reaches into admutify.log.1 after a rollover.
 std::string CrashedRunTail(int n);
 
+// True once a crash is being handled on any thread. The main thread may still run for a few seconds
+// meanwhile; audio changes must stop so they cannot undo the restore of the crash path.
+bool CrashInProgress();
+// Test seam: pretends a crash is in progress.
+void SetCrashInProgressForTests(bool on);
+
 // Reserves stack for the exception filter on the calling thread.
 void ReserveStackGuarantee();
 // Installs the unhandled exception filter and its dump thread.

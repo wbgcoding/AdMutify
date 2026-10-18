@@ -2,6 +2,7 @@
 #include <string>
 
 #include "audio_control.h"
+#include "crash.h"
 #include "settings.h"
 #include "spotify_watch.h"
 #include "test.h"
@@ -145,6 +146,20 @@ TEST(audio_apply_without_spotify) {
         ac.UnwatchSessions();
     }
     SetTargetProcessName(L"Spotify.exe");
+}
+
+TEST(audio_changes_stop_while_crash_in_progress) {
+    AudioControl ac;
+    ac.Init(nullptr);
+    SetCrashInProgressForTests(true);
+    CHECK(CrashInProgress());
+    CHECK(ac.Apply(Mode::Mute, 20) == 0);
+    CHECK(ac.Restore() == 0);
+    CHECK(ac.SwitchMode(Mode::Lower, 20) == 0);
+    CHECK(ac.ChangeLevel(30) == 0);
+    SetCrashInProgressForTests(false);
+    CHECK(!CrashInProgress());
+    ac.Shutdown();
 }
 
 TEST(audio_content_poll_smoke) {
