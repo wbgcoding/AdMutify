@@ -241,7 +241,8 @@ void CreateControls() {
     Make(L"STATIC", IDC_LANGUAGE_LABEL, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
     SetWindowSubclass(Make(L"COMBOBOX", IDC_LANGUAGE, CBS_DROPDOWNLIST | WS_VSCROLL | WS_GROUP | WS_TABSTOP),
                       ComboProc, 1, 0);
-    Make(L"EDIT", IDC_VERSION, ES_READONLY | ES_CENTER | ES_AUTOHSCROLL | WS_TABSTOP);
+    // Selectable for copying, but no tab stop: it has no label, so keyboard focus there would read as an unnamed field.
+    Make(L"EDIT", IDC_VERSION, ES_READONLY | ES_CENTER | ES_AUTOHSCROLL);
     SetWindowSubclass(Make(L"BUTTON", IDC_RESET, BS_OWNERDRAW | WS_TABSTOP), FlatButtonProc, 1, 0);
     SetWindowSubclass(Make(L"BUTTON", IDC_CLOSE, BS_OWNERDRAW | WS_TABSTOP), FlatButtonProc, 1, 0);
 
@@ -741,7 +742,7 @@ void OnCommand(int id, int code) {
         case IDC_MEDIA:
             if (code == CBN_SELCHANGE) {
                 int sel = static_cast<int>(SendMessageW(Ctl(id), CB_GETCURSEL, 0, 0));
-                s.media = sel >= 1 && sel <= 3 ? static_cast<MediaMode>(sel) : MediaMode::Off;
+                s.media = sel > 0 && sel < static_cast<int>(ComboFor(id)->count) ? static_cast<MediaMode>(sel) : MediaMode::Off;
                 UpdateSliderEnabled(s);
                 CommitSettings(s);
                 Layout(Placement::KeepFit);
@@ -750,7 +751,7 @@ void OnCommand(int id, int code) {
         case IDC_MUSIC:
             if (code == CBN_SELCHANGE) {
                 const int sel = static_cast<int>(SendMessageW(Ctl(id), CB_GETCURSEL, 0, 0));
-                const AdMusic want = sel >= 1 && sel <= 3 ? static_cast<AdMusic>(sel) : AdMusic::Off;
+                const AdMusic want = sel > 0 && sel < static_cast<int>(ComboFor(id)->count) ? static_cast<AdMusic>(sel) : AdMusic::Off;
                 std::wstring path = s.adMusicPath;
                 // A choice without a fitting file or folder asks for one first; cancelling keeps the old choice.
                 if (want != AdMusic::Off && !MusicPathFits(want, path)) path = PickMusicPath(want, path);
@@ -794,7 +795,7 @@ void OnScroll(HWND from, int code) {
         if (from == Ctl(candidate.track)) slider = &candidate;
     if (!slider) return;
     int pos = static_cast<int>(SendMessageW(from, TBM_GETPOS, 0, 0));
-    int snapped = slider->max == 100 ? ClampVolumePercent(pos) : ClampLowerPercent(pos);
+    int snapped = slider->field == &Settings::adMusicVolume ? ClampVolumePercent(pos) : ClampLowerPercent(pos);
     if (snapped != pos) SendMessageW(from, TBM_SETPOS, TRUE, snapped);
     UpdatePercentLabels();
     // While the thumb is dragged only the label follows; saving and changing the volume wait for the release.
@@ -892,7 +893,7 @@ void PaintCombo(HWND h, HDC target) {
 
     const int padX = Scale(11);
     const int chevW = Scale(10);
-    wchar_t text[64] = L"";
+    wchar_t text[256] = L"";
     int sel = static_cast<int>(SendMessageW(h, CB_GETCURSEL, 0, 0));
     if (sel >= 0 && SendMessageW(h, CB_GETLBTEXTLEN, sel, 0) < static_cast<LRESULT>(std::size(text)))
         SendMessageW(h, CB_GETLBTEXT, sel, reinterpret_cast<LPARAM>(text));
@@ -936,11 +937,23 @@ LRESULT CALLBACK ComboProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_
             ShowComboMenu(h);
             return 0;
         case WM_KEYDOWN:
-            if (wParam == VK_F4) {
-                ShowComboMenu(h);
-                return 0;
+            // The arrow and paging keys would step the selection one by one, and every step is a choice (a file
+            // picker, a language switch): they open the menu instead, like F4.
+            switch (wParam) {
+                case VK_F4:
+                case VK_UP:
+                case VK_DOWN:
+                case VK_HOME:
+                case VK_END:
+                case VK_PRIOR:
+                case VK_NEXT: ShowComboMenu(h); return 0;
+                default: break;
             }
             break;
+        case WM_CHAR:
+        case WM_MOUSEWHEEL:
+            // Typing a letter or turning the wheel would also step the selection.
+            return 0;
         case WM_SYSKEYDOWN:
             if (wParam == VK_DOWN || wParam == VK_UP) {
                 ShowComboMenu(h);
@@ -1081,7 +1094,7 @@ void DrawButton(const DRAWITEMSTRUCT* di, bool accent) {
     FillRounded(dc, body, radius, fill, border);
     if (ShowFocus(di)) StrokeRounded(dc, all, radius + ring, ThemeText(), static_cast<float>(Scale(2)));
     HGDIOBJ oldFont = SelectObject(dc, w.font);
-    wchar_t text[64];
+    wchar_t text[256];
     GetWindowTextW(di->hwndItem, text, static_cast<int>(std::size(text)));
     SetBkMode(dc, TRANSPARENT);
     SetTextColor(dc, accent ? ThemeAccentText() : ThemeText());

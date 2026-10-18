@@ -313,6 +313,57 @@ int RunDpiTest(const std::wstring& outDir) {
 // With every row shown (music folder, video level) and the longest language, the settings window is scaled to 150,
 // 175 and 200 % as after a move to such a monitor. It must fit the work area with the Close button on screen, and no
 // two visible controls may overlap.
+// The language box gets the arrow keys, a typed letter and the mouse wheel. None of them may change the choice on
+// its own (every change is applied at once); the down arrow opens the menu instead, which a timer closes again.
+bool g_menuSeen = false;
+
+void CALLBACK CloseMenuSoon(HWND, UINT, UINT_PTR id, DWORD) {
+    KillTimer(nullptr, id);
+    g_menuSeen = FindWindowW(L"#32768", nullptr) != nullptr;
+    EndMenu();
+}
+
+int RunComboKeysTest() {
+    SetThemeOverride(1);
+    Settings s;
+    s.language = Language::English;
+    AppUseInMemorySettings(s);
+    SetLanguage(s.language);
+    OpenSettingsWindow();
+    PumpFor(600);
+    HWND hwnd = SettingsWindowHandle();
+    if (!hwnd) return 2;
+    HWND combo = GetDlgItem(hwnd, IDC_LANGUAGE);
+    SetFocus(combo);
+    const LRESULT start = SendMessageW(combo, CB_GETCURSEL, 0, 0);
+    int failures = 0;
+    auto expectSame = [&](const char* what) {
+        PumpFor(200);
+        const LRESULT now = SendMessageW(combo, CB_GETCURSEL, 0, 0);
+        if (now != start) {
+            Print(std::string(what) + " changed the choice from " + std::to_string(start) + " to " + std::to_string(now) + "\n");
+            ++failures;
+            SendMessageW(combo, CB_SETCURSEL, start, 0);
+        }
+    };
+    SendMessageW(combo, WM_MOUSEWHEEL, MAKEWPARAM(0, static_cast<WORD>(-WHEEL_DELTA)), 0);
+    expectSame("wheel");
+    SendMessageW(combo, WM_CHAR, L'p', 0);
+    expectSame("letter");
+    g_menuSeen = false;
+    SetTimer(nullptr, 0, 400, &CloseMenuSoon);
+    SendMessageW(combo, WM_KEYDOWN, VK_DOWN, 0);
+    expectSame("down arrow");
+    if (!g_menuSeen) {
+        Print("down arrow did not open the menu\n");
+        ++failures;
+    }
+    DestroyWindow(hwnd);
+    PumpFor(100);
+    Print(failures ? "combo keys test failed\n" : "combo keys test ok\n");
+    return failures ? 1 : 0;
+}
+
 int RunFitTest(const std::wstring& outDir) {
     SetThemeOverride(1);
     int failures = 0;
@@ -384,6 +435,7 @@ bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
     bool crash = false;
     bool dpiTest = false;
     bool fitTest = false;
+    bool comboTest = false;
     for (int i = 1; i < argc; ++i) {
         std::wstring_view a = argv[i];
         if (a == L"--review" && i + 1 < argc && std::wstring_view(argv[i + 1]) == L"ids") {
@@ -405,6 +457,8 @@ bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
             dpiTest = true;
         } else if (a == L"--fit-test") {
             fitTest = true;
+        } else if (a == L"--combo-keys-test") {
+            comboTest = true;
         } else if (a == L"--crash-test") {
             crash = true;
         }
@@ -432,6 +486,13 @@ bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
         SetAutostartKeyOverride(L"Software\\AdMutifyReview\\Run");
         EnsureDirectory(out);
         exitCode = RunDpiTest(out);
+        return true;
+    }
+
+    if (comboTest) {
+        CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        SetAutostartKeyOverride(L"Software\\AdMutifyReview\\Run");
+        exitCode = RunComboKeysTest();
         return true;
     }
 
