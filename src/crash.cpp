@@ -128,9 +128,22 @@ bool PruneOldLogsLocked() {
     return WriteFileAtomic(LogFilePath(0), kept);
 }
 
+// Heap-free; written twice so a restore that hangs past the caller's wait still leaves a flag behind.
+void WriteCrashFlag(bool restored) {
+    if (!g_flagPath[0]) return;
+    HANDLE flag = CreateFileW(g_flagPath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (flag == INVALID_HANDLE_VALUE) return;
+    const char* text = restored ? "restored=1\r\n" : "restored=0\r\n";
+    DWORD written = 0;
+    WriteFile(flag, text, 12, &written, nullptr);
+    CloseHandle(flag);
+}
+
 DWORD WINAPI DumpThread(LPVOID) {
     WaitForSingleObject(g_crashEvent, INFINITE);
 
+    // Not restored until proven otherwise: if the restore hangs, the next start still reports the crash.
+    WriteCrashFlag(false);
     const bool restored = RestoreAudioUnsafe();
 
     // Spotify must not stay paused because of us. PostMessageW does not allocate and does not wait for Spotify,
@@ -144,16 +157,8 @@ DWORD WINAPI DumpThread(LPVOID) {
 
     SetEvent(g_restoreEvent);
 
-    if (g_flagPath[0]) {
-        // Written before the dump so the next start reports the crash even if the dump stalls.
-        HANDLE flag = CreateFileW(g_flagPath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-        if (flag != INVALID_HANDLE_VALUE) {
-            const char* text = restored ? "restored=1\r\n" : "restored=0\r\n";
-            DWORD written = 0;
-            WriteFile(flag, text, 12, &written, nullptr);
-            CloseHandle(flag);
-        }
-    }
+    // Rewritten before the dump so the next start knows the outcome even if the dump stalls.
+    if (restored) WriteCrashFlag(true);
 
     if (g_dumpDir[0]) {
         SYSTEMTIME st;
