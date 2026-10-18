@@ -29,6 +29,7 @@ constexpr UINT_PTR kTimerRestoreRetry = 5;
 constexpr UINT kRestoreRetryMs = 2000;
 constexpr int kMaxRestoreRetries = 15;
 constexpr UINT kMediaPollMs = 500;
+constexpr uint64_t kApplyRetryMs = 1000;
 constexpr int kMaxProbes = 5;
 enum class Reason { None, Ad, Media };
 
@@ -52,7 +53,6 @@ struct App {
     bool pausedByUs = false;
     bool pauseHandled = false;
     uint64_t pausedAt = 0;
-    // Spotify's session was seen inactive after our pause: from then on an active session is not our own pause.
     bool reevaluating = false;
     bool reevaluateAgain = false;
     bool probeRunning = false;
@@ -60,6 +60,8 @@ struct App {
     // Records of sessions whose restore failed are retried on a slow timer until they resolve or give up.
     bool restoreRetryRunning = false;
     int restoreRetries = 0;
+    // Last retry of an apply that touched nothing; the retry runs at most once per kApplyRetryMs.
+    uint64_t applyRetryAt = 0;
     UINT taskbarCreated = 0;
     std::wstring status;
     std::wstring lastTraceTitle;
@@ -288,8 +290,10 @@ void ReevaluateOnce() {
         int n = g.audio.ChangeLevel(wantPercent);
         g.appliedPercent = wantPercent;
         Log("level percent=%d sessions=%d", g.appliedPercent, n);
-    } else if (!g.audio.HasAppliedSessions()) {
+    } else if (!g.audio.HasAppliedSessions() && now - g.applyRetryAt >= kApplyRetryMs) {
         // The first apply touched nothing (write failed, session not up yet): try again, logged only on success.
+        // A new session also triggers an apply, so the retry only needs a slow pace.
+        g.applyRetryAt = now;
         int n = g.audio.Apply(wantMode, wantPercent);
         if (n > 0) Log("apply_retry sessions=%d", n);
     }
@@ -416,6 +420,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_APP_AUDIO_STATE: Reevaluate(); return 0;
         case WM_APP_MUSIC: g.music.OnEvent(wParam, lParam); return 0;
         case WM_APP_SESSION_CREATED:
+            if (g.closing) return 0;
             g.watch.RescanIfUnknown();
             g.audio.WatchSessions();
             if (g.applied) {
@@ -567,6 +572,7 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
     if (options.trace) SetTraceEnabled(true);
 
     HANDLE mutex = CreateMutexW(nullptr, FALSE, MutexName());
+    const unsigned long mutexErr = mutex ? 0 : GetLastError();
     if (mutex && GetLastError() == ERROR_ALREADY_EXISTS) {
         // The running instance may still be creating its window.
         HWND other = FindWindowW(ClassName(), nullptr);
@@ -587,6 +593,7 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
     // Only the instance that stays gets a crash handler and a log folder.
     InstallCrashHandler();
     ReserveStackGuarantee();
+    if (!mutex) Log("single_instance_unavailable err=%lu", mutexErr);
 
     LoadResult loaded = LoadOrCreateSettings();
     g.settings = loaded.settings;
