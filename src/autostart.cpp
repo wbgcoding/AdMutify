@@ -113,6 +113,8 @@ bool SetAutostart(bool enable) {
         return rc == ERROR_SUCCESS;
     }
     bool ok = DeleteRunValue(ValueName());
+    // Task Manager's choice belongs to the entry; without the entry it would only stay behind as a leftover.
+    if (ok) ClearTaskManagerChoice(ValueName());
     if (Portable() && RunValueIsOurs(kInstalledName)) ok = DeleteRunValue(kInstalledName) && ok;
     return ok;
 }

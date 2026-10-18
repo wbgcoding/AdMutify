@@ -77,7 +77,15 @@ TEST(autostart_disabled_in_task_manager) {
     CHECK(!IsAutostartEnabled());
     CHECK(SetAutostart(true));
     CHECK(IsAutostartEnabled());
+
+    // Switching off removes Task Manager's choice together with the entry.
+    CHECK(RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\AdMutifyTest\\RunApproved", 0, nullptr, 0, KEY_SET_VALUE, nullptr,
+                          &key, nullptr) == ERROR_SUCCESS);
+    RegSetValueExW(key, L"AdMutify", 0, REG_BINARY, off, sizeof(off));
+    RegCloseKey(key);
     CHECK(SetAutostart(false));
+    CHECK(RegGetValueW(HKEY_CURRENT_USER, L"Software\\AdMutifyTest\\RunApproved", L"AdMutify", RRF_RT_ANY, nullptr, nullptr,
+                       nullptr) == ERROR_FILE_NOT_FOUND);
     RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\AdMutifyTest");
 }
 
