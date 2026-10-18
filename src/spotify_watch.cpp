@@ -188,11 +188,16 @@ void SpotifyWatch::Rescan(bool full) {
 
     HWND best = nullptr;
     ULONGLONG bestTick = 0;
+    bool bestVisible = false;
     for (const auto& [w, tick] : lastChange_) {
         if (WindowTitle(w).empty()) continue;
-        if (!best || tick > bestTick || (tick == bestTick && w == main_)) {
+        // On equal ticks a visible window wins over a hidden one, then the current main window.
+        const bool visible = IsWindowVisible(w) != FALSE;
+        if (!best || tick > bestTick ||
+            (tick == bestTick && (visible > bestVisible || (visible == bestVisible && w == main_)))) {
             best = w;
             bestTick = tick;
+            bestVisible = visible;
         }
     }
     SyncNameHooks();
