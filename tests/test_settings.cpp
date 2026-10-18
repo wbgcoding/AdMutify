@@ -1,7 +1,9 @@
 #include <windows.h>
 
+#include <atomic>
 #include <iterator>
 #include <string>
+#include <thread>
 
 #include "settings.h"
 #include "test.h"
@@ -227,4 +229,57 @@ TEST(settings_garbage_lines) {
     CHECK(s.hideTray);
     CHECK(s.enabled);
     CHECK(s.language == Language::System);
+}
+
+TEST(settings_concurrent_writes) {
+    RemoveSettingsFile();
+    std::atomic<int> failures{0};
+    auto writer = [&](char fill) {
+        for (int i = 0; i < 20; ++i)
+            if (!WriteFileAtomic(SettingsPath(), std::string(2000, fill))) ++failures;
+    };
+    std::thread a(writer, 'a');
+    std::thread b(writer, 'b');
+    a.join();
+    b.join();
+    CHECK(failures == 0);
+    std::string after;
+    CHECK(ReadFileUtf8(SettingsPath(), after));
+    CHECK(after.size() == 2000);
+    RemoveSettingsFile();
+}
+
+TEST(settings_stale_temp_files_removed) {
+    std::wstring stale = DataDir() + L"\\settings.ini.1.2.3.tmp";
+    std::wstring fresh = DataDir() + L"\\settings.ini.4.5.6.tmp";
+    CHECK(WriteFileAtomic(stale, "x"));
+    CHECK(WriteFileAtomic(fresh, "x"));
+    HANDLE h = CreateFileW(stale.c_str(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+                           FILE_ATTRIBUTE_NORMAL, nullptr);
+    CHECK(h != INVALID_HANDLE_VALUE);
+    FILETIME old;
+    GetSystemTimeAsFileTime(&old);
+    ULARGE_INTEGER t;
+    t.LowPart = old.dwLowDateTime;
+    t.HighPart = old.dwHighDateTime;
+    t.QuadPart -= 2ULL * 36000000000ULL;
+    old.dwLowDateTime = t.LowPart;
+    old.dwHighDateTime = t.HighPart;
+    SetFileTime(h, nullptr, nullptr, &old);
+    CloseHandle(h);
+    RemoveSettingsFile();
+    LoadOrCreateSettings();
+    CHECK(GetFileAttributesW(stale.c_str()) == INVALID_FILE_ATTRIBUTES);
+    CHECK(GetFileAttributesW(fresh.c_str()) != INVALID_FILE_ATTRIBUTES);
+    DeleteFileW(fresh.c_str());
+    RemoveSettingsFile();
+}
+
+TEST(settings_ensure_directory_sets_error) {
+    RemoveSettingsFile();
+    CHECK(WriteFileAtomic(SettingsPath(), "x"));
+    SetLastError(0);
+    CHECK(!EnsureDirectory(SettingsPath() + L"\\sub"));
+    CHECK(GetLastError() != 0);
+    RemoveSettingsFile();
 }
