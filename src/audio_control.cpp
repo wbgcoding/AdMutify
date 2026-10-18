@@ -945,11 +945,20 @@ int AudioControl::ChangeLevel(int percent) {
 int AudioControl::RestoreFromStateFile(bool* fileIgnored) {
     if (fileIgnored) *fileIgnored = false;
     std::string text;
-    if (!ReadFileUtf8(StatePath(), text)) return 0;
+    const std::wstring path = StatePath();
+    // A file locked at start (scanner, sync client) is retried briefly; a missing file means nothing to restore.
+    constexpr int kReadTries = 3;
+    for (int attempt = 1; !ReadFileUtf8(path, text); ++attempt) {
+        const unsigned long err = GetLastError();
+        if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) return 0;
+        Log("state_read_failed err=%lu try=%d", err, attempt);
+        if (attempt >= kReadTries) return 0;
+        Sleep(200);
+    }
     std::vector<SavedSession> saved;
     if (!ParseStateFile(text, saved)) {
         if (fileIgnored) *fileIgnored = true;
-        DeleteFileW(StatePath().c_str());
+        DeleteFileW(path.c_str());
         return 0;
     }
     for (const SavedSession& sv : saved) impl_->AddPending(sv);
