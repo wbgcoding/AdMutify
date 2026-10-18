@@ -253,8 +253,17 @@ uint64_t NowUnix() {
     ULARGE_INTEGER u;
     u.LowPart = ft.dwLowDateTime;
     u.HighPart = ft.dwHighDateTime;
-    // 100 ns ticks since 1601 to seconds since 1970.
-    return u.QuadPart / 10000000ULL - 11644473600ULL;
+    return UnixFromFileTimeTicks(u.QuadPart);
+}
+
+// Last-write time of a file in unix seconds; 0 when it cannot be read.
+uint64_t FileWriteUnix(const std::wstring& path) {
+    WIN32_FILE_ATTRIBUTE_DATA fad;
+    if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &fad)) return 0;
+    ULARGE_INTEGER u;
+    u.LowPart = fad.ftLastWriteTime.dwLowDateTime;
+    u.HighPart = fad.ftLastWriteTime.dwHighDateTime;
+    return UnixFromFileTimeTicks(u.QuadPart);
 }
 
 // The crash thread reads a slot without locks while the main thread fills it: every field is written first and
@@ -690,6 +699,12 @@ bool UserOverrode(Mode mode, bool expectedMute, float expectedVolume, bool newMu
     return std::fabs(newVolume - expectedVolume) > 0.001f;
 }
 
+uint64_t UnixFromFileTimeTicks(uint64_t ticks) {
+    // 100 ns ticks since 1601 to seconds since 1970; earlier than 1970 is unknown (0).
+    const uint64_t seconds = ticks / 10000000ULL;
+    return seconds > 11644473600ULL ? seconds - 11644473600ULL : 0;
+}
+
 bool RecordFresh(uint64_t savedAt, uint64_t nowUnix) {
     // A clock set back leaves savedAt in the future: that still counts as young.
     return savedAt != 0 && (savedAt >= nowUnix || nowUnix - savedAt <= kPendingMaxAgeSeconds);
@@ -960,6 +975,16 @@ int AudioControl::RestoreFromStateFile(bool* fileIgnored) {
         if (fileIgnored) *fileIgnored = true;
         DeleteFileW(path.c_str());
         return 0;
+    }
+    // A file from before the saved time existed: the last write is the best guess for when the state was applied.
+    uint64_t fallbackAt = 0;
+    for (SavedSession& sv : saved) {
+        if (sv.savedAt != 0) continue;
+        if (fallbackAt == 0) {
+            fallbackAt = FileWriteUnix(path);
+            if (fallbackAt == 0) fallbackAt = NowUnix();
+        }
+        sv.savedAt = fallbackAt;
     }
     for (const SavedSession& sv : saved) impl_->AddPending(sv);
     return impl_->ResolvePending(true);

@@ -35,6 +35,8 @@ struct SavedSession {
 inline constexpr uint64_t kPendingMaxAgeSeconds = 24 * 60 * 60;
 // True when a record saved at savedAt (unix seconds) is still young enough to match by session id.
 bool RecordFresh(uint64_t savedAt, uint64_t nowUnix);
+// FILETIME ticks (100 ns since 1601) to unix seconds; 0 for a time before 1970.
+uint64_t UnixFromFileTimeTicks(uint64_t ticks);
 
 // A session created while a reaction is applied can come up already carrying AdMutify's mute or level
 // (Windows remembers it per app). When a sibling record (same device, same sessionId, same mode) shows that the live

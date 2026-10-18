@@ -127,6 +127,15 @@ TEST(audio_record_freshness) {
     CHECK(RecordFresh(now + 5000, now));
 }
 
+TEST(audio_filetime_to_unix) {
+    const uint64_t epoch = 11644473600ULL * 10000000ULL;
+    CHECK(UnixFromFileTimeTicks(epoch) == 0);
+    CHECK(UnixFromFileTimeTicks(epoch + 10000000ULL) == 1);
+    CHECK(UnixFromFileTimeTicks(epoch + 1790000000ULL * 10000000ULL + 9999999ULL) == 1790000000ULL);
+    CHECK(UnixFromFileTimeTicks(0) == 0);
+    CHECK(UnixFromFileTimeTicks(epoch - 1) == 0);
+}
+
 TEST(audio_state_file_keeps_invalid_escapes) {
     std::vector<SavedSession> out;
     CHECK(ParseStateFile("version=2\r\nsession=d|i%4G|s%|l|0|0.5|0.25\r\n", out));
