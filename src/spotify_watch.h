@@ -36,7 +36,8 @@ private:
     static void CALLBACK HookProc(HWINEVENTHOOK, DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD, DWORD);
     void OnEvent(DWORD event, HWND hwnd);
     bool IsMainCandidate(HWND hwnd);
-    void Rescan(bool full);
+    // windowsChanged: the caller added a window, so the title hooks are synced even on a partial rescan.
+    void Rescan(bool full, bool windowsChanged = false);
     void Publish(HWND best);
     // One title-change hook per process that owns a candidate window.
     void SyncNameHooks();

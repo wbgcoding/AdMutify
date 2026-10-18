@@ -168,25 +168,31 @@ void SpotifyWatch::OnEvent(DWORD event, HWND hwnd) {
     ++callbacks_;
     if (event == EVENT_OBJECT_DESTROY) {
         // The handle is already invalid here, so only compare it.
-        lastChange_.erase(hwnd);
+        const bool tracked = lastChange_.erase(hwnd) != 0;
         rejected_.erase(hwnd);
         if (hwnd == main_) Rescan(true);
+        else if (tracked) SyncNameHooks();
         return;
     }
     auto known = lastChange_.find(hwnd);
-    if (known == lastChange_.end()) {
+    const bool added = known == lastChange_.end();
+    if (added) {
         if (!IsMainCandidate(hwnd)) return;
         known = lastChange_.emplace(hwnd, 0).first;
     }
     if (event == EVENT_OBJECT_NAMECHANGE) known->second = GetTickCount64();
-    Rescan(false);
+    Rescan(false, added);
 }
 
-void SpotifyWatch::Rescan(bool full) {
+void SpotifyWatch::Rescan(bool full, bool windowsChanged) {
     // Drop stale handles, then pick the candidate with the newest title change.
     for (auto it = lastChange_.begin(); it != lastChange_.end();) {
-        if (!IsWindow(it->first)) it = lastChange_.erase(it);
-        else ++it;
+        if (!IsWindow(it->first)) {
+            it = lastChange_.erase(it);
+            windowsChanged = true;
+        } else {
+            ++it;
+        }
     }
     if (full) {
         // Initial state, or fallback after the main window went away.
@@ -212,7 +218,8 @@ void SpotifyWatch::Rescan(bool full) {
             bestVisible = visible;
         }
     }
-    SyncNameHooks();
+    // The per-process title hooks only change with the window set; a title change alone keeps them.
+    if (full || windowsChanged) SyncNameHooks();
     Publish(best);
 }
 
