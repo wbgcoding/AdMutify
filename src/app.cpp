@@ -58,6 +58,8 @@ struct App {
     std::wstring status;
     std::wstring lastTraceTitle;
     bool closing = false;
+    // Windows is signing out: nothing may start playing any more.
+    bool closingEndSession = false;
     bool inMemory = false;
     // The tray exists; a second start before that only leaves a request for the tray icon.
     bool trayReady = false;
@@ -133,8 +135,8 @@ void UpdateMediaTimer(AdState state) {
 }
 
 // Toggles Spotify's playback like a media key would.
-bool SendPlayPause() {
-    HWND target = g.watch.MainWindow();
+bool SendPlayPause(HWND target = nullptr) {
+    if (!target) target = g.watch.MainWindow();
     if (!target) return false;
     DWORD_PTR result = 0;
     SetLastError(0);
@@ -155,9 +157,14 @@ void HandlePause(AdState state, uint64_t now) {
     switch (action) {
         case PauseAction::Pause: {
             g.pauseHandled = true;
-            const bool sent = SendPlayPause();
-            // The send pumps messages: a nested Shutdown must not be followed by state changes.
-            if (g.closing) return;
+            const HWND spotify = g.watch.MainWindow();
+            const bool sent = SendPlayPause(spotify);
+            // The send pumps messages: a nested Shutdown must not be followed by state changes. It ran before the
+            // pause was ours, so it did not give it back; unless Windows is signing out, that happens here.
+            if (g.closing) {
+                if (sent && !g.closingEndSession) Log(SendPlayPause(spotify) ? "media resume" : "media resume_failed");
+                return;
+            }
             if (sent) {
                 g.pausedByUs = true;
                 g.pausedAt = now;
@@ -299,6 +306,7 @@ void Reevaluate() {
 void Shutdown(bool endSession = false) {
     if (g.closing) return;
     g.closing = true;
+    g.closingEndSession = endSession;
     KillTimer(g.hwnd, kTimerExit);
     KillTimer(g.hwnd, kTimerProbe);
     KillTimer(g.hwnd, kTimerMedia);
