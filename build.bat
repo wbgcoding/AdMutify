@@ -57,10 +57,12 @@ if errorlevel 1 ( set "RC=1" & goto :end )
 cmake --build build\x64 --config Release
 if errorlevel 1 ( set "RC=1" & goto :end )
 
-rem --- tests
-"build\x64\Release\admutify_tests.exe"
-if errorlevel 1 (
-    echo Tests failed.
+rem --- tests (the output is also kept in build\x64\tests.log, so a failure can be read after the window closes)
+"build\x64\Release\admutify_tests.exe" > "build\x64\tests.log" 2>&1
+set "TESTRC=!errorlevel!"
+type "build\x64\tests.log"
+if not "!TESTRC!"=="0" (
+    echo Tests failed. Full output: build\x64\tests.log
     set "RC=1"
     goto :end
 )

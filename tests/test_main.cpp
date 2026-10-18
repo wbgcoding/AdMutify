@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 #include "autostart.h"
 #include "settings.h"
@@ -13,6 +14,9 @@
 
 static int g_failures = 0;
 static int g_checkFailuresInTest = 0;
+// Every failed check, repeated at the end so it stays readable after a long run scrolled it away.
+static std::vector<std::string> g_failureLines;
+static const char* g_currentTest = "";
 
 std::vector<TestCase>& Registry() {
     static std::vector<TestCase> tests;
@@ -23,6 +27,7 @@ void ReportFailure(const char* expr, const char* file, int line) {
     ++g_failures;
     ++g_checkFailuresInTest;
     std::printf("  FAIL %s:%d: %s\n", file, line, expr);
+    g_failureLines.push_back(std::string(g_currentTest) + "  " + file + ":" + std::to_string(line) + ": " + expr);
 }
 
 TEST(version_defined) {
@@ -41,6 +46,7 @@ int main() {
     int run = 0;
     for (const TestCase& t : Registry()) {
         g_checkFailuresInTest = 0;
+        g_currentTest = t.name;
         t.fn();
         ++run;
         std::printf("%s %s\n", g_checkFailuresInTest ? "FAIL" : "ok  ", t.name);
@@ -53,6 +59,10 @@ int main() {
     op.pFrom = doomed.c_str();
     op.fFlags = FOF_NO_UI | FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI;
     SHFileOperationW(&op);
+    if (!g_failureLines.empty()) {
+        std::printf("\nFailed checks:\n");
+        for (const std::string& f : g_failureLines) std::printf("  %s\n", f.c_str());
+    }
     std::printf("%d tests, %d failed checks\n", run, g_failures);
     return g_failures ? 1 : 0;
 }
