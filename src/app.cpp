@@ -153,9 +153,12 @@ void HandlePause(AdState state, uint64_t now) {
     PauseAction action = DecidePause(mediaActive, state, g.pausedByUs, g.pauseHandled);
     if (action == PauseAction::Forget && state == AdState::Music && now - g.pausedAt < kPauseSettleMs) action = PauseAction::None;
     switch (action) {
-        case PauseAction::Pause:
+        case PauseAction::Pause: {
             g.pauseHandled = true;
-            if (SendPlayPause()) {
+            const bool sent = SendPlayPause();
+            // The send pumps messages: a nested Shutdown must not be followed by state changes.
+            if (g.closing) return;
+            if (sent) {
                 g.pausedByUs = true;
                 g.pausedAt = now;
                 SetCrashResumeWindow(g.watch.MainWindow());
@@ -164,11 +167,15 @@ void HandlePause(AdState state, uint64_t now) {
                 Log("media pause_failed");
             }
             break;
-        case PauseAction::Resume:
+        }
+        case PauseAction::Resume: {
             g.pausedByUs = false;
             SetCrashResumeWindow(nullptr);
-            Log(SendPlayPause() ? "media resume" : "media resume_failed");
+            const bool sent = SendPlayPause();
+            if (g.closing) return;
+            Log(sent ? "media resume" : "media resume_failed");
             break;
+        }
         case PauseAction::Forget:
             g.pausedByUs = false;
             SetCrashResumeWindow(nullptr);
