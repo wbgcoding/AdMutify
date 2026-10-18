@@ -35,6 +35,7 @@ std::atomic<bool> g_trace{false};
 bool g_prunedOnce = false;
 
 HANDLE g_crashEvent = nullptr;
+HANDLE g_restoreEvent = nullptr;  // audio restored and Spotify resumed, before the dump starts
 HANDLE g_doneEvent = nullptr;
 HANDLE g_dumpThread = nullptr;
 DWORD g_dumpThreadId = 0;
@@ -141,6 +142,8 @@ DWORD WINAPI DumpThread(LPVOID) {
         if (!wcsstr(title, L" - ")) PostMessageW(spotify, WM_APPCOMMAND, 0, MAKELPARAM(0, APPCOMMAND_MEDIA_PLAY_PAUSE));
     }
 
+    SetEvent(g_restoreEvent);
+
     if (g_flagPath[0]) {
         // Written before the dump so the next start reports the crash even if the dump stalls.
         HANDLE flag = CreateFileW(g_flagPath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -176,13 +179,14 @@ DWORD WINAPI DumpThread(LPVOID) {
 
 // Hands the crash to the dump thread and waits for it. A fault inside the dump thread itself returns at once.
 void RunCrashPath(EXCEPTION_POINTERS* info) {
-    if (!g_dumpThread || !g_crashEvent || !g_doneEvent || GetCurrentThreadId() == g_dumpThreadId) return;
+    if (!g_dumpThread || !g_crashEvent || !g_restoreEvent || !g_doneEvent || GetCurrentThreadId() == g_dumpThreadId) return;
     if (!g_crashing.exchange(true)) {
         g_exceptionPointers = info;
         g_crashThreadId = GetCurrentThreadId();
         SetEvent(g_crashEvent);
     }
-    WaitForSingleObject(g_doneEvent, 10000);
+    // The restore gets a short budget; the dump is waited for only after it, so a slow restore cannot cut it short.
+    if (WaitForSingleObject(g_restoreEvent, 5000) == WAIT_OBJECT_0) WaitForSingleObject(g_doneEvent, 30000);
 }
 
 LONG WINAPI CrashFilter(EXCEPTION_POINTERS* info) {
@@ -397,6 +401,7 @@ void ReserveStackGuarantee() {
 void InstallCrashHandler() {
     if (g_dumpThread) return;
     g_crashEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    g_restoreEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     g_doneEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     const std::wstring dir = LogDir();
     const std::wstring flag = CrashFlagPath();
