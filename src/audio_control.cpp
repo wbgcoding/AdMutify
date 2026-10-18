@@ -487,8 +487,13 @@ struct AudioControl::Impl {
         SetStatePath(path);
         bool ok = true;
         unsigned long err = 0;
-        if (list.empty()) DeleteFileW(path.c_str());
-        else ok = WriteFileAtomic(path, FormatStateFile(list), &err);
+        if (list.empty()) {
+            // A stale file that cannot be deleted must not survive with records: overwrite it with an empty one.
+            if (!DeleteFileW(path.c_str())) {
+                err = GetLastError();
+                if (err != ERROR_FILE_NOT_FOUND && err != ERROR_PATH_NOT_FOUND) ok = WriteFileAtomic(path, FormatStateFile({}), &err);
+            }
+        } else ok = WriteFileAtomic(path, FormatStateFile(list), &err);
         if (!ok && !stateWriteFailing) Log("state_write_failed err=%lu", err);
         stateWriteFailing = !ok;
         return ok;
