@@ -87,7 +87,7 @@ void UpdateTray() {
         g.status = g.appliedMode == Mode::Lower ? FormatPercent(StrId::StatusMediaLowered, g.appliedPercent) : Str(StrId::StatusMediaMuted);
         icon = TrayIconKind::Muted;
     } else if (g.machine.Current() == AdState::Ad && g.applied) {
-        g.status = g.settings.mode == Mode::Lower ? FormatPercent(StrId::StatusLowered, g.settings.lowerPercent) : Str(StrId::StatusMuted);
+        g.status = g.appliedMode == Mode::Lower ? FormatPercent(StrId::StatusLowered, g.appliedPercent) : Str(StrId::StatusMuted);
         icon = TrayIconKind::Muted;
     } else if (g.pausedByUs) {
         g.status = Str(StrId::StatusMediaPaused);
