@@ -50,10 +50,15 @@ void SetTargetProcessName(const wchar_t* name) {
     g_cache.clear();
 }
 
-bool IsTargetProcess(DWORD pid) {
+// lookupFailed is set when the process could not be inspected (as opposed to inspected and found foreign).
+static bool QueryTarget(DWORD pid, bool& lookupFailed) {
+    lookupFailed = false;
     if (pid == 0) return false;
     HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
-    if (!h) return false;
+    if (!h) {
+        lookupFailed = true;
+        return false;
+    }
     FILETIME created{}, exited{}, kernel{}, user{};
     bool haveTimes = GetProcessTimes(h, &created, &exited, &kernel, &user) != 0;
 
@@ -73,22 +78,29 @@ bool IsTargetProcess(DWORD pid) {
     return match;
 }
 
+bool IsTargetProcess(DWORD pid) {
+    bool failed = false;
+    return QueryTarget(pid, failed);
+}
+
 SpotifyWatch::~SpotifyWatch() { Stop(); }
 
 bool SpotifyWatch::IsMainCandidate(HWND hwnd) {
-    // Class and owning process never change for a window, so a miss is remembered until its destroy event.
+    // Class and owning process never change for a window, so a mismatch is remembered until its destroy event.
     if (rejected_.count(hwnd)) return false;
     if (!IsWindow(hwnd) || GetAncestor(hwnd, GA_ROOT) != hwnd) return false;
     wchar_t cls[64];
     int n = GetClassNameW(hwnd, cls, static_cast<int>(std::size(cls)));
     bool match = n >= static_cast<int>(std::size(kMainClassPrefix)) - 1 &&
                  wcsncmp(cls, kMainClassPrefix, std::size(kMainClassPrefix) - 1) == 0;
+    bool lookupFailed = false;
     if (match) {
         DWORD pid = 0;
         GetWindowThreadProcessId(hwnd, &pid);
-        match = IsTargetProcess(pid);
+        match = QueryTarget(pid, lookupFailed);
     }
-    if (!match) {
+    // A failed process lookup may be temporary, so only a real mismatch is remembered.
+    if (!match && !lookupFailed) {
         if (rejected_.size() >= kMaxRejected) rejected_.clear();
         rejected_.insert(hwnd);
     }
