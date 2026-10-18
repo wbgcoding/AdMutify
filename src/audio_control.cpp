@@ -73,6 +73,8 @@ public:
 
     // keepUserFlag: a user change already seen stays on record (a level change on a live session).
     void Expect(Mode mode, bool mute, float volume, bool keepUserFlag = false) {
+        // A callback running meanwhile must not compare against half-updated values.
+        appliedMode = -1;
         expectedMute = mute;
         expectedVolume = volume;
         if (!keepUserFlag) userChanged = false;
@@ -156,7 +158,8 @@ private:
 
 class DeviceNotify final : public IMMNotificationClient {
 public:
-    DeviceNotify(HWND hwnd, std::atomic<bool>* devicesDirty) : hwnd_(hwnd), dirty_(devicesDirty) {}
+    DeviceNotify(HWND hwnd, std::atomic<bool>* devicesDirty, std::atomic<bool>* posted)
+        : hwnd_(hwnd), dirty_(devicesDirty), posted_(posted) {}
 
     STDMETHODIMP QueryInterface(REFIID riid, void** ppv) override {
         if (riid == __uuidof(IUnknown) || riid == __uuidof(IMMNotificationClient)) {
@@ -181,14 +184,16 @@ public:
     STDMETHODIMP OnPropertyValueChanged(LPCWSTR, const PROPERTYKEY) override { return S_OK; }
 
 private:
+    // A default device switch arrives once per role; one rescan covers them all.
     HRESULT Poke() {
         *dirty_ = true;
-        PostMessageW(hwnd_, WM_APP_SESSION_CREATED, 0, 0);
+        if (!posted_->exchange(true)) PostMessageW(hwnd_, WM_APP_SESSION_CREATED, 0, 0);
         return S_OK;
     }
     std::atomic<ULONG> ref_{1};
     HWND hwnd_;
     std::atomic<bool>* dirty_;
+    std::atomic<bool>* posted_;
 };
 
 struct DeviceRef {
@@ -303,6 +308,8 @@ struct AudioControl::Impl {
     // Activating a session manager per endpoint is slow, so the list is kept until a device change
     // (set from the notification thread) or a failed read marks it stale.
     std::atomic<bool> devicesDirty{true};
+    // Set while a device change message is queued; cleared when WatchSessions handles it.
+    std::atomic<bool> devicePostQueued{false};
     std::vector<DeviceRef> devices;
     // Capture endpoints follow the render list: any rebuild of it marks them stale too.
     bool captureDirty = true;
@@ -516,7 +523,10 @@ struct AudioControl::Impl {
             }
         }
         pending.push_back(rec);
-        while (pending.size() > kMaxPending) pending.erase(pending.begin());
+        while (pending.size() > kMaxPending) {
+            Log("pending_dropped");
+            pending.erase(pending.begin());
+        }
     }
 
     bool IsAppliedEntry(const std::wstring& deviceId, const std::wstring& instanceId) const {
@@ -753,8 +763,9 @@ bool ParseVolume(std::string_view f, float& v) {
 
 }  // namespace
 
-bool ParseStateFile(std::string_view text, std::vector<SavedSession>& out) {
+bool ParseStateFile(std::string_view text, std::vector<SavedSession>& out, bool* newer) {
     out.clear();
+    if (newer) *newer = false;
     size_t pos = 0;
     bool sawVersion = false;
     bool versionOk = true;
@@ -769,7 +780,9 @@ bool ParseStateFile(std::string_view text, std::vector<SavedSession>& out) {
             std::string_view num = line.substr(8);
             auto r = std::from_chars(num.data(), num.data() + num.size(), v);
             sawVersion = true;
-            if (r.ec != std::errc() || r.ptr != num.data() + num.size() || v != 2) versionOk = false;
+            const bool parsed = r.ec == std::errc() && r.ptr == num.data() + num.size();
+            if (!parsed || v != 2) versionOk = false;
+            if (parsed && v > 2 && newer) *newer = true;
             continue;
         }
         if (line.rfind("session=", 0) != 0) continue;
@@ -823,7 +836,7 @@ bool AudioControl::Init(HWND notifyWindow) {
     if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&impl_->enumerator))))
         return false;
     impl_->notify.Attach(new SessionNotify(notifyWindow));
-    impl_->deviceNotify.Attach(new DeviceNotify(notifyWindow, &impl_->devicesDirty));
+    impl_->deviceNotify.Attach(new DeviceNotify(notifyWindow, &impl_->devicesDirty, &impl_->devicePostQueued));
     if (FAILED(impl_->enumerator->RegisterEndpointNotificationCallback(impl_->deviceNotify.Get())))
         impl_->deviceNotify.Reset();
     // New sessions are announced from the start, so a Spotify that starts hidden later is noticed.
@@ -971,9 +984,12 @@ int AudioControl::RestoreFromStateFile(bool* fileIgnored) {
         Sleep(200);
     }
     std::vector<SavedSession> saved;
-    if (!ParseStateFile(text, saved)) {
+    bool newer = false;
+    if (!ParseStateFile(text, saved, &newer)) {
         if (fileIgnored) *fileIgnored = true;
-        DeleteFileW(path.c_str());
+        // A newer version's records cannot be read here, but that version can still restore them later.
+        if (newer) Log("state_file_newer_kept");
+        else DeleteFileW(path.c_str());
         return 0;
     }
     // A file from before the saved time existed: the last write is the best guess for when the state was applied.
@@ -1088,6 +1104,7 @@ bool AudioControl::HasAppliedSessions() const {
 }
 
 void AudioControl::WatchSessions() {
+    impl_->devicePostQueued = false;
     impl_->Prune();
     impl_->ResolvePending();
     impl_->RegisterDeviceNotifications();

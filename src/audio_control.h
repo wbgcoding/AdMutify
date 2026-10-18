@@ -45,7 +45,8 @@ uint64_t UnixFromFileTimeTicks(uint64_t ticks);
 bool InheritedOld(Mode mode, const SavedSession& sibling, bool liveMute, float liveVolume, bool& oldMute, float& oldVolume);
 
 std::string FormatStateFile(const std::vector<SavedSession>& sessions);
-bool ParseStateFile(std::string_view text, std::vector<SavedSession>& out);
+// newer: set when the file was written by a newer version (it is then kept, not deleted).
+bool ParseStateFile(std::string_view text, std::vector<SavedSession>& out, bool* newer = nullptr);
 
 class AudioControl {
 public:

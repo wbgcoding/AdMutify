@@ -190,28 +190,71 @@ TEST(audio_apply_without_spotify) {
 }
 
 TEST(audio_changes_stop_while_crash_in_progress) {
-    AudioControl ac;
-    ac.Init(nullptr);
-    SetCrashInProgressForTests(true);
-    CHECK(CrashInProgress());
-    CHECK(ac.Apply(Mode::Mute, 20) == 0);
-    CHECK(ac.Restore() == 0);
-    CHECK(ac.SwitchMode(Mode::Lower, 20) == 0);
-    CHECK(ac.ChangeLevel(30) == 0);
-    SetCrashInProgressForTests(false);
-    CHECK(!CrashInProgress());
-    ac.Shutdown();
+    // Aimed at a process that cannot exist: a broken guard must never reach a running Spotify.
+    SetTargetProcessName(L"AdMutifyNoSuchProcess.exe");
+    {
+        AudioControl ac;
+        ac.Init(nullptr);
+        SetCrashInProgressForTests(true);
+        CHECK(CrashInProgress());
+        CHECK(ac.Apply(Mode::Mute, 20) == 0);
+        CHECK(ac.Restore() == 0);
+        CHECK(ac.SwitchMode(Mode::Lower, 20) == 0);
+        CHECK(ac.ChangeLevel(30) == 0);
+        SetCrashInProgressForTests(false);
+        CHECK(!CrashInProgress());
+        ac.Shutdown();
+    }
+    SetTargetProcessName(L"Spotify.exe");
 }
 
 TEST(audio_content_poll_smoke) {
-    // The result depends on what the host plays; the poll must just run repeatedly without trouble.
-    AudioControl ac;
-    ac.Init(nullptr);
-    std::wstring exe;
-    for (int i = 0; i < 3; ++i) {
-        bool playing = ac.IsContentSoundPlaying(&exe);
-        CHECK(!playing || !exe.empty());
+    // Smoke run: what the host plays decides the result, so only the shape of the answer is checked.
+    SetTargetProcessName(L"AdMutifyNoSuchProcess.exe");
+    {
+        AudioControl ac;
+        ac.Init(nullptr);
+        std::wstring exe;
+        for (int i = 0; i < 3; ++i) {
+            exe = L"stale";
+            const bool playing = ac.IsContentSoundPlaying(&exe);
+            // A name is only reported for sound that plays; it is never left over from an earlier call.
+            CHECK(playing ? !exe.empty() && exe != L"stale" : true);
+        }
+        CHECK(!ac.HasAppliedSessions());
+        ac.Shutdown();
+        CHECK(!ac.IsContentSoundPlaying());
     }
-    ac.Shutdown();
-    CHECK(!ac.IsContentSoundPlaying());
+    SetTargetProcessName(L"Spotify.exe");
+}
+
+TEST(audio_state_file_newer_version_is_kept) {
+    std::vector<SavedSession> out;
+    bool newer = false;
+    CHECK(!ParseStateFile("version=3\r\nsession=a|b|c|m|1|0.5|0.5\r\n", out, &newer));
+    CHECK(newer);
+    CHECK(!ParseStateFile("version=x\r\n", out, &newer));
+    CHECK(!newer);
+    CHECK(!ParseStateFile("version=1\r\n", out, &newer));
+    CHECK(!newer);
+
+    SetTargetProcessName(L"AdMutifyNoSuchProcess.exe");
+    {
+        AudioControl ac;
+        ac.Init(nullptr);
+        const std::wstring path = StatePath();
+        EnsureDirectory(DataDir());
+        bool ignored = false;
+        // A newer version's file stays for that version; a broken one is removed.
+        CHECK(WriteFileAtomic(path, "version=3\r\nsession=a|b|c|m|1|0.5|0.5\r\n"));
+        CHECK(ac.RestoreFromStateFile(&ignored) == 0);
+        CHECK(ignored);
+        CHECK(GetFileAttributesW(path.c_str()) != INVALID_FILE_ATTRIBUTES);
+        CHECK(WriteFileAtomic(path, "garbage"));
+        CHECK(ac.RestoreFromStateFile(&ignored) == 0);
+        CHECK(ignored);
+        CHECK(GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES);
+        ac.Shutdown();
+    }
+    SetTargetProcessName(L"Spotify.exe");
 }
