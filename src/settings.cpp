@@ -256,7 +256,7 @@ namespace {
 void RemoveStaleTempFiles() {
     std::wstring dir = DataDir();
     WIN32_FIND_DATAW fd;
-    HANDLE h = FindFirstFileW((dir + L"\\settings.ini.*tmp").c_str(), &fd);
+    HANDLE h = FindFirstFileW((dir + L"\\*.ini.*.tmp").c_str(), &fd);
     if (h == INVALID_HANDLE_VALUE) return;
     FILETIME nowFt;
     GetSystemTimeAsFileTime(&nowFt);
