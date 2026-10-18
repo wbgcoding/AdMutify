@@ -36,7 +36,6 @@ UninstallDisplayIcon={app}\AdMutify.exe
 SetupIconFile=..\assets\app.ico
 OutputDir=..\dist
 OutputBaseFilename=AdMutify-Setup-{#AppVersion}
-AppMutex=Local\AdMutify.SingleInstance
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
@@ -400,6 +399,16 @@ end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
+  // A silent portable setup has no folder page: it needs a writable /DIR of its own, never an installed folder.
+  if WizardSilent and IsPortableMode then
+  begin
+    if (ExpandConstant('{param:DIR|}') = '') or not PortableFolderUsable(ExpandConstant('{app}')) or
+       FileExists(AddBackslash(ExpandConstant('{app}')) + 'unins000.exe') then
+    begin
+      Result := CustomMessage('PortableFolderNotWritable');
+      Exit;
+    end;
+  end;
   WasRunning := CheckForMutexes(AppMutexName);
   if not CloseRunningApp then
     Result := CustomMessage('CloseFailed');
