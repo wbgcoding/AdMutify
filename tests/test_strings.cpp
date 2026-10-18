@@ -1,5 +1,7 @@
 #include <windows.h>
 
+#include <cstdio>
+#include <cwctype>
 #include <cwchar>
 #include <string>
 #include <vector>
@@ -24,7 +26,8 @@ int CountSubstr(const std::wstring& s, const wchar_t* sub) {
     return n;
 }
 
-// The printf conversions of a text in order of appearance ("?" for anything the app does not use).
+// The printf conversions of a text in order of appearance ("?" for anything the app does not use). A literal percent
+// sign takes no argument, so it may sit anywhere ("%50" in Turkish) and is left out.
 std::vector<std::wstring> Specifiers(const std::wstring& s) {
     static const wchar_t* const known[] = {L"%%", L"%hs", L"%lu", L"%d", L"%s"};
     std::vector<std::wstring> out;
@@ -33,7 +36,7 @@ std::vector<std::wstring> Specifiers(const std::wstring& s) {
         bool found = false;
         for (const wchar_t* k : known) {
             if (s.compare(i, wcslen(k), k) == 0) {
-                out.push_back(k);
+                if (wcscmp(k, L"%%") != 0) out.push_back(k);
                 i += wcslen(k) - 1;
                 found = true;
                 break;
@@ -104,11 +107,22 @@ TEST(strings_no_dashes) {
 }
 
 TEST(strings_tables_are_translated) {
-    // Every table other than English has its own text for the exit entry.
-    const std::wstring en = StrFor(Language::English, StrId::MenuExit);
+    // A row equal to English is an untranslated row, except for names and words that are the same in that language.
+    static const wchar_t* const kSameEverywhere[] = {L"AdMutify", L"Spotify", L"Volume", L"System", L"Video"};
     for (Language lang : kAllLanguages) {
         if (lang == Language::English) continue;
-        CHECK(std::wstring(StrFor(lang, StrId::MenuExit)) != en);
+        for (int i = 0; i < static_cast<int>(StrId::Count); ++i) {
+            const std::wstring en = StrFor(Language::English, static_cast<StrId>(i));
+            if (en != StrFor(lang, static_cast<StrId>(i))) continue;
+            // Rows without a letter outside their format codes ("%d %%") are the same in every language.
+            bool allowed = true;
+            for (size_t k = 0; k < en.size(); ++k)
+                if (iswalpha(en[k]) && (k == 0 || en[k - 1] != L'%')) allowed = false;
+            for (const wchar_t* same : kSameEverywhere)
+                if (en == same) allowed = true;
+            if (!allowed) printf("  untranslated: %s row %d \"%ls\"\n", LanguageCode(lang), i, en.c_str());
+            CHECK(allowed);
+        }
     }
 }
 

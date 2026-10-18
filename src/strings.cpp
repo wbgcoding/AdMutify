@@ -68,9 +68,9 @@ constexpr const wchar_t* kEn[] = {
 
 constexpr const wchar_t* kDe[] = {
     L"Aktiv: keine Werbung",                                                            // StatusActive
-    L"Werbung: Stumm",                                                                  // StatusMuted
+    L"Werbung: stumm",                                                                  // StatusMuted
     L"Werbung: leiser (%d %%)",                                                         // StatusLowered
-    L"Video: Stumm",                                                                    // StatusMediaMuted
+    L"Video: stumm",                                                                    // StatusMediaMuted
     L"Video: leiser (%d %%)",                                                           // StatusMediaLowered
     L"Video: Spotify pausiert",                                                         // StatusMediaPaused
     L"Spotify nicht gefunden",                                                          // StatusNoSpotify
@@ -413,7 +413,7 @@ constexpr const wchar_t* kPl[] = {  // Polish
     L"Pliki muzyczne",  // MusicFilterName
     L"Ten folder nie zawiera plików muzycznych do odtworzenia (MP3, M4A, AAC, WMA, WAV, FLAC). Wybierz inny folder.",  // ErrMusicEmpty
     L"Język",  // LanguageLabel
-    L"System",  // LangSystem
+    L"Systemowy",  // LangSystem
     L"Resetuj ustawienia",  // ResetButton
     L"Zamknij",  // Close
     L"Zresetować wszystkie ustawienia do wartości domyślnych? Spowoduje to również wyłączenie uruchamiania z systemem Windows.",  // ResetConfirm
@@ -434,9 +434,9 @@ static_assert(std::size(kPl) == kCount, "Polish table size mismatch");
 constexpr const wchar_t* kTr[] = {  // Turkish
     L"Etkin: reklam oynatılmıyor",  // StatusActive
     L"Reklam: sesi kapatıldı",  // StatusMuted
-    L"Reklam: ses azaltıldı (%d%%)",  // StatusLowered
+    L"Reklam: ses azaltıldı (%%%d)",  // StatusLowered
     L"Video: sesi kapatıldı",  // StatusMediaMuted
-    L"Video: ses azaltıldı (%d%%)",  // StatusMediaLowered
+    L"Video: ses azaltıldı (%%%d)",  // StatusMediaLowered
     L"Video: Spotify duraklatıldı",  // StatusMediaPaused
     L"Spotify bulunamadı",  // StatusNoSpotify
     L"Devre dışı",  // StatusDisabled
@@ -450,7 +450,7 @@ constexpr const wchar_t* kTr[] = {  // Turkish
     L"Reklamlar sırasında",  // GroupAds
     L"Sesi kapat",  // ModeMute
     L"Ses düzeyini şuna düşür",  // ModeLower
-    L"%d%%",  // PercentValue
+    L"%%%d",  // PercentValue
     L"Diğer uygulamalardaki videolar sırasında",  // MediaLabel
     L"Hiçbir şey yapma",  // MediaOff
     L"Spotify'ın sesini azalt",  // MediaLower
@@ -497,7 +497,7 @@ constexpr const wchar_t* kJa[] = {  // Japanese
     L"広告: 音量を下げています (%d%%)",  // StatusLowered
     L"動画: ミュート",  // StatusMediaMuted
     L"動画: 音量を下げています (%d%%)",  // StatusMediaLowered
-    L"動画: Spotify を一時停止",  // StatusMediaPaused
+    L"動画: Spotify を一時停止中",  // StatusMediaPaused
     L"Spotify が見つかりません",  // StatusNoSpotify
     L"無効",  // StatusDisabled
     L"有効",  // MenuEnabled
