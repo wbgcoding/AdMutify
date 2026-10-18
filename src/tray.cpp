@@ -304,6 +304,11 @@ void Tray::Show() {
 }
 
 void Tray::Hide() {
+    // Hide runs only on the way out; the menu font is rebuilt on every menu, so dropping it here is safe.
+    if (g_look.font) {
+        DeleteObject(g_look.font);
+        g_look.font = nullptr;
+    }
     if (!wantVisible_ && !visible_) return;
     wantVisible_ = false;
     NOTIFYICONDATAW nid{};
