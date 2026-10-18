@@ -509,7 +509,12 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
 
     HANDLE mutex = CreateMutexW(nullptr, FALSE, MutexName());
     if (mutex && GetLastError() == ERROR_ALREADY_EXISTS) {
+        // The running instance may still be creating its window.
         HWND other = FindWindowW(ClassName(), nullptr);
+        for (int i = 0; !other && i < 20; ++i) {
+            Sleep(100);
+            other = FindWindowW(ClassName(), nullptr);
+        }
         if (other) PostMessageW(other, WM_APP_SHOW, 0, 0);
         CloseHandle(mutex);
         return 0;
