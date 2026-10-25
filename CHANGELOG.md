@@ -9,6 +9,7 @@ All notable changes to this project are documented here. The format follows Keep
 - Own music during ads, as the third choice next to muting and lowering: play one file, or a folder shuffled or in name order, at a volume you choose. The music fades in when the ad starts, fades out when it ends and continues at the same spot during the next ad.
 - Music during ads plays OGG, OGA, OPUS, WEBM, MKA and MP2 files besides MP3, M4A, AAC, WMA, WAV and FLAC. OGG, OGA, OPUS and MKA need the Web Media Extensions that come with Windows (missing on N editions).
 - Reset settings asks with a second click on the button instead of a dialog.
+- The settings window starts with the choices for ads and videos, then the language; the start options moved to the bottom.
 - Troubleshooting: the hidden line `trace=1` in `settings.ini` turns on the trace like the `--trace` switch.
 
 ### Fixed

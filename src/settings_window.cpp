@@ -221,8 +221,6 @@ void MakeFonts() {
 
 void CreateControls() {
     Make(L"STATIC", IDC_ADS_COUNT, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
-    Make(L"BUTTON", IDC_AUTOSTART, BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP);
-    Make(L"BUTTON", IDC_HIDETRAY, BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP);
     Make(L"STATIC", IDC_GROUP_ADS, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"BUTTON", IDC_MODE_MUTE, BS_AUTORADIOBUTTON | BS_MULTILINE | WS_GROUP | WS_TABSTOP);
     Make(L"BUTTON", IDC_MODE_LOWER, BS_AUTORADIOBUTTON);
@@ -246,6 +244,8 @@ void CreateControls() {
     Make(L"STATIC", IDC_LANGUAGE_LABEL, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
     SetWindowSubclass(Make(L"COMBOBOX", IDC_LANGUAGE, CBS_DROPDOWNLIST | WS_VSCROLL | WS_GROUP | WS_TABSTOP),
                       ComboProc, 1, 0);
+    Make(L"BUTTON", IDC_AUTOSTART, BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP);
+    Make(L"BUTTON", IDC_HIDETRAY, BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP);
     // Selectable for copying, but no tab stop: it has no label, so keyboard focus there would read as an unnamed field.
     Make(L"EDIT", IDC_VERSION, ES_READONLY | ES_CENTER | ES_AUTOHSCROLL);
     SetWindowSubclass(Make(L"BUTTON", IDC_RESET, BS_OWNERDRAW | WS_TABSTOP), FlatButtonProc, 1, 0);
@@ -496,23 +496,13 @@ void Layout(Placement placement, int density = 0) {
 
     // Counter: plain text above the first card.
     Place(IDC_ADS_COUNT, margin + u / 4, y, cardW - u / 4, rowH);
-    y += rowH + cardGap;
+    y += rowH + sectionGap;
 
-    // Card 1: start options.
-    w.cards[0] = {margin, y, margin + cardW, 0};
-    y += vpad;
-    Place(IDC_AUTOSTART, x0, y, innerW, autostartH);
-    y += autostartH;
-    Place(IDC_HIDETRAY, x0, y, innerW, hideTrayH);
-    y += hideTrayH + vpad;
-    w.cards[0].bottom = y;
-    y += sectionGap;
-
-    // Section heading and card 2: what happens during an ad.
+    // Section heading and card 1: what happens during an ad.
     const int headH = density == kMaxDensity ? u * 5 / 4 : u * 3 / 2;
     Place(IDC_GROUP_ADS, margin + u / 4, y, cardW - u / 4, headH);
     y += headH + u / 3;
-    w.cards[1] = {margin, y, margin + cardW, 0};
+    w.cards[0] = {margin, y, margin + cardW, 0};
     y += vpad;
     // Slider rows line up with the ad slider; `off` indents the label of the music rows under their radio.
     const int lowerW = std::min(innerW - sliderMin - valW,
@@ -556,10 +546,10 @@ void Layout(Placement placement, int density = 0) {
         sliderRow(IDC_MUSIC_VOLUME_LABEL, IDC_MUSIC_VOLUME, IDC_MUSIC_VOLUME_VALUE, show, indent);
     }
     y += vpad;
-    w.cards[1].bottom = y;
+    w.cards[0].bottom = y;
     y += cardGap;
 
-    // Cards 3 and 4: video reaction and language, each one label and one choice box; the video card adds a level
+    // Cards 2 and 3: video reaction and language, each one label and one choice box; the video card adds a level
     // slider below.
     auto comboRow = [&](RECT& card, int labelId, int comboId, int labelW, int itemsW, bool level) {
         card = {margin, y, margin + cardW, 0};
@@ -570,9 +560,19 @@ void Layout(Placement placement, int density = 0) {
         y += vpad;
         card.bottom = y;
     };
-    comboRow(w.cards[2], IDC_MEDIA_LABEL, IDC_MEDIA, mediaLabelW, mediaItemsW, true);
+    comboRow(w.cards[1], IDC_MEDIA_LABEL, IDC_MEDIA, mediaLabelW, mediaItemsW, true);
     y += cardGap;
-    comboRow(w.cards[3], IDC_LANGUAGE_LABEL, IDC_LANGUAGE, labelTextW, languageItemsW, false);
+    comboRow(w.cards[2], IDC_LANGUAGE_LABEL, IDC_LANGUAGE, labelTextW, languageItemsW, false);
+    y += cardGap;
+
+    // Card 4: start options.
+    w.cards[3] = {margin, y, margin + cardW, 0};
+    y += vpad;
+    Place(IDC_AUTOSTART, x0, y, innerW, autostartH);
+    y += autostartH;
+    Place(IDC_HIDETRAY, x0, y, innerW, hideTrayH);
+    y += hideTrayH + vpad;
+    w.cards[3].bottom = y;
     y += sectionGap;
 
     // Footer: version, reset link, close button.

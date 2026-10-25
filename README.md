@@ -52,11 +52,11 @@ AdMutify does not modify Spotify in any way: no patching, no code injection, no 
 | Setting | What it does |
 |---|---|
 | Ads muted counter | The first line of the window shows how many ads AdMutify has muted so far. It is kept in `stats.ini` next to the settings and is not changed by "Reset settings". |
-| Start with Windows | Adds AdMutify to your Windows startup apps. |
-| No tray icon when starting with Windows | AdMutify runs invisibly after the Windows start. Open it again to show the icon. Starting it yourself always shows the icon. |
 | During ads | Mute Spotify, lower it to 0 to 90 percent of its current volume, or play your own music while it is muted. For music, pick the source (one file, a folder shuffled or a folder in order, subfolders included; MP3, M4A, AAC, WMA, WAV, FLAC, MP2, WEBM, plus OGG, OGA, OPUS and MKA with the Web Media Extensions that come with Windows), choose the file or folder with "Choose" and set "Volume" (0 to 100 percent). |
 | During videos in other apps | Do nothing, lower Spotify, mute Spotify or pause Spotify while a browser or video player plays sound for a few seconds. Off by default. Lowering uses its own "Lower to" level (0 to 90 percent). Pausing continues playback when the video ends. |
 | Language | System (follows Windows), or one of English, Deutsch, Español, Português (Brasil), Italiano, Nederlands, Polski, Türkçe, 日本語 and 简体中文. The installer speaks the same languages. |
+| Start with Windows | Adds AdMutify to your Windows startup apps. |
+| No tray icon when starting with Windows | AdMutify runs invisibly after the Windows start. Open it again to show the icon. Starting it yourself always shows the icon. |
 | Reset settings | Restores all defaults and turns off start with Windows. The first click turns the button red and asks "Click again to reset"; a second click within 4 seconds resets. Waiting, Esc or leaving the button cancels. |
 
 Settings are stored in `%APPDATA%\AdMutify` (portable: next to the exe), logs in `%LOCALAPPDATA%\AdMutify\logs` (portable: in `logs` next to the exe). Uninstalling asks whether these should be deleted too.
