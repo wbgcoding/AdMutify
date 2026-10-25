@@ -52,6 +52,27 @@ TEST(media_is_ad_track_samples) {
     CHECK(!IsAdTrack(t));
 }
 
+TEST(media_merge_spot_with_previous_enabled_mutes_at_once) {
+    // Real spot: the window title is just "Spotify" (no verdict from the title alone, which waits two seconds) and
+    // the session still offers previous from the episode before.
+    MediaTrack spot = Ad(L"Spotify", L"Spotify");
+    spot.prevEnabled = true;
+    CHECK(MergeMediaTrack(TitleKind::IdleOrAd, AdState::Music, spot, L"Spotify", 20) == TitleKind::Ad);
+    MediaTrack brand = Ad(L"De'Longhi", L"De'Longhi");
+    brand.prevEnabled = true;
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Music, brand, L"De'Longhi", 200) == TitleKind::Ad);
+    // A song-like title keeps the strict check: a local file without tags, last in the queue, stays music.
+    MediaTrack local = Ad(L"demo", L"band");
+    local.prevEnabled = true;
+    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Music, local, L"band - demo", 200) == TitleKind::Music);
+    // A paused player keeps showing the last episode, which never matches the plain title.
+    MediaTrack episode;
+    episode.valid = true;
+    episode.title = L"Das dunkle Mal";
+    episode.album = L"4 - Harry Potter und der Feuerkelch";
+    CHECK(MergeMediaTrack(TitleKind::IdleOrAd, AdState::Music, episode, L"Spotify Free", 20) == TitleKind::IdleOrAd);
+}
+
 TEST(media_track_matches_title) {
     const MediaTrack song = Song();
     CHECK(TrackMatchesTitle(song, L"leon chang - sleep it off"));

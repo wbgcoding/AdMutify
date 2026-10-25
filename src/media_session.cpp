@@ -49,6 +49,11 @@ TitleKind MergeMediaTrack(TitleKind kind, AdState current, const MediaTrack& t, 
     if (!t.valid) return kind;
     const bool matches = TrackMatchesTitle(t, windowTitle);
     if (matches && IsAdTrack(t)) return TitleKind::Ad;
+    // At the start of a spot Spotify still offers previous from the track before, often until the spot ends.
+    // Where the title already points to an ad that is not asked, so the mute does not wait for the title debounce;
+    // a song-like title keeps the strict check (a local file without album tags at the end of the queue).
+    if (kind != TitleKind::Music && matches && t.trackNumber == 0 && t.album.empty() && !t.nextEnabled)
+        return TitleKind::Ad;
     // A title without " - " reads as an ad, but podcast episodes look like that too; the session shows them with
     // their show as album, which a Spotify spot never has.
     if (kind == TitleKind::Ad && matches && IsContentTrack(t)) return TitleKind::Music;
