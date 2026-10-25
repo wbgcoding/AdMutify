@@ -30,6 +30,7 @@ enum SettingsControlId {
     IDC_MUSIC_VOLUME = 124,
     IDC_MUSIC_VOLUME_VALUE = 125,
     IDC_ADS_COUNT = 126,
+    IDC_ADS_CAPTION = 128,
 };
 
 // Opens the settings window, or brings the open one to the front.

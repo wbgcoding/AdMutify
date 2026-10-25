@@ -41,6 +41,7 @@ struct Win {
     HWND hwnd = nullptr;
     HFONT font = nullptr;
     HFONT headFont = nullptr;
+    HFONT bigFont = nullptr;
     HWND tip = nullptr;
     HBRUSH bg = nullptr;
     HBRUSH card = nullptr;
@@ -192,6 +193,7 @@ void StrokeRounded(HDC dc, const RECT& rc, float radius, COLORREF color, float w
 void MakeFonts() {
     if (w.font) DeleteObject(w.font);
     if (w.headFont) DeleteObject(w.headFont);
+    if (w.bigFont) DeleteObject(w.bigFont);
     NONCLIENTMETRICSW ncm{};
     ncm.cbSize = sizeof(ncm);
     SystemParametersInfoForDpi(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0, w.dpi);
@@ -199,8 +201,15 @@ void MakeFonts() {
     LOGFONTW head = ncm.lfMessageFont;
     head.lfWeight = FW_SEMIBOLD;
     w.headFont = CreateFontIndirectW(&head);
+    // The counter number: twice the message font, semibold.
+    LOGFONTW big = head;
+    big.lfHeight *= 2;
+    big.lfWidth = 0;
+    w.bigFont = CreateFontIndirectW(&big);
     for (int id = IDC_AUTOSTART; id <= IDC_MODE_MUSIC; ++id)
-        if (HWND c = Ctl(id)) SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(id == IDC_GROUP_ADS ? w.headFont : w.font), TRUE);
+        if (HWND c = Ctl(id))
+            SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(id == IDC_GROUP_ADS ? w.headFont : id == IDC_ADS_COUNT ? w.bigFont : w.font), TRUE);
+    SendMessageW(Ctl(IDC_ADS_CAPTION), WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
     if (w.tip) {
         SendMessageW(w.tip, WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
         SendMessageW(w.tip, TTM_SETMAXTIPWIDTH, 0, Scale(320));
@@ -220,7 +229,8 @@ void MakeFonts() {
 }
 
 void CreateControls() {
-    Make(L"STATIC", IDC_ADS_COUNT, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
+    Make(L"STATIC", IDC_ADS_COUNT, SS_CENTER | SS_CENTERIMAGE | SS_NOPREFIX);
+    Make(L"STATIC", IDC_ADS_CAPTION, SS_CENTER | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"STATIC", IDC_GROUP_ADS, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"BUTTON", IDC_MODE_MUTE, BS_AUTORADIOBUTTON | BS_MULTILINE | WS_GROUP | WS_TABSTOP);
     Make(L"BUTTON", IDC_MODE_LOWER, BS_AUTORADIOBUTTON);
@@ -315,14 +325,31 @@ void UpdateMusicPath() {
 }
 
 void UpdateCounterText() {
+    // The number alone, with the thousands separator of the user's locale.
+    wchar_t digits[32];
+    swprintf_s(digits, L"%llu", static_cast<unsigned long long>(StatsAdsMuted()));
     wchar_t buf[96];
-    swprintf_s(buf, Str(StrId::AdsMutedCount), static_cast<unsigned long long>(StatsAdsMuted()));
+    NUMBERFMTW fmt{};
+    fmt.NumDigits = 0;
+    fmt.LeadingZero = 1;
+    fmt.Grouping = 3;
+    wchar_t decimal[8] = L".";
+    wchar_t thousand[8] = L",";
+    GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SDECIMAL, decimal, static_cast<int>(std::size(decimal)));
+    GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_STHOUSAND, thousand, static_cast<int>(std::size(thousand)));
+    fmt.lpDecimalSep = decimal;
+    fmt.lpThousandSep = thousand;
+    fmt.NegativeOrder = 1;
+    if (GetNumberFormatEx(LOCALE_NAME_USER_DEFAULT, 0, digits, &fmt, buf, static_cast<int>(std::size(buf))) == 0)
+        wcscpy_s(buf, digits);
     SetText(IDC_ADS_COUNT, buf);
+    InvalidateRect(Ctl(IDC_ADS_COUNT), nullptr, TRUE);
 }
 
 void ApplyTexts() {
     SetWindowTextW(w.hwnd, Str(StrId::SettingsTitle));
     UpdateCounterText();
+    SetText(IDC_ADS_CAPTION, Str(StrId::AdsMutedCaption));
     SetText(IDC_AUTOSTART, Str(StrId::OptAutostart));
     SetText(IDC_HIDETRAY, Str(StrId::OptHideTray));
     if (w.tip) {
@@ -468,7 +495,7 @@ void Layout(Placement placement, int density = 0) {
     const int languageItemsW = WidestItem(dc, w.font, kCombos[1]);
     const int musicItemsW = WidestItem(dc, w.font, kCombos[2]);
     const int comboExtra = 3 * u;
-    int need = std::max({TextWidth(dc, w.font, IDC_ADS_COUNT) + u,
+    int need = std::max({TextWidth(dc, w.bigFont, IDC_ADS_COUNT) + u, TextWidth(dc, w.font, IDC_ADS_CAPTION) + u,
                          indent + std::max({TextWidth(dc, w.font, IDC_AUTOSTART), TextWidth(dc, w.font, IDC_HIDETRAY),
                                             TextWidth(dc, w.font, IDC_MODE_MUTE), TextWidth(dc, w.font, IDC_MODE_MUSIC)}) + u,
                          indent + lowerTextW + u + sliderMin + valW,
@@ -494,9 +521,20 @@ void Layout(Placement placement, int density = 0) {
     ReleaseDC(w.hwnd, dc);
     int y = margin;
 
-    // Counter: plain text above the first card.
-    Place(IDC_ADS_COUNT, margin + u / 4, y, cardW - u / 4, rowH);
-    y += rowH + sectionGap;
+    // Counter: number over caption, centred over the content, no card.
+    {
+        TEXTMETRICW bigTm{};
+        HDC cdc = GetDC(w.hwnd);
+        HGDIOBJ oldBig = SelectObject(cdc, w.bigFont);
+        GetTextMetricsW(cdc, &bigTm);
+        SelectObject(cdc, oldBig);
+        ReleaseDC(w.hwnd, cdc);
+        const int numH = bigTm.tmHeight;
+        Place(IDC_ADS_COUNT, margin, y, cardW, numH);
+        y += numH;
+        Place(IDC_ADS_CAPTION, margin, y, cardW, rowH);
+        y += rowH + sectionGap;
+    }
 
     // Section heading and card 1: what happens during an ad.
     const int headH = density == kMaxDensity ? u * 5 / 4 : u * 3 / 2;
@@ -1201,7 +1239,8 @@ void OnPaint(HWND hwnd) {
     EndPaint(hwnd, &ps);
 }
 
-bool OnCard(int id) { return id != IDC_GROUP_ADS && id != IDC_VERSION && id != IDC_ADS_COUNT; }
+bool OnCard(int id) { return id != IDC_GROUP_ADS && id != IDC_VERSION && id != IDC_ADS_COUNT &&
+                                                   id != IDC_ADS_CAPTION; }
 
 LRESULT OnCtlColor(HDC dc, HWND ctl) {
     int id = GetDlgCtrlID(ctl);
@@ -1209,6 +1248,8 @@ LRESULT OnCtlColor(HDC dc, HWND ctl) {
     if (const SliderDef* slider = SliderFor(id); slider && id != slider->track && !IsWindowEnabled(Ctl(slider->track)))
         text = ThemeDisabledText();
     if (id == IDC_MUSIC_PATH && CurrentSettings().adMusicPath.empty()) text = ThemeDisabledText();
+    if (id == IDC_ADS_COUNT) text = IsHighContrast() ? ThemeText() : ThemeAccent();
+    if (id == IDC_ADS_CAPTION) text = ThemeDisabledText();
     const bool card = OnCard(id);
     SetTextColor(dc, text);
     SetBkColor(dc, card ? ThemeCard() : ThemeBackground());
@@ -1301,9 +1342,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             // Fonts and brushes go last, after the child windows that still use them are gone.
             if (w.font) DeleteObject(w.font);
             if (w.headFont) DeleteObject(w.headFont);
+            if (w.bigFont) DeleteObject(w.bigFont);
             if (w.bg) DeleteObject(w.bg);
             if (w.card) DeleteObject(w.card);
-            w.font = w.headFont = nullptr;
+            w.font = w.headFont = w.bigFont = nullptr;
             w.bg = w.card = nullptr;
             if (w.gdiplus) Gdiplus::GdiplusShutdown(w.gdiplus);
             w.gdiplus = 0;

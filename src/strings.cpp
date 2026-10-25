@@ -20,7 +20,7 @@ constexpr const wchar_t* kEn[] = {
     L"Settings",                                                                       // MenuSettings
     L"Exit",                                                                            // MenuExit
     L"AdMutify Settings",                                                               // SettingsTitle
-    L"Ads muted: %llu",  // AdsMutedCount
+    L"Ads muted",  // AdsMutedCaption
     L"Start with Windows",                                                              // OptAutostart
     L"No tray icon when starting with Windows",                                         // OptHideTray
     L"Applies when AdMutify starts with Windows. Open AdMutify again to show the icon.", // OptHideTrayHint
@@ -78,7 +78,7 @@ constexpr const wchar_t* kDe[] = {
     L"Einstellungen",                                                                  // MenuSettings
     L"Beenden",                                                                         // MenuExit
     L"AdMutify Einstellungen",                                                          // SettingsTitle
-    L"Werbung stummgeschaltet: %llu",  // AdsMutedCount
+    L"Werbung stummgeschaltet",  // AdsMutedCaption
     L"Mit Windows starten",                                                             // OptAutostart
     L"Beim Start mit Windows ohne Tray-Icon",                                           // OptHideTray
     L"Gilt beim Start mit Windows. Zum Anzeigen AdMutify erneut öffnen.",            // OptHideTrayHint
@@ -142,7 +142,7 @@ constexpr const wchar_t* kEs[] = {  // Spanish
     L"Configuración",  // MenuSettings
     L"Salir",  // MenuExit
     L"Configuración de AdMutify",  // SettingsTitle
-    L"Anuncios silenciados: %llu",  // AdsMutedCount
+    L"Anuncios silenciados",  // AdsMutedCaption
     L"Iniciar con Windows",  // OptAutostart
     L"Sin icono en el área de notificación al iniciar con Windows",  // OptHideTray
     L"Se aplica cuando AdMutify se inicia con Windows. Abre AdMutify de nuevo para mostrar el icono.",  // OptHideTrayHint
@@ -201,7 +201,7 @@ constexpr const wchar_t* kPt[] = {  // Brazilian Portuguese
     L"Configurações",  // MenuSettings
     L"Sair",  // MenuExit
     L"Configurações do AdMutify",  // SettingsTitle
-    L"Anúncios silenciados: %llu",  // AdsMutedCount
+    L"Anúncios silenciados",  // AdsMutedCaption
     L"Iniciar com o Windows",  // OptAutostart
     L"Não mostrar ícone na área de notificação ao iniciar com o Windows",  // OptHideTray
     L"Aplica-se quando o AdMutify inicia com o Windows. Abra o AdMutify novamente para mostrar o ícone.",  // OptHideTrayHint
@@ -260,7 +260,7 @@ constexpr const wchar_t* kIt[] = {  // Italian
     L"Impostazioni",  // MenuSettings
     L"Esci",  // MenuExit
     L"Impostazioni di AdMutify",  // SettingsTitle
-    L"Pubblicità silenziate: %llu",  // AdsMutedCount
+    L"Pubblicità silenziate",  // AdsMutedCaption
     L"Avvia con Windows",  // OptAutostart
     L"Nessuna icona nell'area di notifica all'avvio con Windows",  // OptHideTray
     L"Si applica quando AdMutify si avvia con Windows. Apri di nuovo AdMutify per visualizzare l'icona.",  // OptHideTrayHint
@@ -319,7 +319,7 @@ constexpr const wchar_t* kNl[] = {  // Dutch
     L"Instellingen",  // MenuSettings
     L"Afsluiten",  // MenuExit
     L"Instellingen voor AdMutify",  // SettingsTitle
-    L"Advertenties gedempt: %llu",  // AdsMutedCount
+    L"Advertenties gedempt",  // AdsMutedCaption
     L"Opstarten met Windows",  // OptAutostart
     L"Geen pictogram in het systeemvak bij opstarten met Windows",  // OptHideTray
     L"Geldt wanneer AdMutify met Windows wordt opgestart. Open AdMutify opnieuw om het pictogram weer te geven.",  // OptHideTrayHint
@@ -378,7 +378,7 @@ constexpr const wchar_t* kPl[] = {  // Polish
     L"Ustawienia",  // MenuSettings
     L"Zakończ",  // MenuExit
     L"Ustawienia AdMutify",  // SettingsTitle
-    L"Wyciszone reklamy: %llu",  // AdsMutedCount
+    L"Wyciszone reklamy",  // AdsMutedCaption
     L"Uruchamiaj z systemem Windows",  // OptAutostart
     L"Bez ikony w obszarze powiadomień po uruchomieniu z systemem Windows",  // OptHideTray
     L"Dotyczy uruchamiania AdMutify z systemem Windows. Aby wyświetlić ikonę, otwórz ponownie AdMutify.",  // OptHideTrayHint
@@ -437,7 +437,7 @@ constexpr const wchar_t* kTr[] = {  // Turkish
     L"Ayarlar",  // MenuSettings
     L"Çıkış",  // MenuExit
     L"AdMutify Ayarları",  // SettingsTitle
-    L"Sessize alınan reklamlar: %llu",  // AdsMutedCount
+    L"Sessize alınan reklamlar",  // AdsMutedCaption
     L"Windows ile başlat",  // OptAutostart
     L"Windows ile başlatıldığında bildirim alanı simgesini gösterme",  // OptHideTray
     L"AdMutify Windows ile başlatıldığında geçerlidir. Simgeyi göstermek için AdMutify'ı yeniden açın.",  // OptHideTrayHint
@@ -496,7 +496,7 @@ constexpr const wchar_t* kJa[] = {  // Japanese
     L"設定",  // MenuSettings
     L"終了",  // MenuExit
     L"AdMutify の設定",  // SettingsTitle
-    L"ミュートした広告: %llu",  // AdsMutedCount
+    L"ミュートした広告",  // AdsMutedCaption
     L"Windows と同時に起動",  // OptAutostart
     L"Windows と同時に起動するときに通知領域のアイコンを表示しない",  // OptHideTray
     L"AdMutify を Windows と同時に起動する場合に適用されます。アイコンを表示するには、AdMutify をもう一度開いてください。",  // OptHideTrayHint
@@ -555,7 +555,7 @@ constexpr const wchar_t* kZh[] = {  // Simplified Chinese
     L"设置",  // MenuSettings
     L"退出",  // MenuExit
     L"AdMutify 设置",  // SettingsTitle
-    L"已静音的广告：%llu",  // AdsMutedCount
+    L"已静音的广告",  // AdsMutedCaption
     L"随 Windows 启动",  // OptAutostart
     L"随 Windows 启动时不显示通知区域图标",  // OptHideTray
     L"适用于 AdMutify 随 Windows 启动的情况。要显示图标，请再次打开 AdMutify。",  // OptHideTrayHint
