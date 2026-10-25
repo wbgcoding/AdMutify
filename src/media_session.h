@@ -27,11 +27,10 @@ struct MediaTrack {
 // The media session usually lags the window title by a few hundred ms.
 constexpr uint64_t kMediaSettleMs = 1500;
 
-// The song-like ad rule only holds this long after a title change; Spotify spots are shorter, so a longer item
-// with the same traits (podcast, audiobook, untagged file) is not muted for its whole length.
-constexpr uint64_t kMaxSessionAdMs = 65000;
-
 bool IsAdTrack(const MediaTrack& t);
+// Has an album (a song's album or a podcast's show): never a Spotify spot. Skip controls are not used, Spotify
+// turns them off for a moment while switching episodes.
+bool IsContentTrack(const MediaTrack& t);
 // The window title is the track title, or "artist - title".
 bool TrackMatchesTitle(const MediaTrack& t, std::wstring_view windowTitle);
 // Second signal on top of ClassifyTitle: catches ads whose title looks like a song, and holds a running ad

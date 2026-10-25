@@ -42,11 +42,19 @@ bool TrackMatchesTitle(const MediaTrack& t, std::wstring_view windowTitle) {
     return !t.artist.empty() && title == t.artist + L" - " + t.title;
 }
 
+bool IsContentTrack(const MediaTrack& t) { return t.valid && !t.album.empty(); }
+
 TitleKind MergeMediaTrack(TitleKind kind, AdState current, const MediaTrack& t, std::wstring_view windowTitle,
                           uint64_t msSinceTitleChange) {
     if (!t.valid) return kind;
     const bool matches = TrackMatchesTitle(t, windowTitle);
-    if (matches && IsAdTrack(t) && msSinceTitleChange < kMaxSessionAdMs) return TitleKind::Ad;
+    if (matches && IsAdTrack(t)) return TitleKind::Ad;
+    // A title without " - " reads as an ad, but podcast episodes look like that too; the session shows them with
+    // their show as album, which a Spotify spot never has.
+    if (kind == TitleKind::Ad && matches && IsContentTrack(t)) return TitleKind::Music;
+    // Such a title is not muted before the session has caught up with it, so an episode start does not dip.
+    if (kind == TitleKind::Ad && current != AdState::Ad && !matches && msSinceTitleChange < kMediaSettleMs)
+        return TitleKind::Music;
     if (kind == TitleKind::Music && current == AdState::Ad && !matches && msSinceTitleChange < kMediaSettleMs)
         return TitleKind::Ad;
     return kind;

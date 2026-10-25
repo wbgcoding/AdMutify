@@ -76,17 +76,35 @@ TEST(media_merge_regression_song_like_ad) {
     CHECK(MergeMediaTrack(TitleKind::Music, AdState::Idle, t, title, 0) == TitleKind::Ad);
 }
 
-TEST(media_merge_ad_rule_expires) {
-    // A long item with ad traits (podcast, audiobook, untagged file) must not stay muted for its whole length.
-    const MediaTrack t = Ad(L"Episode 12", L"Some Show");
-    const std::wstring_view title = L"Some Show - Episode 12";
-    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, t, title, 30000) == TitleKind::Ad);
-    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, t, title, 66000) == TitleKind::Music);
-    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, t, title, kMaxSessionAdMs - 1) == TitleKind::Ad);
-    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, t, title, kMaxSessionAdMs) == TitleKind::Music);
-    // The title verdict itself is not touched by the limit.
-    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Ad, t, title, 66000) == TitleKind::Ad);
-    CHECK(MergeMediaTrack(TitleKind::IdleOrAd, AdState::Ad, t, title, 66000) == TitleKind::IdleOrAd);
+TEST(media_merge_podcast_episode_is_content) {
+    // Real podcast episode: its title has no " - ", so the title alone reads as an ad. The session shows the show as
+    // album and live skip controls, which an ad never has.
+    MediaTrack episode;
+    episode.valid = true;
+    episode.title = L"Die größten Geheimnisse der Antike \x2013 Was wissen wir bis heute nicht?";
+    episode.album = L"Wissen zum Einschlafen";
+    episode.nextEnabled = true;
+    episode.prevEnabled = true;
+    const std::wstring title = episode.title;
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Music, episode, title, 100) == TitleKind::Music);
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Ad, episode, title, 600000) == TitleKind::Music);
+    // While switching episodes Spotify turns the skip controls off for a moment; the show still makes it content.
+    MediaTrack switching = episode;
+    switching.nextEnabled = false;
+    switching.prevEnabled = false;
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Music, switching, title, 100) == TitleKind::Music);
+    // Until the session shows this very title the mute waits; a stale entry of the song before vouches for nothing,
+    // and once the wait is over the title verdict decides.
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Music, Song(), title, 100) == TitleKind::Music);
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Music, Song(), title, kMediaSettleMs) == TitleKind::Ad);
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Ad, Song(), title, 100) == TitleKind::Ad);
+    // Real Spotify spot: no album, skip controls off; stays an ad however long it runs.
+    const MediaTrack spot = Ad(L"Hör Musik ohne Werbepausen.", L"Spotify");
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Ad, spot, L"Hör Musik ohne Werbepausen.", 100) == TitleKind::Ad);
+    // A song-like ad keeps its mute even when it runs longer than a minute.
+    const MediaTrack songLike = Ad(L"JETZT HÖREN", L"Best Christmas Playlists");
+    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, songLike, L"Best Christmas Playlists - JETZT HÖREN", 120000) ==
+          TitleKind::Ad);
 }
 
 TEST(media_merge_song_stays_music) {

@@ -14,7 +14,7 @@ All notable changes to this project are documented here. The format follows Keep
 
 ### Fixed
 - Ads whose title looks like a song are muted too.
-- A podcast, audiobook or untagged file is no longer muted as an ad for its whole length.
+- Podcast episodes are no longer muted as ads: their titles often lack " - ", so the Windows media info (the show as album) now tells them apart from spots.
 - Spotify no longer stays quiet after an ad when it opens a new audio session during the ad, and a failed restore is retried within seconds instead of at the next ad.
 - A failed mute during an ad is retried instead of showing "muted" while the ad plays.
 - Old recovery records no longer undo a volume you set yourself later; locked recovery files are handled.
