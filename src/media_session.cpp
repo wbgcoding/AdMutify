@@ -100,12 +100,16 @@ struct MediaSession::Impl {
 
     static MediaTrack Read(const wmc::GlobalSystemMediaTransportControlsSession& s) {
         MediaTrack t;
+        // Both calls may hand back null while a session is going away; calling into null would crash.
         auto props = s.TryGetMediaPropertiesAsync().get();
+        auto info = s.GetPlaybackInfo();
+        wmc::GlobalSystemMediaTransportControlsSessionPlaybackControls controls{nullptr};
+        if (info) controls = info.Controls();
+        if (!props || !controls) return t;
         t.title = props.Title().c_str();
         t.artist = props.Artist().c_str();
         t.album = props.AlbumTitle().c_str();
         t.trackNumber = static_cast<uint32_t>(props.TrackNumber());
-        auto controls = s.GetPlaybackInfo().Controls();
         t.nextEnabled = controls.IsNextEnabled();
         t.prevEnabled = controls.IsPreviousEnabled();
         t.valid = true;
