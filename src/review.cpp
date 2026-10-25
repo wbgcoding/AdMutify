@@ -369,6 +369,62 @@ int RunComboKeysTest() {
     return failures ? 1 : 0;
 }
 
+bool g_dialogSeen = false;
+
+// A file or folder picker runs its own modal loop; this timer fires inside it, notes it and closes it.
+void CALLBACK CloseDialogSoon(HWND, UINT, UINT_PTR id, DWORD) {
+    KillTimer(nullptr, id);
+    EnumThreadWindows(
+        GetCurrentThreadId(),
+        [](HWND h, LPARAM) -> BOOL {
+            wchar_t cls[32]{};
+            GetClassNameW(h, cls, static_cast<int>(std::size(cls)));
+            if (IsWindowVisible(h) && std::wstring_view(cls) == L"#32770") {
+                g_dialogSeen = true;
+                PostMessageW(h, WM_CLOSE, 0, 0);
+            }
+            return TRUE;
+        },
+        0);
+}
+
+// Choosing "own music" without a file or folder only switches the mode; no picker opens on its own.
+int RunMusicRadioTest() {
+    SetThemeOverride(1);
+    Settings s;
+    s.language = Language::English;
+    s.mode = Mode::Mute;
+    s.adMusic = AdMusic::Shuffle;
+    s.adMusicPath.clear();
+    AppUseInMemorySettings(s);
+    SetLanguage(s.language);
+    OpenSettingsWindow();
+    PumpFor(600);
+    HWND hwnd = SettingsWindowHandle();
+    if (!hwnd) return 2;
+    int failures = 0;
+    g_dialogSeen = false;
+    SetTimer(nullptr, 0, 800, &CloseDialogSoon);
+    PostMessageW(GetDlgItem(hwnd, IDC_MODE_MUSIC), BM_CLICK, 0, 0);
+    PumpFor(1500);
+    if (g_dialogSeen) {
+        Print("a picker opened on its own\n");
+        ++failures;
+    }
+    if (CurrentSettings().mode != Mode::Music) {
+        Print("the mode did not switch to music\n");
+        ++failures;
+    }
+    if (!IsWindowVisible(GetDlgItem(hwnd, IDC_MUSIC_PATH))) {
+        Print("the music rows did not show\n");
+        ++failures;
+    }
+    DestroyWindow(hwnd);
+    PumpFor(100);
+    Print(failures ? "music radio test failed\n" : "music radio test ok\n");
+    return failures ? 1 : 0;
+}
+
 int RunFitTest(const std::wstring& outDir) {
     SetThemeOverride(1);
     int failures = 0;
@@ -441,6 +497,7 @@ bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
     bool dpiTest = false;
     bool fitTest = false;
     bool comboTest = false;
+    bool musicTest = false;
     for (int i = 1; i < argc; ++i) {
         std::wstring_view a = argv[i];
         if (a == L"--review" && i + 1 < argc && std::wstring_view(argv[i + 1]) == L"ids") {
@@ -464,6 +521,8 @@ bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
             fitTest = true;
         } else if (a == L"--combo-keys-test") {
             comboTest = true;
+        } else if (a == L"--music-radio-test") {
+            musicTest = true;
         } else if (a == L"--crash-test") {
             crash = true;
         }
@@ -498,6 +557,13 @@ bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
         CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
         SetAutostartKeyOverride(L"Software\\AdMutifyReview\\Run");
         exitCode = RunComboKeysTest();
+        return true;
+    }
+
+    if (musicTest) {
+        CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        SetAutostartKeyOverride(L"Software\\AdMutifyReview\\Run");
+        exitCode = RunMusicRadioTest();
         return true;
     }
 

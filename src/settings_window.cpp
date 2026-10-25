@@ -229,7 +229,7 @@ void MakeFonts() {
 }
 
 void CreateControls() {
-    Make(L"STATIC", IDC_ADS_COUNT, SS_CENTER | SS_CENTERIMAGE | SS_NOPREFIX);
+    Make(L"STATIC", IDC_ADS_COUNT, SS_CENTER | SS_NOPREFIX);
     Make(L"STATIC", IDC_ADS_CAPTION, SS_CENTER | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"STATIC", IDC_GROUP_ADS, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"BUTTON", IDC_MODE_MUTE, BS_AUTORADIOBUTTON | BS_MULTILINE | WS_GROUP | WS_TABSTOP);
@@ -523,17 +523,21 @@ void Layout(Placement placement, int density = 0) {
 
     // Counter: number over caption, centred over the content, no card.
     {
-        TEXTMETRICW bigTm{};
+        TEXTMETRICW bigTm{}, capTm{};
         HDC cdc = GetDC(w.hwnd);
         HGDIOBJ oldBig = SelectObject(cdc, w.bigFont);
         GetTextMetricsW(cdc, &bigTm);
+        SelectObject(cdc, w.font);
+        GetTextMetricsW(cdc, &capTm);
         SelectObject(cdc, oldBig);
         ReleaseDC(w.hwnd, cdc);
-        const int numH = bigTm.tmHeight;
-        Place(IDC_ADS_COUNT, margin, y, cardW, numH);
-        y += numH;
-        Place(IDC_ADS_CAPTION, margin, y, cardW, rowH);
-        y += rowH + sectionGap;
+        // Digits use neither the internal leading above nor the descent below: the control starts that much
+        // higher and ends at the baseline, so number and caption sit close together.
+        const int lead = std::min<int>(bigTm.tmInternalLeading, y);
+        Place(IDC_ADS_COUNT, margin, y - lead, cardW, bigTm.tmAscent);
+        y += bigTm.tmAscent - lead + u / 6;
+        Place(IDC_ADS_CAPTION, margin, y, cardW, capTm.tmHeight);
+        y += capTm.tmHeight + sectionGap;
     }
 
     // Section heading and card 1: what happens during an ad.
@@ -818,22 +822,11 @@ void OnCommand(int id, int code) {
             break;
         case IDC_MODE_MUSIC:
             if (code == BN_CLICKED) {
-                std::wstring path = s.adMusicPath;
-                // Music without a fitting file or folder asks for one first; cancelling keeps the previous radio.
-                if (!MusicPathFits(s.adMusic, path)) path = PickMusicPath(s.adMusic, path);
-                if (path.empty()) {
-                    const Mode keep = CurrentSettings().mode;
-                    SendMessageW(Ctl(IDC_MODE_MUTE), BM_SETCHECK, keep == Mode::Mute ? BST_CHECKED : BST_UNCHECKED, 0);
-                    SendMessageW(Ctl(IDC_MODE_LOWER), BM_SETCHECK, keep == Mode::Lower ? BST_CHECKED : BST_UNCHECKED, 0);
-                    SendMessageW(Ctl(IDC_MODE_MUSIC), BM_SETCHECK, keep == Mode::Music ? BST_CHECKED : BST_UNCHECKED, 0);
-                    break;
-                }
-                // The picker waits for the user; the tray menu may have changed other settings meanwhile.
-                Settings now = CurrentSettings();
-                now.mode = Mode::Music;
-                now.adMusicPath = path;
-                UpdateSliderEnabled(now);
-                CommitSettings(now);
+                // Only switches the mode; the source rows below pick the file or folder. Without one an ad stays
+                // muted in silence.
+                s.mode = Mode::Music;
+                UpdateSliderEnabled(s);
+                CommitSettings(s);
                 UpdateMusicPath();
                 Layout(Placement::KeepFit);
             }
