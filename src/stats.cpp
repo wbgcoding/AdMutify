@@ -65,8 +65,16 @@ void StatsLoad() {
     g_adsMuted = 0;
     g_keepFile = false;
     std::string text;
-    if (!ReadFileUtf8(StatsPath(), text)) {
-        DWORD err = GetLastError();
+    bool read = false;
+    DWORD err = 0;
+    // A scanner may hold the file for a moment right at start; a few short retries keep the count.
+    for (int attempt = 0; attempt < 5; ++attempt) {
+        if ((read = ReadFileUtf8(StatsPath(), text))) break;
+        err = GetLastError();
+        if (err != ERROR_SHARING_VIOLATION && err != ERROR_ACCESS_DENIED) break;
+        Sleep(50);
+    }
+    if (!read) {
         if (err != ERROR_FILE_NOT_FOUND && err != ERROR_PATH_NOT_FOUND) g_keepFile = true;
         return;
     }
