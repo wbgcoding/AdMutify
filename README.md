@@ -53,7 +53,7 @@ AdMutify does not modify Spotify in any way: no patching, no code injection, no 
 | Start with Windows | Adds AdMutify to your Windows startup apps. |
 | No tray icon when starting with Windows | AdMutify runs invisibly after the Windows start. Open it again to show the icon. Starting it yourself always shows the icon. |
 | During ads | Mute Spotify, or lower it to 0 to 90 percent of its current volume. |
-| Music during ads | Off, one file, a folder shuffled or a folder in order (subfolders included; MP3, M4A, AAC, WMA, WAV, FLAC). Choose the file or folder with "Choose"; "Volume" sets how loud it plays (0 to 100 percent). Off by default. |
+| Music during ads | Off, one file, a folder shuffled or a folder in order (subfolders included; MP3, M4A, AAC, WMA, WAV, FLAC, MP2, WEBM, plus OGG, OGA, OPUS and MKA with the Web Media Extensions that come with Windows). Choose the file or folder with "Choose"; "Volume" sets how loud it plays (0 to 100 percent). Off by default. |
 | During videos in other apps | Do nothing, lower Spotify, mute Spotify or pause Spotify while a browser or video player plays sound for a few seconds. Off by default. Lowering uses its own "Lower to" level (0 to 90 percent). Pausing continues playback when the video ends. |
 | Language | System (follows Windows), or one of English, Deutsch, Español, Português (Brasil), Italiano, Nederlands, Polski, Türkçe, 日本語 and 简体中文. The installer speaks the same languages. |
 

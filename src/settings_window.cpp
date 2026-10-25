@@ -668,7 +668,8 @@ std::wstring PickMusicPath(AdMusic mode, const std::wstring& current) {
     dlg->SetOptions(opts);
     dlg->SetTitle(Str(folder ? StrId::MusicPickFolderTitle : StrId::MusicPickFileTitle));
     if (!folder) {
-        const COMDLG_FILTERSPEC types[] = {{Str(StrId::MusicFilterName), L"*.mp3;*.m4a;*.aac;*.wma;*.wav;*.flac"}};
+        const std::wstring spec = MusicFilterSpec();
+        const COMDLG_FILTERSPEC types[] = {{Str(StrId::MusicFilterName), spec.c_str()}};
         dlg->SetFileTypes(static_cast<UINT>(std::size(types)), types);
     }
     // Start where the current choice is: its folder for a file, the folder itself for a folder.
@@ -696,7 +697,9 @@ std::wstring PickMusicPath(AdMusic mode, const std::wstring& current) {
         CoTaskMemFree(path);
         if (chosen) chosen->Release();
         if (!folder || result.empty() || !ScanMusicFolder(result, 1).empty()) break;
-        MessageBoxW(w.hwnd, Str(StrId::ErrMusicEmpty), Str(StrId::SettingsTitle), MB_OK | MB_ICONWARNING);
+        wchar_t text[512];
+        swprintf_s(text, Str(StrId::ErrMusicEmpty), MusicTypeList().c_str());
+        MessageBoxW(w.hwnd, text, Str(StrId::SettingsTitle), MB_OK | MB_ICONWARNING);
         result.clear();
     }
     dlg->Release();

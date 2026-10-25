@@ -11,8 +11,12 @@
 #include "settings.h"
 
 // Pure parts
-// True for the audio formats Windows plays without extra codecs: mp3, m4a, aac, wma, wav, flac.
+// True for the audio formats the Windows media engine plays: mp3, m4a, aac, wma, wav, flac, mp2 and webm everywhere;
+// ogg, oga, opus and mka need the Web Media Extensions that ship with Windows (missing on N editions).
 bool IsMusicFile(std::wstring_view name);
+// The same formats as an open dialog filter ("*.mp3;*.m4a;...") and as a list for messages ("MP3, M4A, ...").
+std::wstring MusicFilterSpec();
+std::wstring MusicTypeList();
 // Explorer-like name order (case folded, digit runs compared as numbers).
 bool MusicNameLess(const std::wstring& a, const std::wstring& b);
 // Playable files in a folder and its subfolders, in name order; stops at maxFiles.

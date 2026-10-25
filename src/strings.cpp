@@ -47,7 +47,7 @@ constexpr const wchar_t* kEn[] = {
     L"Choose a music file",  // MusicPickFileTitle
     L"Choose a music folder",  // MusicPickFolderTitle
     L"Music files",  // MusicFilterName
-    L"This folder has no playable music files (MP3, M4A, AAC, WMA, WAV, FLAC). Choose another folder.",  // ErrMusicEmpty
+    L"This folder has no playable music files (%s). Choose another folder.",  // ErrMusicEmpty
     L"Language",                                                                        // LanguageLabel
     L"System",                                                                          // LangSystem
     L"Reset settings",                                                                  // ResetButton
@@ -106,7 +106,7 @@ constexpr const wchar_t* kDe[] = {
     L"Musikdatei auswählen",  // MusicPickFileTitle
     L"Musikordner auswählen",  // MusicPickFolderTitle
     L"Musikdateien",  // MusicFilterName
-    L"In diesem Ordner sind keine abspielbaren Musikdateien (MP3, M4A, AAC, WMA, WAV, FLAC). Wähle einen anderen Ordner.",  // ErrMusicEmpty
+    L"In diesem Ordner sind keine abspielbaren Musikdateien (%s). Wähle einen anderen Ordner.",  // ErrMusicEmpty
     L"Sprache",                                                                         // LanguageLabel
     L"System",                                                                          // LangSystem
     L"Einstellungen zurücksetzen",                                                 // ResetButton
@@ -171,7 +171,7 @@ constexpr const wchar_t* kEs[] = {  // Spanish
     L"Elegir un archivo de música",  // MusicPickFileTitle
     L"Elegir una carpeta de música",  // MusicPickFolderTitle
     L"Archivos de música",  // MusicFilterName
-    L"Esta carpeta no tiene archivos de música reproducibles (MP3, M4A, AAC, WMA, WAV, FLAC). Elige otra carpeta.",  // ErrMusicEmpty
+    L"Esta carpeta no tiene archivos de música reproducibles (%s). Elige otra carpeta.",  // ErrMusicEmpty
     L"Idioma",  // LanguageLabel
     L"Sistema",  // LangSystem
     L"Restablecer configuración",  // ResetButton
@@ -231,7 +231,7 @@ constexpr const wchar_t* kPt[] = {  // Brazilian Portuguese
     L"Escolher um arquivo de música",  // MusicPickFileTitle
     L"Escolher uma pasta de música",  // MusicPickFolderTitle
     L"Arquivos de música",  // MusicFilterName
-    L"Esta pasta não tem arquivos de música reproduzíveis (MP3, M4A, AAC, WMA, WAV, FLAC). Escolha outra pasta.",  // ErrMusicEmpty
+    L"Esta pasta não tem arquivos de música reproduzíveis (%s). Escolha outra pasta.",  // ErrMusicEmpty
     L"Idioma",  // LanguageLabel
     L"Sistema",  // LangSystem
     L"Redefinir configurações",  // ResetButton
@@ -291,7 +291,7 @@ constexpr const wchar_t* kIt[] = {  // Italian
     L"Scegli un file musicale",  // MusicPickFileTitle
     L"Scegli una cartella musicale",  // MusicPickFolderTitle
     L"File musicali",  // MusicFilterName
-    L"Questa cartella non contiene file musicali riproducibili (MP3, M4A, AAC, WMA, WAV, FLAC). Scegli un'altra cartella.",  // ErrMusicEmpty
+    L"Questa cartella non contiene file musicali riproducibili (%s). Scegli un'altra cartella.",  // ErrMusicEmpty
     L"Lingua",  // LanguageLabel
     L"Sistema",  // LangSystem
     L"Reimposta impostazioni",  // ResetButton
@@ -351,7 +351,7 @@ constexpr const wchar_t* kNl[] = {  // Dutch
     L"Muziekbestand kiezen",  // MusicPickFileTitle
     L"Muziekmap kiezen",  // MusicPickFolderTitle
     L"Muziekbestanden",  // MusicFilterName
-    L"Deze map bevat geen afspeelbare muziekbestanden (MP3, M4A, AAC, WMA, WAV, FLAC). Kies een andere map.",  // ErrMusicEmpty
+    L"Deze map bevat geen afspeelbare muziekbestanden (%s). Kies een andere map.",  // ErrMusicEmpty
     L"Taal",  // LanguageLabel
     L"Systeem",  // LangSystem
     L"Instellingen herstellen",  // ResetButton
@@ -411,7 +411,7 @@ constexpr const wchar_t* kPl[] = {  // Polish
     L"Wybierz plik muzyczny",  // MusicPickFileTitle
     L"Wybierz folder z muzyką",  // MusicPickFolderTitle
     L"Pliki muzyczne",  // MusicFilterName
-    L"Ten folder nie zawiera plików muzycznych do odtworzenia (MP3, M4A, AAC, WMA, WAV, FLAC). Wybierz inny folder.",  // ErrMusicEmpty
+    L"Ten folder nie zawiera plików muzycznych do odtworzenia (%s). Wybierz inny folder.",  // ErrMusicEmpty
     L"Język",  // LanguageLabel
     L"Systemowy",  // LangSystem
     L"Resetuj ustawienia",  // ResetButton
@@ -471,7 +471,7 @@ constexpr const wchar_t* kTr[] = {  // Turkish
     L"Müzik dosyası seç",  // MusicPickFileTitle
     L"Müzik klasörü seç",  // MusicPickFolderTitle
     L"Müzik dosyaları",  // MusicFilterName
-    L"Bu klasörde çalınabilir müzik dosyası yok (MP3, M4A, AAC, WMA, WAV, FLAC). Başka bir klasör seç.",  // ErrMusicEmpty
+    L"Bu klasörde çalınabilir müzik dosyası yok (%s). Başka bir klasör seç.",  // ErrMusicEmpty
     L"Dil",  // LanguageLabel
     L"Sistem",  // LangSystem
     L"Ayarları sıfırla",  // ResetButton
@@ -531,7 +531,7 @@ constexpr const wchar_t* kJa[] = {  // Japanese
     L"音楽ファイルを選択",  // MusicPickFileTitle
     L"音楽フォルダーを選択",  // MusicPickFolderTitle
     L"音楽ファイル",  // MusicFilterName
-    L"このフォルダーには再生できる音楽ファイル (MP3、M4A、AAC、WMA、WAV、FLAC) がありません。別のフォルダーを選択してください。",  // ErrMusicEmpty
+    L"このフォルダーには再生できる音楽ファイル (%s) がありません。別のフォルダーを選択してください。",  // ErrMusicEmpty
     L"言語",  // LanguageLabel
     L"システム",  // LangSystem
     L"設定をリセット",  // ResetButton
@@ -591,7 +591,7 @@ constexpr const wchar_t* kZh[] = {  // Simplified Chinese
     L"选择音乐文件",  // MusicPickFileTitle
     L"选择音乐文件夹",  // MusicPickFolderTitle
     L"音乐文件",  // MusicFilterName
-    L"此文件夹中没有可播放的音乐文件（MP3、M4A、AAC、WMA、WAV、FLAC）。请选择其他文件夹。",  // ErrMusicEmpty
+    L"此文件夹中没有可播放的音乐文件（%s）。请选择其他文件夹。",  // ErrMusicEmpty
     L"语言",  // LanguageLabel
     L"系统",  // LangSystem
     L"重置设置",  // ResetButton

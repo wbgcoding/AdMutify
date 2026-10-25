@@ -74,11 +74,24 @@ TEST(ad_music_file_types) {
     CHECK(IsMusicFile(L"a.wma"));
     CHECK(IsMusicFile(L"a.wav"));
     CHECK(IsMusicFile(L"a.FLAC"));
+    CHECK(IsMusicFile(L"a.ogg"));
+    CHECK(IsMusicFile(L"a.OGA"));
+    CHECK(IsMusicFile(L"a.opus"));
+    CHECK(IsMusicFile(L"a.webm"));
+    CHECK(IsMusicFile(L"a.mka"));
+    CHECK(IsMusicFile(L"a.mp2"));
+    CHECK(!IsMusicFile(L"a.aiff"));
+    CHECK(!IsMusicFile(L"clip.mp4"));
     CHECK(!IsMusicFile(L"cover.jpg"));
     CHECK(!IsMusicFile(L"playlist.m3u"));
     CHECK(!IsMusicFile(L"mp3"));
     CHECK(!IsMusicFile(L"folder.mp3\\readme"));
     CHECK(!IsMusicFile(L""));
+}
+
+TEST(ad_music_type_lists) {
+    CHECK(MusicFilterSpec() == L"*.mp3;*.m4a;*.aac;*.wma;*.wav;*.flac;*.ogg;*.oga;*.opus;*.webm;*.mka;*.mp2");
+    CHECK(MusicTypeList() == L"MP3, M4A, AAC, WMA, WAV, FLAC, OGG, OGA, OPUS, WEBM, MKA, MP2");
 }
 
 TEST(ad_music_name_order) {

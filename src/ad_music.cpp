@@ -7,19 +7,46 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cwctype>
 #include <thread>
 
 #include "app_messages.h"
 #include "crash.h"
 #include "util.h"
 
+namespace {
+
+constexpr const wchar_t* kMusicExtensions[] = {L".mp3", L".m4a", L".aac",  L".wma",  L".wav", L".flac",
+                                               L".ogg", L".oga", L".opus", L".webm", L".mka", L".mp2"};
+
+}  // namespace
+
 bool IsMusicFile(std::wstring_view name) {
     const size_t dot = name.find_last_of(L'.');
     if (dot == std::wstring_view::npos || name.find_first_of(L"\\/", dot) != std::wstring_view::npos) return false;
     const std::wstring_view ext = name.substr(dot);
-    for (const wchar_t* known : {L".mp3", L".m4a", L".aac", L".wma", L".wav", L".flac"})
+    for (const wchar_t* known : kMusicExtensions)
         if (EqualsNoCase(ext, known)) return true;
     return false;
+}
+
+std::wstring MusicFilterSpec() {
+    std::wstring spec;
+    for (const wchar_t* ext : kMusicExtensions) {
+        if (!spec.empty()) spec += L';';
+        spec += L'*';
+        spec += ext;
+    }
+    return spec;
+}
+
+std::wstring MusicTypeList() {
+    std::wstring list;
+    for (const wchar_t* ext : kMusicExtensions) {
+        if (!list.empty()) list += L", ";
+        for (const wchar_t* c = ext + 1; *c; ++c) list += static_cast<wchar_t>(towupper(*c));
+    }
+    return list;
 }
 
 bool MusicNameLess(const std::wstring& a, const std::wstring& b) { return StrCmpLogicalW(a.c_str(), b.c_str()) < 0; }

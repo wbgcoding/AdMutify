@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows Keep
 
 ### Added
 - Own music during ads: play one file, or a folder shuffled or in name order, at a volume you choose. The music fades in when the ad starts, fades out when it ends and continues at the same spot during the next ad.
+- Music during ads plays OGG, OGA, OPUS, WEBM, MKA and MP2 files besides MP3, M4A, AAC, WMA, WAV and FLAC. OGG, OGA, OPUS and MKA need the Web Media Extensions that come with Windows (missing on N editions).
 
 ### Fixed
 - Ads whose title looks like a song are muted too.
