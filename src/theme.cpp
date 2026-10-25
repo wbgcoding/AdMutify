@@ -103,6 +103,14 @@ COLORREF ThemeAccentText() {
     if (IsHighContrast()) return GetSysColor(COLOR_HIGHLIGHTTEXT);
     return IsDarkTheme() ? RGB(0x00, 0x00, 0x00) : RGB(0xFF, 0xFF, 0xFF);
 }
+COLORREF ThemeCritical() {
+    if (IsHighContrast()) return GetSysColor(COLOR_WINDOWTEXT);
+    return IsDarkTheme() ? RGB(0xFF, 0x99, 0xA4) : RGB(0xC4, 0x2B, 0x1C);
+}
+COLORREF ThemeCriticalText() {
+    if (IsHighContrast()) return GetSysColor(COLOR_WINDOW);
+    return IsDarkTheme() ? RGB(0x1A, 0x1A, 0x1A) : RGB(0xFF, 0xFF, 0xFF);
+}
 
 void ApplyTitleBarTheme(HWND hwnd) {
     BOOL dark = IsDarkTheme() ? TRUE : FALSE;

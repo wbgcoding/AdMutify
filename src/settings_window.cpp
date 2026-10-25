@@ -31,8 +31,8 @@ using std::min;
 namespace {
 
 constexpr wchar_t kClassName[] = L"AdMutify.Settings";
-constexpr int kBtnReset = 1001;
-constexpr int kBtnCancel = 1002;
+constexpr UINT_PTR kResetTimer = 1;
+constexpr UINT kResetArmMs = 4000;
 constexpr DWORD kCaptionColor = 35;
 constexpr COLORREF kDefaultCaptionColor = 0xFFFFFFFF;
 constexpr UINT kMsgOpenCombo = WM_APP + 20;
@@ -47,6 +47,8 @@ struct Win {
     UINT dpi = 96;
     ULONG_PTR gdiplus = 0;
     int hotId = 0;
+    // The reset button waits for a second click.
+    bool resetArmed = false;
     // Control id of the box whose menu is open, 0 when none.
     int menuOpenId = 0;
     // A click on the box that closed its menu must not open it again.
@@ -348,7 +350,7 @@ void ApplyTexts() {
     SetText(IDC_MEDIA_PERCENT_LABEL, Str(StrId::MediaPercentLabel));
     SetText(IDC_LANGUAGE_LABEL, Str(StrId::LanguageLabel));
     for (const ComboDef& def : kCombos) FillCombo(def);
-    SetText(IDC_RESET, Str(StrId::ResetButton));
+    SetText(IDC_RESET, Str(w.resetArmed ? StrId::ResetConfirmClick : StrId::ResetButton));
     SetText(IDC_CLOSE, Str(StrId::Close));
     wchar_t version[128];
     swprintf_s(version, L"AdMutify %hs \u00B7 " ADMUTIFY_COPYRIGHT_W, ADMUTIFY_VERSION_STR);
@@ -419,7 +421,18 @@ void Layout(Placement placement, int density = 0) {
     TEXTMETRICW tm{};
     GetTextMetricsW(dc, &tm);
     SelectObject(dc, oldFont);
-    const int resetTextW = TextWidth(dc, w.font, IDC_RESET);
+    // The reset button keeps one width for both of its texts.
+    int resetTextW = 0;
+    {
+        HGDIOBJ oldFont2 = SelectObject(dc, w.font);
+        for (StrId id : {StrId::ResetButton, StrId::ResetConfirmClick}) {
+            const wchar_t* text = Str(id);
+            SIZE size{};
+            GetTextExtentPoint32W(dc, text, static_cast<int>(wcslen(text)), &size);
+            resetTextW = std::max(resetTextW, static_cast<int>(size.cx));
+        }
+        SelectObject(dc, oldFont2);
+    }
     const int lowerTextW = TextWidth(dc, w.font, IDC_MODE_LOWER);
     const int closeTextW = TextWidth(dc, w.font, IDC_CLOSE);
     const int labelTextW = TextWidth(dc, w.font, IDC_LANGUAGE_LABEL);
@@ -653,21 +666,25 @@ void RefreshTheme() {
     RedrawWindow(w.hwnd, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN | RDW_UPDATENOW);
 }
 
-void OnReset() {
-    const TASKDIALOG_BUTTON buttons[] = {{kBtnReset, Str(StrId::ResetBtn)}, {kBtnCancel, Str(StrId::Cancel)}};
-    TASKDIALOGCONFIG cfg{};
-    cfg.cbSize = sizeof(cfg);
-    cfg.hwndParent = w.hwnd;
-    cfg.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION | TDF_POSITION_RELATIVE_TO_WINDOW;
-    cfg.pszWindowTitle = Str(StrId::SettingsTitle);
-    cfg.pszMainInstruction = Str(StrId::ResetConfirm);
-    cfg.pszMainIcon = TD_WARNING_ICON;
-    cfg.cButtons = static_cast<UINT>(std::size(buttons));
-    cfg.pButtons = buttons;
-    cfg.nDefaultButton = kBtnCancel;
-    int pressed = 0;
-    if (FAILED(TaskDialogIndirect(&cfg, &pressed, nullptr, nullptr)) || pressed != kBtnReset) return;
+void DisarmReset() {
+    if (!w.resetArmed) return;
+    w.resetArmed = false;
+    if (!w.hwnd) return;
+    KillTimer(w.hwnd, kResetTimer);
+    SetText(IDC_RESET, Str(StrId::ResetButton));
+    InvalidateRect(Ctl(IDC_RESET), nullptr, FALSE);
+}
 
+// The first click arms the button, a second one within a few seconds resets.
+void OnReset() {
+    if (!w.resetArmed) {
+        w.resetArmed = true;
+        SetText(IDC_RESET, Str(StrId::ResetConfirmClick));
+        InvalidateRect(Ctl(IDC_RESET), nullptr, FALSE);
+        SetTimer(w.hwnd, kResetTimer, kResetArmMs, nullptr);
+        return;
+    }
+    DisarmReset();
     if (!SetAutostart(false)) MessageBoxW(w.hwnd, Str(StrId::ErrAutostart), Str(StrId::SettingsTitle), MB_OK | MB_ICONWARNING);
     CommitSettings(Settings{});
     ApplyTexts();
@@ -873,6 +890,9 @@ LRESULT CALLBACK FlatButtonProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, 
         case WM_MOUSELEAVE:
             if (w.hotId == GetDlgCtrlID(h)) w.hotId = 0;
             InvalidateRect(h, nullptr, FALSE);
+            break;
+        case WM_KILLFOCUS:
+            if (GetDlgCtrlID(h) == IDC_RESET) DisarmReset();
             break;
         case WM_GETDLGCODE:
             if (lParam) {
@@ -1118,7 +1138,7 @@ LRESULT OnCustomDraw(NMCUSTOMDRAW* nm) {
 bool ShowFocus(const DRAWITEMSTRUCT* di) { return (di->itemState & ODS_FOCUS) && !(di->itemState & ODS_NOFOCUSRECT); }
 
 // Drawn off screen first: GDI+ output and GDI text on the same window DC can land out of order.
-// The close button is the accent button; reset uses the standard button look.
+// The close button is the accent button; reset uses the standard button look, red while it waits for the second click.
 void DrawButton(const DRAWITEMSTRUCT* di, bool accent) {
     const int cx = di->rcItem.right - di->rcItem.left;
     const int cy = di->rcItem.bottom - di->rcItem.top;
@@ -1130,9 +1150,13 @@ void DrawButton(const DRAWITEMSTRUCT* di, bool accent) {
     FillRect(dc, &all, di->CtlID == IDC_MUSIC_PICK ? w.card : w.bg);
     const bool pressed = (di->itemState & ODS_SELECTED) != 0;
     const bool hot = w.hotId == static_cast<int>(di->CtlID);
+    const bool critical = di->CtlID == IDC_RESET && w.resetArmed;
     COLORREF fill;
     COLORREF border;
-    if (accent) {
+    if (critical) {
+        fill = ThemeCritical();
+        border = fill;
+    } else if (accent) {
         fill = pressed ? ThemeAccentPressed() : (hot ? ThemeAccentHot() : ThemeAccent());
         border = fill;
     } else {
@@ -1149,7 +1173,7 @@ void DrawButton(const DRAWITEMSTRUCT* di, bool accent) {
     wchar_t text[256];
     GetWindowTextW(di->hwndItem, text, static_cast<int>(std::size(text)));
     SetBkMode(dc, TRANSPARENT);
-    SetTextColor(dc, accent ? ThemeAccentText() : ThemeText());
+    SetTextColor(dc, critical ? ThemeCriticalText() : (accent ? ThemeAccentText() : ThemeText()));
     DrawTextW(dc, text, -1, &body, DT_SINGLELINE | DT_VCENTER | DT_CENTER | DT_NOPREFIX);
     SelectObject(dc, oldFont);
     BitBlt(di->hDC, di->rcItem.left, di->rcItem.top, cx, cy, dc, 0, 0, SRCCOPY);
@@ -1259,8 +1283,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             Layout(Placement::KeepFit);
             return 0;
         case WM_SYSCOLORCHANGE: RefreshTheme(); return 0;
+        case WM_ACTIVATE:
+            if (LOWORD(wParam) == WA_INACTIVE) DisarmReset();
+            break;
+        case WM_TIMER:
+            if (wParam == kResetTimer) DisarmReset();
+            return 0;
         case WM_CLOSE: DestroyWindow(hwnd); return 0;
         case WM_DESTROY:
+            KillTimer(hwnd, kResetTimer);
+            w.resetArmed = false;
             w.tip = nullptr;
             w.hwnd = nullptr;
             w.hotId = 0;
@@ -1324,5 +1356,15 @@ void OpenSettingsWindow() {
 }
 
 bool SettingsWindowPreTranslate(MSG* msg) {
-    return w.hwnd && IsDialogMessageW(w.hwnd, msg);
+    if (!w.hwnd) return false;
+    // Esc ends the confirm state first and leaves the window open.
+    if (w.resetArmed && msg->message == WM_KEYDOWN && msg->wParam == VK_ESCAPE && (msg->hwnd == w.hwnd || IsChild(w.hwnd, msg->hwnd))) {
+        DisarmReset();
+        return true;
+    }
+    return IsDialogMessageW(w.hwnd, msg);
+}
+
+void SettingsWindowArmReset() {
+    if (w.hwnd && !w.resetArmed) OnReset();
 }

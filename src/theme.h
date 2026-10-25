@@ -28,6 +28,9 @@ COLORREF ThemeAccent();
 COLORREF ThemeAccentHot();
 COLORREF ThemeAccentPressed();
 COLORREF ThemeAccentText();
+// Fill and text of a button that asks for a destructive confirmation.
+COLORREF ThemeCritical();
+COLORREF ThemeCriticalText();
 
 // Immersive dark title bar on or off for a top-level window.
 void ApplyTitleBarTheme(HWND hwnd);

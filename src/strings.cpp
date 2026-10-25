@@ -52,10 +52,8 @@ constexpr const wchar_t* kEn[] = {
     L"Language",                                                                        // LanguageLabel
     L"System",                                                                          // LangSystem
     L"Reset settings",                                                                  // ResetButton
+    L"Click again to reset",                                                            // ResetConfirmClick
     L"Close",                                                                           // Close
-    L"Reset all settings to their defaults? This also turns off start with Windows.",   // ResetConfirm
-    L"Reset",                                                                           // ResetBtn
-    L"Cancel",                                                                          // Cancel
     L"Your settings file comes from a newer AdMutify version. Defaults are used and the file is left unchanged.",  // ErrSettingsNewer
     L"Could not save the settings. Check that the folder is writable.",                 // ErrSettingsSave
     L"Could not change the Windows startup entry.",                                     // ErrAutostart
@@ -112,10 +110,8 @@ constexpr const wchar_t* kDe[] = {
     L"Sprache",                                                                         // LanguageLabel
     L"System",                                                                          // LangSystem
     L"Einstellungen zurücksetzen",                                                 // ResetButton
+    L"Zum Zurücksetzen erneut klicken",                                            // ResetConfirmClick
     L"Schließen",                                                                  // Close
-    L"Alle Einstellungen auf Standard zurücksetzen? Dabei wird auch der Autostart ausgeschaltet.",  // ResetConfirm
-    L"Zurücksetzen",                                                               // ResetBtn
-    L"Abbrechen",                                                                       // Cancel
     L"Die Einstellungsdatei stammt aus einer neueren AdMutify-Version. Es gelten die Standardwerte, die Datei bleibt unverändert.",  // ErrSettingsNewer
     L"Die Einstellungen konnten nicht gespeichert werden. Prüfe, ob der Ordner beschreibbar ist.",  // ErrSettingsSave
     L"Der Autostart-Eintrag konnte nicht geändert werden.",                        // ErrAutostart
@@ -178,10 +174,8 @@ constexpr const wchar_t* kEs[] = {  // Spanish
     L"Idioma",  // LanguageLabel
     L"Sistema",  // LangSystem
     L"Restablecer configuración",  // ResetButton
+    L"Haz clic de nuevo para restablecer",  // ResetConfirmClick
     L"Cerrar",  // Close
-    L"¿Restablecer toda la configuración a sus valores predeterminados? También se desactivará el inicio con Windows.",  // ResetConfirm
-    L"Restablecer",  // ResetBtn
-    L"Cancelar",  // Cancel
     L"El archivo de configuración procede de una versión más reciente de AdMutify. Se usan los valores predeterminados y el archivo no se modifica.",  // ErrSettingsNewer
     L"No se pudo guardar la configuración. Comprueba que se pueda escribir en la carpeta.",  // ErrSettingsSave
     L"No se pudo cambiar la entrada de inicio de Windows.",  // ErrAutostart
@@ -239,10 +233,8 @@ constexpr const wchar_t* kPt[] = {  // Brazilian Portuguese
     L"Idioma",  // LanguageLabel
     L"Sistema",  // LangSystem
     L"Redefinir configurações",  // ResetButton
+    L"Clique de novo para redefinir",  // ResetConfirmClick
     L"Fechar",  // Close
-    L"Redefinir todas as configurações para os valores padrão? Isso também desativa a inicialização com o Windows.",  // ResetConfirm
-    L"Redefinir",  // ResetBtn
-    L"Cancelar",  // Cancel
     L"O arquivo de configurações veio de uma versão mais recente do AdMutify. Os valores padrão são usados e o arquivo não é alterado.",  // ErrSettingsNewer
     L"Não foi possível salvar as configurações. Verifique se é possível gravar na pasta.",  // ErrSettingsSave
     L"Não foi possível alterar a entrada de inicialização do Windows.",  // ErrAutostart
@@ -300,10 +292,8 @@ constexpr const wchar_t* kIt[] = {  // Italian
     L"Lingua",  // LanguageLabel
     L"Sistema",  // LangSystem
     L"Reimposta impostazioni",  // ResetButton
+    L"Fai clic di nuovo per ripristinare",  // ResetConfirmClick
     L"Chiudi",  // Close
-    L"Reimpostare tutte le impostazioni sui valori predefiniti? Verrà disattivato anche l'avvio con Windows.",  // ResetConfirm
-    L"Reimposta",  // ResetBtn
-    L"Annulla",  // Cancel
     L"Il file delle impostazioni proviene da una versione più recente di AdMutify. Vengono usati i valori predefiniti e il file non viene modificato.",  // ErrSettingsNewer
     L"Non è stato possibile salvare le impostazioni. Verifica che sia possibile scrivere nella cartella.",  // ErrSettingsSave
     L"Non è stato possibile modificare la voce di avvio di Windows.",  // ErrAutostart
@@ -361,10 +351,8 @@ constexpr const wchar_t* kNl[] = {  // Dutch
     L"Taal",  // LanguageLabel
     L"Systeem",  // LangSystem
     L"Instellingen herstellen",  // ResetButton
+    L"Klik nogmaals om terug te zetten",  // ResetConfirmClick
     L"Sluiten",  // Close
-    L"Alle instellingen opnieuw instellen op de standaardwaarden? Hierdoor wordt opstarten met Windows ook uitgeschakeld.",  // ResetConfirm
-    L"Herstellen",  // ResetBtn
-    L"Annuleren",  // Cancel
     L"Het instellingenbestand is afkomstig van een nieuwere versie van AdMutify. De standaardwaarden worden gebruikt en het bestand blijft ongewijzigd.",  // ErrSettingsNewer
     L"De instellingen kunnen niet worden opgeslagen. Controleer of naar de map kan worden geschreven.",  // ErrSettingsSave
     L"Het Windows-opstartitem kan niet worden gewijzigd.",  // ErrAutostart
@@ -422,10 +410,8 @@ constexpr const wchar_t* kPl[] = {  // Polish
     L"Język",  // LanguageLabel
     L"Systemowy",  // LangSystem
     L"Resetuj ustawienia",  // ResetButton
+    L"Kliknij ponownie, aby zresetować",  // ResetConfirmClick
     L"Zamknij",  // Close
-    L"Zresetować wszystkie ustawienia do wartości domyślnych? Spowoduje to również wyłączenie uruchamiania z systemem Windows.",  // ResetConfirm
-    L"Resetuj",  // ResetBtn
-    L"Anuluj",  // Cancel
     L"Plik ustawień pochodzi z nowszej wersji AdMutify. Używane są wartości domyślne, a plik pozostaje niezmieniony.",  // ErrSettingsNewer
     L"Nie można zapisać ustawień. Sprawdź, czy można zapisywać w tym folderze.",  // ErrSettingsSave
     L"Nie można zmienić wpisu uruchamiania systemu Windows.",  // ErrAutostart
@@ -483,10 +469,8 @@ constexpr const wchar_t* kTr[] = {  // Turkish
     L"Dil",  // LanguageLabel
     L"Sistem",  // LangSystem
     L"Ayarları sıfırla",  // ResetButton
+    L"Sıfırlamak için tekrar tıkla",  // ResetConfirmClick
     L"Kapat",  // Close
-    L"Tüm ayarlar varsayılanlarına sıfırlansın mı? Bu işlem Windows ile başlatmayı da kapatır.",  // ResetConfirm
-    L"Sıfırla",  // ResetBtn
-    L"İptal",  // Cancel
     L"Ayar dosyanız daha yeni bir AdMutify sürümünden geliyor. Varsayılan değerler kullanılır ve dosya değiştirilmez.",  // ErrSettingsNewer
     L"Ayarlar kaydedilemedi. Klasöre yazılabildiğini kontrol edin.",  // ErrSettingsSave
     L"Windows başlangıç girdisi değiştirilemedi.",  // ErrAutostart
@@ -544,10 +528,8 @@ constexpr const wchar_t* kJa[] = {  // Japanese
     L"言語",  // LanguageLabel
     L"システム",  // LangSystem
     L"設定をリセット",  // ResetButton
+    L"もう一度クリックしてリセット",  // ResetConfirmClick
     L"閉じる",  // Close
-    L"すべての設定を既定値にリセットしますか? Windows と同時に起動する設定もオフになります。",  // ResetConfirm
-    L"リセット",  // ResetBtn
-    L"キャンセル",  // Cancel
     L"設定ファイルは新しいバージョンの AdMutify で作成されています。既定値を使用し、ファイルは変更しません。",  // ErrSettingsNewer
     L"設定を保存できませんでした。フォルダーに書き込めることを確認してください。",  // ErrSettingsSave
     L"Windows のスタートアップ項目を変更できませんでした。",  // ErrAutostart
@@ -605,10 +587,8 @@ constexpr const wchar_t* kZh[] = {  // Simplified Chinese
     L"语言",  // LanguageLabel
     L"系统",  // LangSystem
     L"重置设置",  // ResetButton
+    L"再次单击以重置",  // ResetConfirmClick
     L"关闭",  // Close
-    L"要将所有设置重置为默认值吗？这也会关闭随 Windows 启动。",  // ResetConfirm
-    L"重置",  // ResetBtn
-    L"取消",  // Cancel
     L"你的设置文件来自较新版本的 AdMutify。将使用默认值，并且不会更改该文件。",  // ErrSettingsNewer
     L"无法保存设置。请检查该文件夹是否可写。",  // ErrSettingsSave
     L"无法更改 Windows 启动项。",  // ErrAutostart

@@ -36,6 +36,8 @@ enum SettingsControlId {
 void OpenSettingsWindow();
 // Lets the settings window handle keyboard navigation; returns true when the message was consumed.
 bool SettingsWindowPreTranslate(MSG* msg);
+// Puts the reset button of the open window into its confirm state (review shots).
+void SettingsWindowArmReset();
 // The open window or null.
 HWND SettingsWindowHandle();
 // Shows the current ad counter in the open window (no-op when closed).

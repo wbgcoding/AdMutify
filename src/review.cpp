@@ -23,7 +23,7 @@ using Microsoft::WRL::ComPtr;
 
 namespace {
 
-const wchar_t* const kSurfaces[] = {L"menu", L"menu-ad", L"menu-off", L"menu-lang", L"settings", L"settings-lower", L"settings-media", L"settings-music"};
+const wchar_t* const kSurfaces[] = {L"menu", L"menu-ad", L"menu-off", L"menu-lang", L"settings", L"settings-lower", L"settings-media", L"settings-music", L"settings-reset"};
 
 void Print(const std::string& text) {
     HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -181,11 +181,15 @@ bool ShootMenu(const std::wstring& id, const std::wstring& path) {
     return g_menuShot.saved;
 }
 
-bool ShootSettings(const std::wstring& path) {
+bool ShootSettings(const std::wstring& path, bool armReset) {
     OpenSettingsWindow();
     PumpFor(600);
     HWND hwnd = SettingsWindowHandle();
     if (!hwnd) return false;
+    if (armReset) {
+        SettingsWindowArmReset();
+        PumpFor(150);
+    }
     bool ok = CaptureWindow(hwnd, path);
     DestroyWindow(hwnd);
     PumpFor(100);
@@ -214,7 +218,7 @@ bool Shoot(const std::wstring& id, Language language, bool dark, const std::wstr
         ApplyMenuAppMode(dark ? 2 : 3);
         return ShootMenu(id, path);
     }
-    return ShootSettings(path);
+    return ShootSettings(path, id == L"settings-reset");
 }
 
 struct LayoutSnap {
