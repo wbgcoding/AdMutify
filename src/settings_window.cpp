@@ -190,6 +190,8 @@ void StrokeRounded(HDC dc, const RECT& rc, float radius, COLORREF color, float w
     g.DrawPath(&pen, &path);
 }
 
+void SetComboHeights();
+
 void MakeFonts() {
     if (w.font) DeleteObject(w.font);
     if (w.headFont) DeleteObject(w.headFont);
@@ -214,9 +216,20 @@ void MakeFonts() {
         SendMessageW(w.tip, WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
         SendMessageW(w.tip, TTM_SETMAXTIPWIDTH, 0, Scale(320));
     }
-    // Taller selection field so the boxes line up with the Windows 11 control height.
-    for (const ComboDef& def : kCombos) {
-        HWND c = Ctl(def.id);
+    // A new font resets the field height of the boxes.
+    SetComboHeights();
+}
+
+// The video and language boxes stand alone in their cards and get a taller field; the music source keeps the
+// standard height of its row. The box drops the height again when it is moved, re-themed or gets a font, so the
+// wanted height is kept as a property and ComboProc puts it back.
+constexpr wchar_t kComboHeightProp[] = L"AdMutifyComboHeight";
+// Off in the most compact layout, where every pixel of height counts.
+bool g_tallCombos = true;
+
+void SetComboHeights() {
+    for (int id : {IDC_MEDIA, IDC_LANGUAGE}) {
+        HWND c = Ctl(id);
         if (!c) continue;
         TEXTMETRICW tm{};
         HDC dc = GetDC(c);
@@ -224,7 +237,10 @@ void MakeFonts() {
         GetTextMetricsW(dc, &tm);
         SelectObject(dc, old);
         ReleaseDC(c, dc);
-        SendMessageW(c, CB_SETITEMHEIGHT, static_cast<WPARAM>(-1), tm.tmHeight + Scale(12));
+        // Without the taller field the box gets its standard height back (font height plus two).
+        const int height = tm.tmHeight + (g_tallCombos ? Scale(10) : 2);
+        SetPropW(c, kComboHeightProp, reinterpret_cast<HANDLE>(static_cast<INT_PTR>(height)));
+        SendMessageW(c, CB_SETITEMHEIGHT, static_cast<WPARAM>(-1), height);
     }
 }
 
@@ -443,6 +459,10 @@ void Layout(Placement placement, int density = 0) {
     // WM_SETREDRAW TRUE on a hidden window makes it visible (while still being created, before the theme is set).
     const bool pauseRedraw = IsWindowVisible(w.hwnd) != FALSE;
     if (pauseRedraw) SendMessageW(w.hwnd, WM_SETREDRAW, FALSE, 0);
+    if (g_tallCombos != (density < kMaxDensity)) {
+        g_tallCombos = density < kMaxDensity;
+        SetComboHeights();
+    }
     HDC dc = GetDC(w.hwnd);
     HGDIOBJ oldFont = SelectObject(dc, w.font);
     TEXTMETRICW tm{};
@@ -519,7 +539,7 @@ void Layout(Placement placement, int density = 0) {
     const int muteH = wrapRowH(IDC_MODE_MUTE);
     const int musicH = wrapRowH(IDC_MODE_MUSIC);
     ReleaseDC(w.hwnd, dc);
-    int y = margin;
+    int y = u / 3;
 
     // Counter: number over caption, centred over the content, no card.
     {
@@ -537,7 +557,7 @@ void Layout(Placement placement, int density = 0) {
         Place(IDC_ADS_COUNT, margin, y - lead, cardW, bigTm.tmAscent);
         y += bigTm.tmAscent - lead + u / 6;
         Place(IDC_ADS_CAPTION, margin, y, cardW, capTm.tmHeight);
-        y += capTm.tmHeight + sectionGap;
+        y += capTm.tmHeight + u / 3;
     }
 
     // Section heading and card 1: what happens during an ad.
@@ -557,27 +577,32 @@ void Layout(Placement placement, int density = 0) {
         if (show) y += rowH;
     };
     // Label on the left, choice box on the right of the row at y; the box is centred on the row.
-    auto placeCombo = [&](int off, int labelId, int comboId, int labelW, int itemsW) {
+    auto placeCombo = [&](int off, int labelId, int comboId, int labelW, int itemsW, int rowHeight) {
         const int avail = innerW - off;
         const int comboW = std::max({avail * 2 / 5, std::min(avail - labelW - u, 22 * ave), std::min(itemsW + comboExtra, avail - labelW - u)});
-        Place(labelId, x0 + off, y, avail - comboW - u / 2, rowH);
+        Place(labelId, x0 + off, y, avail - comboW - u / 2, rowHeight);
         Place(comboId, x0 + innerW - comboW, y, comboW, rowH * 5);
         RECT comboRc{};
         GetWindowRect(Ctl(comboId), &comboRc);
-        Place(comboId, x0 + innerW - comboW, y + (rowH - (comboRc.bottom - comboRc.top)) / 2, comboW, rowH * 5);
+        Place(comboId, x0 + innerW - comboW, y + (rowHeight - (comboRc.bottom - comboRc.top)) / 2, comboW, rowH * 5);
     };
     Place(IDC_MODE_MUTE, x0, y, innerW, muteH);
     y += muteH;
-    Place(IDC_MODE_LOWER, x0, y, lowerW, rowH);
-    Place(IDC_PERCENT, x0 + lowerW, y, innerW - lowerW - valW, rowH);
-    Place(IDC_PERCENT_VALUE, x0 + innerW - valW, y, valW, rowH);
-    y += rowH;
+    {
+        // The level slider exists only while "lower" is chosen.
+        const bool show = SendMessageW(Ctl(IDC_MODE_LOWER), BM_GETCHECK, 0, 0) == BST_CHECKED;
+        Place(IDC_MODE_LOWER, x0, y, show ? lowerW : innerW, rowH);
+        Place(IDC_PERCENT, x0 + lowerW, y, innerW - lowerW - valW, rowH);
+        Place(IDC_PERCENT_VALUE, x0 + innerW - valW, y, valW, rowH);
+        for (int id : {IDC_PERCENT, IDC_PERCENT_VALUE}) ShowWindow(Ctl(id), show ? SW_SHOWNOACTIVATE : SW_HIDE);
+        y += rowH;
+    }
     Place(IDC_MODE_MUSIC, x0, y, innerW, musicH);
     y += musicH;
     {
         // Source, path and volume exist only while the music radio is selected.
         const bool show = MusicRowsShown();
-        placeCombo(indent, IDC_MUSIC_LABEL, IDC_MUSIC, musicLabelW, musicItemsW);
+        placeCombo(indent, IDC_MUSIC_LABEL, IDC_MUSIC, musicLabelW, musicItemsW, rowH);
         for (int id : {IDC_MUSIC_LABEL, IDC_MUSIC}) ShowWindow(Ctl(id), show ? SW_SHOWNOACTIVATE : SW_HIDE);
         if (show) y += rowH;
         const int buttonW = std::min(pickW, (innerW - indent) / 2);
@@ -596,8 +621,13 @@ void Layout(Placement placement, int density = 0) {
     auto comboRow = [&](RECT& card, int labelId, int comboId, int labelW, int itemsW, bool level) {
         card = {margin, y, margin + cardW, 0};
         y += vpad;
-        placeCombo(0, labelId, comboId, labelW, itemsW);
-        y += rowH;
+        // The taller box keeps a small even gap to the card edge, also in the compact layout.
+        placeCombo(0, labelId, comboId, labelW, itemsW, rowH);
+        RECT comboRc{};
+        GetWindowRect(Ctl(comboId), &comboRc);
+        const int boxRowH = std::max(rowH, static_cast<int>(comboRc.bottom - comboRc.top) + u / 3);
+        placeCombo(0, labelId, comboId, labelW, itemsW, boxRowH);
+        y += boxRowH;
         if (level) sliderRow(IDC_MEDIA_PERCENT_LABEL, IDC_MEDIA_PERCENT, IDC_MEDIA_PERCENT_VALUE, MediaLevelShown(), 0);
         y += vpad;
         card.bottom = y;
@@ -703,6 +733,7 @@ void RefreshTheme() {
     w.bg = CreateSolidBrush(ThemeBackground());
     w.card = CreateSolidBrush(ThemeCard());
     for (const ComboDef& def : kCombos) ApplyControlTheme(Ctl(def.id), L"DarkMode_CFD");
+    SetComboHeights();
     if (w.tip) ApplyControlTheme(w.tip, L"DarkMode_Explorer");
     for (const SliderDef& slider : kSliders) ApplyControlTheme(Ctl(slider.track), L"DarkMode_Explorer");
     RedrawWindow(w.hwnd, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN | RDW_UPDATENOW);
@@ -1068,6 +1099,16 @@ LRESULT CALLBACK ComboProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_
             if (wParam) PostMessageW(h, kMsgOpenCombo, 0, 0);
             return TRUE;
         case kMsgOpenCombo: ShowComboMenu(h); return 0;
+        case WM_WINDOWPOSCHANGED:
+        case WM_SETFONT:
+        case WM_THEMECHANGED: {
+            const LRESULT r = DefSubclassProc(h, msg, wParam, lParam);
+            const int want = static_cast<int>(reinterpret_cast<INT_PTR>(GetPropW(h, kComboHeightProp)));
+            if (want > 0 && SendMessageW(h, CB_GETITEMHEIGHT, static_cast<WPARAM>(-1), 0) != want)
+                SendMessageW(h, CB_SETITEMHEIGHT, static_cast<WPARAM>(-1), want);
+            return r;
+        }
+        case WM_NCDESTROY: RemovePropW(h, kComboHeightProp); break;
         default: break;
     }
     if (IsHighContrast()) return DefSubclassProc(h, msg, wParam, lParam);
@@ -1262,8 +1303,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             MakeFonts();
             ApplyTexts();
             LoadFromSettings();
-            Layout(Placement::Center);
             RefreshTheme();
+            Layout(Placement::Center);
             return 0;
         }
         case WM_ERASEBKGND: return 1;

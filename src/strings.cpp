@@ -26,7 +26,7 @@ constexpr const wchar_t* kEn[] = {
     L"Applies when AdMutify starts with Windows. Open AdMutify again to show the icon.", // OptHideTrayHint
     L"During ads",                                                                      // GroupAds
     L"Mute",                                                                            // ModeMute
-    L"Lower volume to",                                                                 // ModeLower
+    L"Lower volume",                                                                    // ModeLower
     L"Play your own music",  // ModeMusic
     L"%d %%",                                                                           // PercentValue
     L"During videos in other apps",                                                     // MediaLabel
@@ -84,7 +84,7 @@ constexpr const wchar_t* kDe[] = {
     L"Gilt beim Start mit Windows. Zum Anzeigen AdMutify erneut öffnen.",            // OptHideTrayHint
     L"Bei Werbung",                                                                     // GroupAds
     L"Stummschalten",                                                                   // ModeMute
-    L"Leiser stellen auf",                                                              // ModeLower
+    L"Leiser stellen",                                                                  // ModeLower
     L"Eigene Musik spielen",  // ModeMusic
     L"%d %%",                                                                           // PercentValue
     L"Bei Videos in anderen Apps",                                                      // MediaLabel
@@ -148,7 +148,7 @@ constexpr const wchar_t* kEs[] = {  // Spanish
     L"Se aplica cuando AdMutify se inicia con Windows. Abre AdMutify de nuevo para mostrar el icono.",  // OptHideTrayHint
     L"Durante los anuncios",  // GroupAds
     L"Silenciar",  // ModeMute
-    L"Reducir volumen a",  // ModeLower
+    L"Reducir volumen",  // ModeLower
     L"Reproducir tu propia música",  // ModeMusic
     L"%d %%",  // PercentValue
     L"Durante vídeos en otras aplicaciones",  // MediaLabel
@@ -207,7 +207,7 @@ constexpr const wchar_t* kPt[] = {  // Brazilian Portuguese
     L"Aplica-se quando o AdMutify inicia com o Windows. Abra o AdMutify novamente para mostrar o ícone.",  // OptHideTrayHint
     L"Durante anúncios",  // GroupAds
     L"Silenciar",  // ModeMute
-    L"Reduzir volume para",  // ModeLower
+    L"Reduzir volume",  // ModeLower
     L"Tocar sua própria música",  // ModeMusic
     L"%d%%",  // PercentValue
     L"Durante vídeos em outros aplicativos",  // MediaLabel
@@ -266,7 +266,7 @@ constexpr const wchar_t* kIt[] = {  // Italian
     L"Si applica quando AdMutify si avvia con Windows. Apri di nuovo AdMutify per visualizzare l'icona.",  // OptHideTrayHint
     L"Durante la pubblicità",  // GroupAds
     L"Disattiva audio",  // ModeMute
-    L"Riduci volume a",  // ModeLower
+    L"Riduci volume",  // ModeLower
     L"Riproduci la tua musica",  // ModeMusic
     L"%d%%",  // PercentValue
     L"Durante i video in altre app",  // MediaLabel
@@ -325,7 +325,7 @@ constexpr const wchar_t* kNl[] = {  // Dutch
     L"Geldt wanneer AdMutify met Windows wordt opgestart. Open AdMutify opnieuw om het pictogram weer te geven.",  // OptHideTrayHint
     L"Tijdens advertenties",  // GroupAds
     L"Dempen",  // ModeMute
-    L"Volume verlagen tot",  // ModeLower
+    L"Volume verlagen",  // ModeLower
     L"Eigen muziek afspelen",  // ModeMusic
     L"%d%%",  // PercentValue
     L"Tijdens video's in andere apps",  // MediaLabel
@@ -384,7 +384,7 @@ constexpr const wchar_t* kPl[] = {  // Polish
     L"Dotyczy uruchamiania AdMutify z systemem Windows. Aby wyświetlić ikonę, otwórz ponownie AdMutify.",  // OptHideTrayHint
     L"Podczas reklam",  // GroupAds
     L"Wycisz",  // ModeMute
-    L"Zmniejsz głośność do",  // ModeLower
+    L"Zmniejsz głośność",  // ModeLower
     L"Odtwarzaj własną muzykę",  // ModeMusic
     L"%d %%",  // PercentValue
     L"Podczas wideo w innych aplikacjach",  // MediaLabel
@@ -443,7 +443,7 @@ constexpr const wchar_t* kTr[] = {  // Turkish
     L"AdMutify Windows ile başlatıldığında geçerlidir. Simgeyi göstermek için AdMutify'ı yeniden açın.",  // OptHideTrayHint
     L"Reklamlar sırasında",  // GroupAds
     L"Sesi kapat",  // ModeMute
-    L"Ses düzeyini şuna düşür",  // ModeLower
+    L"Ses düzeyini düşür",  // ModeLower
     L"Kendi müziğini çal",  // ModeMusic
     L"%%%d",  // PercentValue
     L"Diğer uygulamalardaki videolar sırasında",  // MediaLabel
@@ -561,7 +561,7 @@ constexpr const wchar_t* kZh[] = {  // Simplified Chinese
     L"适用于 AdMutify 随 Windows 启动的情况。要显示图标，请再次打开 AdMutify。",  // OptHideTrayHint
     L"播放广告时",  // GroupAds
     L"静音",  // ModeMute
-    L"将音量降至",  // ModeLower
+    L"降低音量",  // ModeLower
     L"播放自己的音乐",  // ModeMusic
     L"%d%%",  // PercentValue
     L"在其他应用中播放视频时",  // MediaLabel
