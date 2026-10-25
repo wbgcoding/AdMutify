@@ -402,7 +402,6 @@ void Shutdown(bool endSession = false) {
     KillTimer(g.hwnd, kTimerMediaSettle);
     g.mediaTimerRunning = false;
     StopRestoreRetry();
-    g.mediaSession.Stop();
     // Spotify must not stay paused because of AdMutify.
     // Still showing the song title shortly after our pause means the pause has not shown in the title yet.
     const AdState current = g.machine.Current();
@@ -413,6 +412,8 @@ void Shutdown(bool endSession = false) {
     g.pausedByUs = false;
     SetCrashResumeWindow(nullptr);
     if (g.applied) DoRestore();
+    // Only after the restore: stopping the session may wait, and at logoff Windows can end the process meanwhile.
+    g.mediaSession.Stop();
     g.music.Shutdown();
     g.tray.Hide();
     g.watch.Stop();
