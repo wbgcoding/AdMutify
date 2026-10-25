@@ -55,6 +55,16 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 Name: "chinesesimplified"; MessagesFile: "ChineseSimplified.isl"
 
 [CustomMessages]
+english.AutostartTask=Start with Windows
+german.AutostartTask=Mit Windows starten
+spanish.AutostartTask=Iniciar con Windows
+brazilianportuguese.AutostartTask=Iniciar com o Windows
+italian.AutostartTask=Avvia con Windows
+dutch.AutostartTask=Opstarten met Windows
+polish.AutostartTask=Uruchamiaj z systemem Windows
+turkish.AutostartTask=Windows ile başlat
+japanese.AutostartTask=Windows と同時に起動
+chinesesimplified.AutostartTask=随 Windows 启动
 english.DowngradeBlocked=A newer version of AdMutify (%1) is already installed. This setup would install version %2, so it was stopped.
 german.DowngradeBlocked=Eine neuere Version von AdMutify (%1) ist bereits installiert. Dieses Setup würde Version %2 installieren und wurde deshalb beendet.
 spanish.DowngradeBlocked=Ya hay instalada una versión más reciente de AdMutify (%1). Esta instalación instalaría la versión %2, por lo que se detuvo.
@@ -139,6 +149,8 @@ chinesesimplified.OtherModeInstalled=AdMutify 已以另一种模式安装（仅�
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Check: not IsPortableMode
+; On by default; only offered on a first install, an update keeps what the user set in AdMutify since.
+Name: "autostart"; Description: "{cm:AutostartTask}"; Check: IsFirstInstall
 
 [Files]
 Source: "..\build\x64\Release\AdMutify.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -178,6 +190,11 @@ function AllowSetForegroundWindow(dwProcessId: DWORD): Boolean; external 'AllowS
 function IsPortableMode: Boolean;
 begin
   Result := ((PortableCheck <> nil) and PortableCheck.Checked) or (ExpandConstant('{param:PORTABLE|0}') = '1');
+end;
+
+function IsFirstInstall: Boolean;
+begin
+  Result := not IsPortableMode and (InstalledVersion = '');
 end;
 
 function GetDefaultDir(Param: String): String;
@@ -421,6 +438,12 @@ begin
   // A silent upgrade has no finish page to launch from, so bring back an instance that was running.
   if (CurStep = ssPostInstall) and WizardSilent and WasRunning then
     ExecAsOriginalUser(ExpandConstant('{app}\AdMutify.exe'), '', '', SW_SHOWNORMAL, ewNoWait, Code);
+  // Same entry as the app writes itself; a Task Manager "disabled" mark from an older install is cleared.
+  if (CurStep = ssPostInstall) and IsFirstInstall and WizardIsTaskSelected('autostart') then
+  begin
+    RegWriteStringValue(HKCU, RunKey, 'AdMutify', '"' + ExpandConstant('{app}\AdMutify.exe') + '" --autostart');
+    RegDeleteValue(HKCU, StartupApprovedKey, 'AdMutify');
+  end;
   if (CurStep = ssPostInstall) and IsPortableMode then
     SaveStringToFile(ExpandConstant('{app}\portable.txt'), 'Settings are stored next to AdMutify.exe.' + #13#10, False);
 end;
