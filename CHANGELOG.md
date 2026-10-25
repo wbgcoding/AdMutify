@@ -14,6 +14,8 @@ All notable changes to this project are documented here. The format follows Keep
 
 ### Fixed
 - Ads whose title looks like a song are muted too.
+- Spots titled just "Spotify" or a brand name are muted at once instead of after a few seconds.
+- Choosing own music no longer opens a folder picker by itself; the source row below picks the file or folder.
 - Podcast episodes are no longer muted as ads: their titles often lack " - ", so the Windows media info (the show as album) now tells them apart from spots.
 - Spotify no longer stays quiet after an ad when it opens a new audio session during the ad, and a failed restore is retried within seconds instead of at the next ad.
 - A failed mute during an ad is retried instead of showing "muted" while the ad plays.
