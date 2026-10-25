@@ -310,7 +310,7 @@ void ReevaluateOnce() {
     if (g.closing) return;
     // An ad wins over video playback.
     Reason want = Reason::None;
-    Mode wantMode = g.settings.mode;
+    Mode wantMode = AudioModeFor(g.settings.mode);
     int wantPercent = g.settings.lowerPercent;
     if (g.settings.enabled) {
         if (after == AdState::Ad) {
@@ -373,8 +373,8 @@ void ReevaluateOnce() {
         g.probes = 0;
     }
 
-    // Own music plays while an ad is muted or lowered; video reactions stay quiet.
-    g.music.SetActive(g.applied && g.appliedReason == Reason::Ad);
+    // Own music plays while an ad is muted in the music mode; video reactions stay quiet.
+    g.music.SetActive(MusicShouldPlay(g.settings.mode, g.applied && g.appliedReason == Reason::Ad));
 
     if (TraceEnabled()) Log("trace callbacks=%lu", g.watch.CallbackCount());
     UpdateTray();

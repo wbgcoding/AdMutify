@@ -52,7 +52,7 @@ struct Win {
     // A click on the box that closed its menu must not open it again.
     ULONGLONG ignoreClickUntil = 0;
     int ignoreClickId = 0;
-    RECT cards[5]{};
+    RECT cards[4]{};
     bool loading = false;
     bool classRegistered = false;
 };
@@ -76,7 +76,7 @@ struct ComboDef {
 constexpr ComboDef kCombos[] = {
     {IDC_MEDIA, 4, {StrId::MediaOff, StrId::MediaLower, StrId::MediaMute, StrId::MediaPause}},
     {IDC_LANGUAGE, kLanguageCount, {StrId::LangSystem}},
-    {IDC_MUSIC, 4, {StrId::MusicOff, StrId::MusicFile, StrId::MusicShuffle, StrId::MusicOrder}},
+    {IDC_MUSIC, 3, {StrId::MusicFile, StrId::MusicShuffle, StrId::MusicOrder}},
 };
 
 int LanguageIndex(Language language) { return static_cast<int>(language); }
@@ -134,7 +134,7 @@ struct TipDef {
 constexpr TipDef kTips[] = {
     {IDC_HIDETRAY, StrId::OptHideTrayHint},
     {IDC_MEDIA_LABEL, StrId::MediaHint},
-    {IDC_MUSIC_LABEL, StrId::MusicHint},
+    {IDC_MODE_MUSIC, StrId::MusicHint},
 };
 
 LRESULT CALLBACK FlatButtonProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR);
@@ -197,7 +197,7 @@ void MakeFonts() {
     LOGFONTW head = ncm.lfMessageFont;
     head.lfWeight = FW_SEMIBOLD;
     w.headFont = CreateFontIndirectW(&head);
-    for (int id = IDC_AUTOSTART; id <= IDC_ADS_COUNT; ++id)
+    for (int id = IDC_AUTOSTART; id <= IDC_MODE_MUSIC; ++id)
         if (HWND c = Ctl(id)) SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(id == IDC_GROUP_ADS ? w.headFont : w.font), TRUE);
     if (w.tip) {
         SendMessageW(w.tip, WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
@@ -224,9 +224,10 @@ void CreateControls() {
     Make(L"STATIC", IDC_GROUP_ADS, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"BUTTON", IDC_MODE_MUTE, BS_AUTORADIOBUTTON | BS_MULTILINE | WS_GROUP | WS_TABSTOP);
     Make(L"BUTTON", IDC_MODE_LOWER, BS_AUTORADIOBUTTON);
+    Make(L"BUTTON", IDC_MODE_MUSIC, BS_AUTORADIOBUTTON | BS_MULTILINE);
     Make(TRACKBAR_CLASSW, IDC_PERCENT, TBS_HORZ | TBS_NOTICKS | WS_GROUP | WS_TABSTOP);
     Make(L"STATIC", IDC_PERCENT_VALUE, SS_RIGHT | SS_CENTERIMAGE | SS_NOPREFIX);
-    Make(L"STATIC", IDC_MUSIC_LABEL, SS_LEFT | SS_CENTERIMAGE | SS_NOTIFY | SS_NOPREFIX);
+    Make(L"STATIC", IDC_MUSIC_LABEL, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
     SetWindowSubclass(Make(L"COMBOBOX", IDC_MUSIC, CBS_DROPDOWNLIST | WS_VSCROLL | WS_GROUP | WS_TABSTOP), ComboProc, 1, 0);
     // SS_NOTIFY for the tooltip with the full path; long paths are shortened in the middle.
     Make(L"STATIC", IDC_MUSIC_PATH, SS_LEFT | SS_CENTERIMAGE | SS_NOTIFY | SS_NOPREFIX | SS_PATHELLIPSIS);
@@ -336,7 +337,8 @@ void ApplyTexts() {
     SetText(IDC_MODE_MUTE, Str(StrId::ModeMute));
     SetText(IDC_MODE_LOWER, Str(StrId::ModeLower));
     SetText(IDC_PERCENT, Str(StrId::ModeLower));
-    SetText(IDC_MUSIC_LABEL, Str(StrId::MusicLabel));
+    SetText(IDC_MODE_MUSIC, Str(StrId::ModeMusic));
+    SetText(IDC_MUSIC_LABEL, Str(StrId::MusicSource));
     SetText(IDC_MUSIC_PICK, Str(StrId::MusicPick));
     SetText(IDC_MUSIC_VOLUME, Str(StrId::MusicVolumeLabel));
     SetText(IDC_MUSIC_VOLUME_LABEL, Str(StrId::MusicVolumeLabel));
@@ -391,8 +393,8 @@ int WidestItem(HDC dc, HFONT font, const ComboDef& def) {
     return widest;
 }
 
-// The music rows (path, volume) only exist while music is chosen.
-bool MusicRowsShown() { return SendMessageW(Ctl(IDC_MUSIC), CB_GETCURSEL, 0, 0) > 0; }
+// The music rows (source, path, volume) only exist while the music radio is selected.
+bool MusicRowsShown() { return SendMessageW(Ctl(IDC_MODE_MUSIC), BM_GETCHECK, 0, 0) == BST_CHECKED; }
 
 // The video level row only exists while the choice is "Lower Spotify".
 bool MediaLevelShown() {
@@ -455,11 +457,11 @@ void Layout(Placement placement, int density = 0) {
     const int comboExtra = 3 * u;
     int need = std::max({TextWidth(dc, w.font, IDC_ADS_COUNT) + u,
                          indent + std::max({TextWidth(dc, w.font, IDC_AUTOSTART), TextWidth(dc, w.font, IDC_HIDETRAY),
-                                            TextWidth(dc, w.font, IDC_MODE_MUTE)}) + u,
+                                            TextWidth(dc, w.font, IDC_MODE_MUTE), TextWidth(dc, w.font, IDC_MODE_MUSIC)}) + u,
                          indent + lowerTextW + u + sliderMin + valW,
                          mediaLevelLabelW + u + sliderMin + valW,
-                         musicVolumeLabelW + u + sliderMin + valW,
-                         musicLabelW + u + musicItemsW + comboExtra,
+                         indent + musicVolumeLabelW + u + sliderMin + valW,
+                         indent + musicLabelW + u + musicItemsW + comboExtra,
                          mediaLabelW + u + mediaItemsW + comboExtra,
                          labelTextW + u + languageItemsW + comboExtra});
     const int frame = 2 * pad + 2 * margin;
@@ -475,6 +477,7 @@ void Layout(Placement placement, int density = 0) {
     const int autostartH = wrapRowH(IDC_AUTOSTART);
     const int hideTrayH = wrapRowH(IDC_HIDETRAY);
     const int muteH = wrapRowH(IDC_MODE_MUTE);
+    const int musicH = wrapRowH(IDC_MODE_MUSIC);
     ReleaseDC(w.hwnd, dc);
     int y = margin;
 
@@ -498,56 +501,65 @@ void Layout(Placement placement, int density = 0) {
     y += headH + u / 3;
     w.cards[1] = {margin, y, margin + cardW, 0};
     y += vpad;
-    Place(IDC_MODE_MUTE, x0, y, innerW, muteH);
-    y += muteH;
+    // Slider rows line up with the ad slider; `off` indents the label of the music rows under their radio.
     const int lowerW = std::min(innerW - sliderMin - valW,
-                                std::max({lowerTextW + indent + u, mediaLevelLabelW + u, musicVolumeLabelW + u}));
-    Place(IDC_MODE_LOWER, x0, y, lowerW, rowH);
-    Place(IDC_PERCENT, x0 + lowerW, y, innerW - lowerW - valW, rowH);
-    Place(IDC_PERCENT_VALUE, x0 + innerW - valW, y, valW, rowH);
-    y += rowH + vpad;
-    w.cards[1].bottom = y;
-    y += cardGap;
-
-    // Cards 3 to 5: ad music, video reaction and language, each one label and one choice box; the music card adds
-    // the path and a volume slider below, the video card a level slider, lined up with the ad slider.
-    enum class Extra { None, Music, MediaLevel };
-    auto sliderRow = [&](int labelId, int trackId, int valueId, bool show) {
-        Place(labelId, x0, y, lowerW, rowH);
+                                std::max({lowerTextW + indent + u, mediaLevelLabelW + u, musicVolumeLabelW + indent + u}));
+    auto sliderRow = [&](int labelId, int trackId, int valueId, bool show, int off) {
+        Place(labelId, x0 + off, y, lowerW - off, rowH);
         Place(trackId, x0 + lowerW, y, innerW - lowerW - valW, rowH);
         Place(valueId, x0 + innerW - valW, y, valW, rowH);
         for (int id : {labelId, trackId, valueId}) ShowWindow(Ctl(id), show ? SW_SHOWNOACTIVATE : SW_HIDE);
         if (show) y += rowH;
     };
-    auto comboRow = [&](RECT& card, int labelId, int comboId, int labelW, int itemsW, Extra extra) {
-        card = {margin, y, margin + cardW, 0};
-        y += vpad;
-        const int comboW = std::max({innerW * 2 / 5, std::min(innerW - labelW - u, 22 * ave), std::min(itemsW + comboExtra, innerW - labelW - u)});
-        Place(labelId, x0, y, innerW - comboW - u / 2, rowH);
+    // Label on the left, choice box on the right of the row at y; the box is centred on the row.
+    auto placeCombo = [&](int off, int labelId, int comboId, int labelW, int itemsW) {
+        const int avail = innerW - off;
+        const int comboW = std::max({avail * 2 / 5, std::min(avail - labelW - u, 22 * ave), std::min(itemsW + comboExtra, avail - labelW - u)});
+        Place(labelId, x0 + off, y, avail - comboW - u / 2, rowH);
         Place(comboId, x0 + innerW - comboW, y, comboW, rowH * 5);
         RECT comboRc{};
         GetWindowRect(Ctl(comboId), &comboRc);
         Place(comboId, x0 + innerW - comboW, y + (rowH - (comboRc.bottom - comboRc.top)) / 2, comboW, rowH * 5);
+    };
+    Place(IDC_MODE_MUTE, x0, y, innerW, muteH);
+    y += muteH;
+    Place(IDC_MODE_LOWER, x0, y, lowerW, rowH);
+    Place(IDC_PERCENT, x0 + lowerW, y, innerW - lowerW - valW, rowH);
+    Place(IDC_PERCENT_VALUE, x0 + innerW - valW, y, valW, rowH);
+    y += rowH;
+    Place(IDC_MODE_MUSIC, x0, y, innerW, musicH);
+    y += musicH;
+    {
+        // Source, path and volume exist only while the music radio is selected.
+        const bool show = MusicRowsShown();
+        placeCombo(indent, IDC_MUSIC_LABEL, IDC_MUSIC, musicLabelW, musicItemsW);
+        for (int id : {IDC_MUSIC_LABEL, IDC_MUSIC}) ShowWindow(Ctl(id), show ? SW_SHOWNOACTIVATE : SW_HIDE);
+        if (show) y += rowH;
+        const int buttonW = std::min(pickW, (innerW - indent) / 2);
+        Place(IDC_MUSIC_PATH, x0 + indent, y, innerW - indent - buttonW - u / 2, rowH);
+        Place(IDC_MUSIC_PICK, x0 + innerW - buttonW, y, buttonW, rowH);
+        for (int id : {IDC_MUSIC_PATH, IDC_MUSIC_PICK}) ShowWindow(Ctl(id), show ? SW_SHOWNOACTIVATE : SW_HIDE);
+        if (show) y += rowH;
+        sliderRow(IDC_MUSIC_VOLUME_LABEL, IDC_MUSIC_VOLUME, IDC_MUSIC_VOLUME_VALUE, show, indent);
+    }
+    y += vpad;
+    w.cards[1].bottom = y;
+    y += cardGap;
+
+    // Cards 3 and 4: video reaction and language, each one label and one choice box; the video card adds a level
+    // slider below.
+    auto comboRow = [&](RECT& card, int labelId, int comboId, int labelW, int itemsW, bool level) {
+        card = {margin, y, margin + cardW, 0};
+        y += vpad;
+        placeCombo(0, labelId, comboId, labelW, itemsW);
         y += rowH;
-        if (extra == Extra::Music) {
-            const bool show = MusicRowsShown();
-            const int buttonW = std::min(pickW, innerW / 2);
-            Place(IDC_MUSIC_PATH, x0, y, innerW - buttonW - u / 2, rowH);
-            Place(IDC_MUSIC_PICK, x0 + innerW - buttonW, y, buttonW, rowH);
-            for (int id : {IDC_MUSIC_PATH, IDC_MUSIC_PICK}) ShowWindow(Ctl(id), show ? SW_SHOWNOACTIVATE : SW_HIDE);
-            if (show) y += rowH;
-            sliderRow(IDC_MUSIC_VOLUME_LABEL, IDC_MUSIC_VOLUME, IDC_MUSIC_VOLUME_VALUE, show);
-        } else if (extra == Extra::MediaLevel) {
-            sliderRow(IDC_MEDIA_PERCENT_LABEL, IDC_MEDIA_PERCENT, IDC_MEDIA_PERCENT_VALUE, MediaLevelShown());
-        }
+        if (level) sliderRow(IDC_MEDIA_PERCENT_LABEL, IDC_MEDIA_PERCENT, IDC_MEDIA_PERCENT_VALUE, MediaLevelShown(), 0);
         y += vpad;
         card.bottom = y;
     };
-    comboRow(w.cards[2], IDC_MUSIC_LABEL, IDC_MUSIC, musicLabelW, musicItemsW, Extra::Music);
+    comboRow(w.cards[2], IDC_MEDIA_LABEL, IDC_MEDIA, mediaLabelW, mediaItemsW, true);
     y += cardGap;
-    comboRow(w.cards[3], IDC_MEDIA_LABEL, IDC_MEDIA, mediaLabelW, mediaItemsW, Extra::MediaLevel);
-    y += cardGap;
-    comboRow(w.cards[4], IDC_LANGUAGE_LABEL, IDC_LANGUAGE, labelTextW, languageItemsW, Extra::None);
+    comboRow(w.cards[3], IDC_LANGUAGE_LABEL, IDC_LANGUAGE, labelTextW, languageItemsW, false);
     y += sectionGap;
 
     // Footer: version, reset link, close button.
@@ -613,6 +625,7 @@ void LoadFromSettings() {
     SendMessageW(Ctl(IDC_HIDETRAY), BM_SETCHECK, s.hideTray ? BST_CHECKED : BST_UNCHECKED, 0);
     SendMessageW(Ctl(IDC_MODE_MUTE), BM_SETCHECK, s.mode == Mode::Mute ? BST_CHECKED : BST_UNCHECKED, 0);
     SendMessageW(Ctl(IDC_MODE_LOWER), BM_SETCHECK, s.mode == Mode::Lower ? BST_CHECKED : BST_UNCHECKED, 0);
+    SendMessageW(Ctl(IDC_MODE_MUSIC), BM_SETCHECK, s.mode == Mode::Music ? BST_CHECKED : BST_UNCHECKED, 0);
     SendMessageW(Ctl(IDC_PERCENT), TBM_SETPOS, TRUE, s.lowerPercent);
     SendMessageW(Ctl(IDC_MEDIA_PERCENT), TBM_SETPOS, TRUE, s.mediaPercent);
     SendMessageW(Ctl(IDC_LANGUAGE), CB_SETCURSEL, LanguageIndex(s.language), 0);
@@ -745,6 +758,29 @@ void OnCommand(int id, int code) {
                 s.mode = id == IDC_MODE_LOWER ? Mode::Lower : Mode::Mute;
                 UpdateSliderEnabled(s);
                 CommitSettings(s);
+                Layout(Placement::KeepFit);
+            }
+            break;
+        case IDC_MODE_MUSIC:
+            if (code == BN_CLICKED) {
+                std::wstring path = s.adMusicPath;
+                // Music without a fitting file or folder asks for one first; cancelling keeps the previous radio.
+                if (!MusicPathFits(s.adMusic, path)) path = PickMusicPath(s.adMusic, path);
+                if (path.empty()) {
+                    const Mode keep = CurrentSettings().mode;
+                    SendMessageW(Ctl(IDC_MODE_MUTE), BM_SETCHECK, keep == Mode::Mute ? BST_CHECKED : BST_UNCHECKED, 0);
+                    SendMessageW(Ctl(IDC_MODE_LOWER), BM_SETCHECK, keep == Mode::Lower ? BST_CHECKED : BST_UNCHECKED, 0);
+                    SendMessageW(Ctl(IDC_MODE_MUSIC), BM_SETCHECK, keep == Mode::Music ? BST_CHECKED : BST_UNCHECKED, 0);
+                    break;
+                }
+                // The picker waits for the user; the tray menu may have changed other settings meanwhile.
+                Settings now = CurrentSettings();
+                now.mode = Mode::Music;
+                now.adMusicPath = path;
+                UpdateSliderEnabled(now);
+                CommitSettings(now);
+                UpdateMusicPath();
+                Layout(Placement::KeepFit);
             }
             break;
         case IDC_LANGUAGE:
@@ -768,11 +804,11 @@ void OnCommand(int id, int code) {
         case IDC_MUSIC:
             if (code == CBN_SELCHANGE) {
                 const int sel = static_cast<int>(SendMessageW(Ctl(id), CB_GETCURSEL, 0, 0));
-                const AdMusic want = sel > 0 && sel < static_cast<int>(ComboFor(id)->count) ? static_cast<AdMusic>(sel) : AdMusic::Off;
+                const AdMusic want = sel >= 0 && sel < static_cast<int>(ComboFor(id)->count) ? static_cast<AdMusic>(sel) : AdMusic::Shuffle;
                 std::wstring path = s.adMusicPath;
-                // A choice without a fitting file or folder asks for one first; cancelling keeps the old choice.
-                if (want != AdMusic::Off && !MusicPathFits(want, path)) path = PickMusicPath(want, path);
-                if (want != AdMusic::Off && path.empty()) {
+                // A source without a fitting file or folder asks for one first; cancelling keeps the old source.
+                if (!MusicPathFits(want, path)) path = PickMusicPath(want, path);
+                if (path.empty()) {
                     SendMessageW(Ctl(id), CB_SETCURSEL, static_cast<WPARAM>(CurrentSettings().adMusic), 0);
                     break;
                 }
@@ -782,11 +818,10 @@ void OnCommand(int id, int code) {
                 now.adMusicPath = path;
                 CommitSettings(now);
                 UpdateMusicPath();
-                Layout(Placement::KeepFit);
             }
             break;
         case IDC_MUSIC_PICK:
-            if (code == BN_CLICKED && s.adMusic != AdMusic::Off) {
+            if (code == BN_CLICKED) {
                 std::wstring path = PickMusicPath(s.adMusic, s.adMusicPath);
                 if (path.empty()) break;
                 Settings now = CurrentSettings();

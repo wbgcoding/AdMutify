@@ -174,7 +174,7 @@ TEST(settings_defaults) {
 
 TEST(settings_newer_version_keeps_file) {
     RemoveSettingsFile();
-    const std::string original = "version=2\r\nenabled=0\r\nmode=lower\r\nfuture_key=1\r\n";
+    const std::string original = "version=3\r\nenabled=0\r\nmode=lower\r\nfuture_key=1\r\n";
     CHECK(WriteFileAtomic(SettingsPath(), original));
     LoadResult r = LoadOrCreateSettings();
     CHECK(r.newerVersion);
@@ -240,7 +240,7 @@ TEST(settings_unreadable_file_is_kept) {
 
 TEST(settings_retry_finds_newer_version) {
     RemoveSettingsFile();
-    const std::string original = "version=2\r\nenabled=0\r\nfuture_key=1\r\n";
+    const std::string original = "version=3\r\nenabled=0\r\nfuture_key=1\r\n";
     CHECK(WriteFileAtomic(SettingsPath(), original));
     HANDLE lock = CreateFileW(SettingsPath().c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     CHECK(lock != INVALID_HANDLE_VALUE);

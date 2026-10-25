@@ -3,10 +3,11 @@
 #include <string>
 #include <string_view>
 
-enum class Mode { Mute, Lower };
+// How an ad is handled: mute, lower, or mute and play own music.
+enum class Mode { Mute, Lower, Music };
 enum class MediaMode { Off, Lower, Mute, Pause };
-// Own music during ads: off, one file (looped), a folder shuffled or in name order.
-enum class AdMusic { Off, File, Shuffle, Order };
+// Source of the own music: one file (looped), a folder shuffled or in name order.
+enum class AdMusic { File, Shuffle, Order };
 enum class Language { System, English, German, Spanish, Portuguese, Italian, Dutch, Polish, Turkish, Japanese, Chinese };
 constexpr int kLanguageCount = 11;
 // ini code of a language ("system", "en", "de", ...) and the reverse; unknown text gives System.
@@ -24,8 +25,8 @@ struct Settings {
     MediaMode media = MediaMode::Off;
     // Level of the video reaction "Lower"; independent of the ad level.
     int mediaPercent = 20;
-    // Music played while an ad is muted or lowered; path is a file (File) or a folder (Shuffle, Order).
-    AdMusic adMusic = AdMusic::Off;
+    // Source for Mode::Music; path is a file (File) or a folder (Shuffle, Order).
+    AdMusic adMusic = AdMusic::Shuffle;
     std::wstring adMusicPath;
     int adMusicVolume = 50;
     // Hidden key `trace=1`: turns on the troubleshooting trace at start like --trace. Not in the window; only written

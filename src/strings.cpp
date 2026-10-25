@@ -27,6 +27,7 @@ constexpr const wchar_t* kEn[] = {
     L"During ads",                                                                      // GroupAds
     L"Mute",                                                                            // ModeMute
     L"Lower volume to",                                                                 // ModeLower
+    L"Play your own music",  // ModeMusic
     L"%d %%",                                                                           // PercentValue
     L"During videos in other apps",                                                     // MediaLabel
     L"Do nothing",                                                                      // MediaOff
@@ -35,8 +36,7 @@ constexpr const wchar_t* kEn[] = {
     L"Pause Spotify",                                                                   // MediaPause
     L"Reacts only to sound from browsers and video players that lasts a few seconds. Short sounds, games and calls are ignored.",  // MediaHint
     L"Lower to",                                                                        // MediaPercentLabel
-    L"Music during ads",  // MusicLabel
-    L"Off",  // MusicOff
+    L"Source",  // MusicSource
     L"One file",  // MusicFile
     L"Folder, shuffled",  // MusicShuffle
     L"Folder, in order",  // MusicOrder
@@ -87,6 +87,7 @@ constexpr const wchar_t* kDe[] = {
     L"Bei Werbung",                                                                     // GroupAds
     L"Stummschalten",                                                                   // ModeMute
     L"Leiser stellen auf",                                                              // ModeLower
+    L"Eigene Musik spielen",  // ModeMusic
     L"%d %%",                                                                           // PercentValue
     L"Bei Videos in anderen Apps",                                                      // MediaLabel
     L"Nichts tun",                                                                      // MediaOff
@@ -95,8 +96,7 @@ constexpr const wchar_t* kDe[] = {
     L"Spotify pausieren",                                                               // MediaPause
     L"Reagiert nur auf Ton von Browsern und Videoplayern, der einige Sekunden anhält. Kurze Töne, Spiele und Anrufe zählen nicht.",  // MediaHint
     L"Leiser auf",                                                                      // MediaPercentLabel
-    L"Musik bei Werbung",  // MusicLabel
-    L"Aus",  // MusicOff
+    L"Quelle",  // MusicSource
     L"Eine Datei",  // MusicFile
     L"Ordner, zufällig",  // MusicShuffle
     L"Ordner, der Reihe nach",  // MusicOrder
@@ -153,6 +153,7 @@ constexpr const wchar_t* kEs[] = {  // Spanish
     L"Durante los anuncios",  // GroupAds
     L"Silenciar",  // ModeMute
     L"Reducir volumen a",  // ModeLower
+    L"Reproducir tu propia música",  // ModeMusic
     L"%d %%",  // PercentValue
     L"Durante vídeos en otras aplicaciones",  // MediaLabel
     L"No hacer nada",  // MediaOff
@@ -161,8 +162,7 @@ constexpr const wchar_t* kEs[] = {  // Spanish
     L"Pausar Spotify",  // MediaPause
     L"Solo reacciona al sonido de navegadores y reproductores de vídeo que dura unos segundos. Se ignoran los sonidos breves, los juegos y las llamadas.",  // MediaHint
     L"Reducir a",  // MediaPercentLabel
-    L"Música durante los anuncios",  // MusicLabel
-    L"Desactivada",  // MusicOff
+    L"Fuente",  // MusicSource
     L"Un archivo",  // MusicFile
     L"Carpeta, aleatorio",  // MusicShuffle
     L"Carpeta, en orden",  // MusicOrder
@@ -214,6 +214,7 @@ constexpr const wchar_t* kPt[] = {  // Brazilian Portuguese
     L"Durante anúncios",  // GroupAds
     L"Silenciar",  // ModeMute
     L"Reduzir volume para",  // ModeLower
+    L"Tocar sua própria música",  // ModeMusic
     L"%d%%",  // PercentValue
     L"Durante vídeos em outros aplicativos",  // MediaLabel
     L"Não fazer nada",  // MediaOff
@@ -222,8 +223,7 @@ constexpr const wchar_t* kPt[] = {  // Brazilian Portuguese
     L"Pausar Spotify",  // MediaPause
     L"Reage apenas ao som de navegadores e players de vídeo que dura alguns segundos. Sons curtos, jogos e chamadas são ignorados.",  // MediaHint
     L"Reduzir para",  // MediaPercentLabel
-    L"Música durante anúncios",  // MusicLabel
-    L"Desligada",  // MusicOff
+    L"Fonte",  // MusicSource
     L"Um arquivo",  // MusicFile
     L"Pasta, aleatória",  // MusicShuffle
     L"Pasta, em ordem",  // MusicOrder
@@ -275,6 +275,7 @@ constexpr const wchar_t* kIt[] = {  // Italian
     L"Durante la pubblicità",  // GroupAds
     L"Disattiva audio",  // ModeMute
     L"Riduci volume a",  // ModeLower
+    L"Riproduci la tua musica",  // ModeMusic
     L"%d%%",  // PercentValue
     L"Durante i video in altre app",  // MediaLabel
     L"Nessuna azione",  // MediaOff
@@ -283,8 +284,7 @@ constexpr const wchar_t* kIt[] = {  // Italian
     L"Metti Spotify in pausa",  // MediaPause
     L"Reagisce solo all'audio di browser e lettori video che dura alcuni secondi. I suoni brevi, i giochi e le chiamate vengono ignorati.",  // MediaHint
     L"Riduci a",  // MediaPercentLabel
-    L"Musica durante la pubblicità",  // MusicLabel
-    L"Disattivata",  // MusicOff
+    L"Origine",  // MusicSource
     L"Un file",  // MusicFile
     L"Cartella, casuale",  // MusicShuffle
     L"Cartella, in ordine",  // MusicOrder
@@ -336,6 +336,7 @@ constexpr const wchar_t* kNl[] = {  // Dutch
     L"Tijdens advertenties",  // GroupAds
     L"Dempen",  // ModeMute
     L"Volume verlagen tot",  // ModeLower
+    L"Eigen muziek afspelen",  // ModeMusic
     L"%d%%",  // PercentValue
     L"Tijdens video's in andere apps",  // MediaLabel
     L"Niets doen",  // MediaOff
@@ -344,8 +345,7 @@ constexpr const wchar_t* kNl[] = {  // Dutch
     L"Spotify pauzeren",  // MediaPause
     L"Reageert alleen op geluid van browsers en videospelers dat enkele seconden aanhoudt. Korte geluiden, games en oproepen worden genegeerd.",  // MediaHint
     L"Verlagen tot",  // MediaPercentLabel
-    L"Muziek tijdens advertenties",  // MusicLabel
-    L"Uit",  // MusicOff
+    L"Bron",  // MusicSource
     L"Eén bestand",  // MusicFile
     L"Map, willekeurig",  // MusicShuffle
     L"Map, op volgorde",  // MusicOrder
@@ -397,6 +397,7 @@ constexpr const wchar_t* kPl[] = {  // Polish
     L"Podczas reklam",  // GroupAds
     L"Wycisz",  // ModeMute
     L"Zmniejsz głośność do",  // ModeLower
+    L"Odtwarzaj własną muzykę",  // ModeMusic
     L"%d %%",  // PercentValue
     L"Podczas wideo w innych aplikacjach",  // MediaLabel
     L"Nic nie rób",  // MediaOff
@@ -405,8 +406,7 @@ constexpr const wchar_t* kPl[] = {  // Polish
     L"Wstrzymaj Spotify",  // MediaPause
     L"Reaguje tylko na dźwięk z przeglądarek i odtwarzaczy wideo, który trwa kilka sekund. Krótkie dźwięki, gry i połączenia są ignorowane.",  // MediaHint
     L"Zmniejsz do",  // MediaPercentLabel
-    L"Muzyka podczas reklam",  // MusicLabel
-    L"Wyłączona",  // MusicOff
+    L"Źródło",  // MusicSource
     L"Jeden plik",  // MusicFile
     L"Folder, losowo",  // MusicShuffle
     L"Folder, po kolei",  // MusicOrder
@@ -458,6 +458,7 @@ constexpr const wchar_t* kTr[] = {  // Turkish
     L"Reklamlar sırasında",  // GroupAds
     L"Sesi kapat",  // ModeMute
     L"Ses düzeyini şuna düşür",  // ModeLower
+    L"Kendi müziğini çal",  // ModeMusic
     L"%%%d",  // PercentValue
     L"Diğer uygulamalardaki videolar sırasında",  // MediaLabel
     L"Hiçbir şey yapma",  // MediaOff
@@ -466,8 +467,7 @@ constexpr const wchar_t* kTr[] = {  // Turkish
     L"Spotify'ı duraklat",  // MediaPause
     L"Yalnızca tarayıcılardan ve video oynatıcılardan gelen ve birkaç saniye süren sese tepki verir. Kısa sesler, oyunlar ve aramalar yok sayılır.",  // MediaHint
     L"Şuna düşür",  // MediaPercentLabel
-    L"Reklamlar sırasında müzik",  // MusicLabel
-    L"Kapalı",  // MusicOff
+    L"Kaynak",  // MusicSource
     L"Tek dosya",  // MusicFile
     L"Klasör, karışık",  // MusicShuffle
     L"Klasör, sırayla",  // MusicOrder
@@ -519,6 +519,7 @@ constexpr const wchar_t* kJa[] = {  // Japanese
     L"広告の再生中",  // GroupAds
     L"ミュート",  // ModeMute
     L"音量を下げる",  // ModeLower
+    L"自分の音楽を再生",  // ModeMusic
     L"%d%%",  // PercentValue
     L"他のアプリでの動画再生中",  // MediaLabel
     L"何もしない",  // MediaOff
@@ -527,8 +528,7 @@ constexpr const wchar_t* kJa[] = {  // Japanese
     L"Spotify を一時停止",  // MediaPause
     L"ブラウザーや動画プレーヤーから数秒間続く音声だけに反応します。短い音、ゲーム、通話は無視されます。",  // MediaHint
     L"下げる音量",  // MediaPercentLabel
-    L"広告中の音楽",  // MusicLabel
-    L"オフ",  // MusicOff
+    L"ソース",  // MusicSource
     L"1 つのファイル",  // MusicFile
     L"フォルダー、シャッフル",  // MusicShuffle
     L"フォルダー、順番どおり",  // MusicOrder
@@ -580,6 +580,7 @@ constexpr const wchar_t* kZh[] = {  // Simplified Chinese
     L"播放广告时",  // GroupAds
     L"静音",  // ModeMute
     L"将音量降至",  // ModeLower
+    L"播放自己的音乐",  // ModeMusic
     L"%d%%",  // PercentValue
     L"在其他应用中播放视频时",  // MediaLabel
     L"不执行任何操作",  // MediaOff
@@ -588,8 +589,7 @@ constexpr const wchar_t* kZh[] = {  // Simplified Chinese
     L"暂停 Spotify",  // MediaPause
     L"仅响应浏览器和视频播放器中持续数秒的声音。短促声音、游戏和通话将被忽略。",  // MediaHint
     L"降至",  // MediaPercentLabel
-    L"广告期间的音乐",  // MusicLabel
-    L"关闭",  // MusicOff
+    L"来源",  // MusicSource
     L"单个文件",  // MusicFile
     L"文件夹，随机",  // MusicShuffle
     L"文件夹，按顺序",  // MusicOrder

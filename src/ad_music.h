@@ -11,6 +11,10 @@
 #include "settings.h"
 
 // Pure parts
+// The music plays only for the music mode while the ad reaction is applied; lowering never plays it.
+bool MusicShouldPlay(Mode mode, bool adApplied);
+// Music mutes Spotify exactly like Mute; the audio layer only knows Mute and Lower.
+Mode AudioModeFor(Mode mode);
 // True for the audio formats the Windows media engine plays: mp3, m4a, aac, wma, wav, flac, mp2 and webm everywhere;
 // ogg, oga, opus and mka need the Web Media Extensions that ship with Windows (missing on N editions).
 bool IsMusicFile(std::wstring_view name);
@@ -44,7 +48,7 @@ private:
     uint32_t rng_ = 1;
 };
 
-// Plays the chosen music while an ad is muted or lowered. The player only exists during an ad: when the ad ends the
+// Plays the chosen music while an ad is muted. The player only exists during an ad: when the ad ends the
 // music fades out, its file and position are kept and the next ad continues there.
 class AdMusicPlayer {
 public:

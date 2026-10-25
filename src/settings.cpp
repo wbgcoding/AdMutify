@@ -63,9 +63,8 @@ namespace {
 const char* AdMusicCode(AdMusic m) {
     switch (m) {
         case AdMusic::File: return "file";
-        case AdMusic::Shuffle: return "shuffle";
         case AdMusic::Order: return "order";
-        default: return "off";
+        default: return "shuffle";
     }
 }
 
@@ -91,8 +90,8 @@ Language LanguageFromCode(std::string_view code) {
 std::string FormatSettings(const Settings& s) {
     char buf[320];
     std::snprintf(buf, sizeof(buf),
-                  "version=1\r\nenabled=%d\r\nmode=%s\r\nlower_percent=%d\r\nhide_tray=%d\r\nlanguage=%s\r\ndark_menus=%d\r\nmedia=%s\r\nmedia_percent=%d\r\n",
-                  s.enabled ? 1 : 0, s.mode == Mode::Lower ? "lower" : "mute", s.lowerPercent,
+                  "version=2\r\nenabled=%d\r\nmode=%s\r\nlower_percent=%d\r\nhide_tray=%d\r\nlanguage=%s\r\ndark_menus=%d\r\nmedia=%s\r\nmedia_percent=%d\r\n",
+                  s.enabled ? 1 : 0, s.mode == Mode::Lower ? "lower" : (s.mode == Mode::Music ? "music" : "mute"), s.lowerPercent,
                   s.hideTray ? 1 : 0,
                   LanguageCode(s.language),
                   s.darkMenus ? 1 : 0, s.media == MediaMode::Lower ? "lower"
@@ -118,6 +117,9 @@ bool ParseSettings(std::string_view text, Settings& out) {
         text.remove_prefix(3);
 
     bool newer = false;
+    // A file without a version line counts as current; only a version 1 file is migrated.
+    int fileVersion = 2;
+    std::string_view legacyMusic;
     size_t pos = 0;
     while (pos <= text.size()) {
         size_t end = text.find('\n', pos);
@@ -133,12 +135,17 @@ bool ParseSettings(std::string_view text, Settings& out) {
         int n = 0;
         bool b = false;
         if (key == "version") {
-            if (ParseInt(val, n) && n > 1) newer = true;
+            if (ParseInt(val, n)) {
+                if (n > 2) newer = true;
+                else if (n < 2) fileVersion = 1;
+            }
         } else if (key == "enabled") {
             if (ParseBool(val, b)) s.enabled = b;
         } else if (key == "mode") {
             if (val == "mute") s.mode = Mode::Mute;
             else if (val == "lower") s.mode = Mode::Lower;
+            else if (val == "music") s.mode = Mode::Music;
+            else s.mode = Mode::Mute;
         } else if (key == "lower_percent") {
             if (ParseInt(val, n)) s.lowerPercent = ClampLowerPercent(n);
         } else if (key == "hide_tray") {
@@ -155,10 +162,10 @@ bool ParseSettings(std::string_view text, Settings& out) {
         } else if (key == "media_percent") {
             if (ParseInt(val, n)) s.mediaPercent = ClampLowerPercent(n);
         } else if (key == "ad_music") {
+            legacyMusic = val;
             if (val == "file") s.adMusic = AdMusic::File;
-            else if (val == "shuffle") s.adMusic = AdMusic::Shuffle;
             else if (val == "order") s.adMusic = AdMusic::Order;
-            else s.adMusic = AdMusic::Off;
+            else s.adMusic = AdMusic::Shuffle;
         } else if (key == "ad_music_path") {
             s.adMusicPath = Utf8ToWide(val);
         } else if (key == "ad_music_volume") {
@@ -171,6 +178,8 @@ bool ParseSettings(std::string_view text, Settings& out) {
         out = Settings{};
         return false;
     }
+    // Version 1 had the music as a separate setting; a chosen source now means the music mode.
+    if (fileVersion < 2 && (legacyMusic == "file" || legacyMusic == "shuffle" || legacyMusic == "order")) s.mode = Mode::Music;
     out = s;
     return true;
 }

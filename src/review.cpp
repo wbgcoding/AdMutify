@@ -200,6 +200,7 @@ bool Shoot(const std::wstring& id, Language language, bool dark, const std::wstr
     s.media = id == L"settings-media" ? MediaMode::Lower : MediaMode::Off;
     s.mediaPercent = id == L"settings-media" ? 45 : 20;
     if (id == L"settings-music") {
+        s.mode = Mode::Music;
         s.adMusic = AdMusic::Shuffle;
         s.adMusicPath = L"D:\\Music\\Break music";
         s.adMusicVolume = 60;
@@ -371,7 +372,7 @@ int RunFitTest(const std::wstring& outDir) {
         for (UINT dpi : {144u, 168u, 192u}) {
             Settings s;
             s.language = language;
-            s.mode = Mode::Lower;
+            s.mode = Mode::Music;
             s.media = MediaMode::Lower;
             s.adMusic = AdMusic::Shuffle;
             s.adMusicPath = L"D:\\Music\\Break music";

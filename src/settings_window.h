@@ -9,6 +9,7 @@ enum SettingsControlId {
     IDC_GROUP_ADS = 104,
     IDC_MODE_MUTE = 105,
     IDC_MODE_LOWER = 106,
+    IDC_MODE_MUSIC = 127,
     IDC_PERCENT = 107,
     IDC_PERCENT_VALUE = 108,
     IDC_LANGUAGE_LABEL = 109,

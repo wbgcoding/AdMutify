@@ -194,15 +194,22 @@ TEST(ad_music_scan_folder) {
 
 TEST(ad_music_settings_roundtrip) {
     Settings s;
-    CHECK(s.adMusic == AdMusic::Off);
+    CHECK(s.adMusic == AdMusic::Shuffle);
     CHECK(s.adMusicPath.empty());
     CHECK(s.adMusicVolume == 50);
-    for (AdMusic m : {AdMusic::Off, AdMusic::File, AdMusic::Shuffle, AdMusic::Order}) {
-        s.adMusic = m;
-        Settings back;
-        CHECK(ParseSettings(FormatSettings(s), back));
-        CHECK(back.adMusic == m);
+    for (Mode md : {Mode::Mute, Mode::Lower, Mode::Music}) {
+        for (AdMusic m : {AdMusic::File, AdMusic::Shuffle, AdMusic::Order}) {
+            s.mode = md;
+            s.adMusic = m;
+            Settings back;
+            CHECK(ParseSettings(FormatSettings(s), back));
+            CHECK(back.adMusic == m);
+            CHECK(back.mode == md);
+        }
     }
+    s.mode = Mode::Mute;
+    s.adMusic = AdMusic::Shuffle;
+    CHECK(FormatSettings(s).rfind("version=2", 0) == 0);
     s.adMusicPath = L"D:\\Musik\\Pausen \u00fc \u65e5\u672c\\";
     s.adMusicVolume = 35;
     Settings back;
@@ -224,20 +231,66 @@ TEST(ad_music_settings_roundtrip) {
 
 TEST(ad_music_settings_parse_values) {
     Settings back;
-    CHECK(ParseSettings("version=1\nad_music=bogus\nad_music_volume=250\n", back));
-    CHECK(back.adMusic == AdMusic::Off);
+    CHECK(ParseSettings("version=2\nad_music=bogus\nad_music_volume=250\n", back));
+    CHECK(back.adMusic == AdMusic::Shuffle);
     CHECK(back.adMusicVolume == 100);
-    CHECK(ParseSettings("version=1\nad_music=order\nad_music_volume=-4\nad_music_path= E:\\Music \n", back));
+    CHECK(ParseSettings("version=2\nad_music=order\nad_music_volume=-4\nad_music_path= E:\\Music \n", back));
     CHECK(back.adMusic == AdMusic::Order);
     CHECK(back.adMusicVolume == 0);
     CHECK(back.adMusicPath == L"E:\\Music");
-    CHECK(ParseSettings("version=1\nad_music_volume=43\n", back));
+    CHECK(ParseSettings("version=2\nad_music_volume=43\n", back));
     CHECK(back.adMusicVolume == 45);
-    CHECK(ParseSettings("version=1\nad_music_volume=abc\n", back));
+    CHECK(ParseSettings("version=2\nad_music_volume=abc\n", back));
     CHECK(back.adMusicVolume == 50);
     CHECK(ClampVolumePercent(101) == 100);
     CHECK(ClampVolumePercent(97) == 95);
     CHECK(ClampVolumePercent(98) == 100);
+}
+
+TEST(ad_music_settings_migrate_v1) {
+    Settings back;
+    // A version 1 source other than off becomes the music mode, whatever the mode was.
+    for (const char* mode : {"mute", "lower"}) {
+        const std::pair<const char*, AdMusic> sources[] = {{"file", AdMusic::File}, {"shuffle", AdMusic::Shuffle}, {"order", AdMusic::Order}};
+        for (const auto& [code, want] : sources) {
+            std::string text = std::string("version=1\nmode=") + mode + "\nad_music=" + code + "\n";
+            CHECK(ParseSettings(text, back));
+            CHECK(back.mode == Mode::Music);
+            CHECK(back.adMusic == want);
+        }
+        // Off keeps the mode and falls back to the default source.
+        std::string off = std::string("version=1\nmode=") + mode + "\nad_music=off\n";
+        CHECK(ParseSettings(off, back));
+        CHECK(back.mode == (std::string(mode) == "lower" ? Mode::Lower : Mode::Mute));
+        CHECK(back.adMusic == AdMusic::Shuffle);
+    }
+    // The key order does not matter, and no key keeps the defaults.
+    CHECK(ParseSettings("version=1\nad_music=order\nmode=lower\n", back));
+    CHECK(back.mode == Mode::Music);
+    CHECK(ParseSettings("version=1\nmode=lower\n", back));
+    CHECK(back.mode == Mode::Lower);
+    CHECK(back.adMusic == AdMusic::Shuffle);
+    // Version 2 never migrates: the source alone does not change the mode.
+    CHECK(ParseSettings("version=2\nmode=lower\nad_music=order\n", back));
+    CHECK(back.mode == Mode::Lower);
+    CHECK(back.adMusic == AdMusic::Order);
+    // An unknown mode gives Mute; a newer version is refused.
+    CHECK(ParseSettings("version=2\nmode=bogus\n", back));
+    CHECK(back.mode == Mode::Mute);
+    CHECK(ParseSettings("version=2\nmode=music\n", back));
+    CHECK(back.mode == Mode::Music);
+    CHECK(!ParseSettings("version=3\nmode=music\n", back));
+}
+
+TEST(ad_music_mode_rules) {
+    // Lower never plays music; Music plays during an applied ad only and mutes like Mute.
+    CHECK(!MusicShouldPlay(Mode::Lower, true));
+    CHECK(!MusicShouldPlay(Mode::Mute, true));
+    CHECK(MusicShouldPlay(Mode::Music, true));
+    CHECK(!MusicShouldPlay(Mode::Music, false));
+    CHECK(AudioModeFor(Mode::Music) == Mode::Mute);
+    CHECK(AudioModeFor(Mode::Mute) == Mode::Mute);
+    CHECK(AudioModeFor(Mode::Lower) == Mode::Lower);
 }
 
 TEST(ad_music_settings_merge) {
@@ -337,8 +390,8 @@ TEST(ad_music_player_plays_resumes_and_skips) {
         CHECK(PumpUntil([&] { return player.IsPlaying(); }, 5000));
         CHECK(player.Position() >= kept - 0.3);
 
-        // A new folder starts over; switching off stops at once.
-        player.Configure(AdMusic::Off, root, 0);
+        // A new source starts over; a missing file stops at once.
+        player.Configure(AdMusic::File, root + L"/nothing.mp3", 0);
         CHECK(!player.IsPlaying());
         CHECK(player.Position() == 0);
         player.Shutdown();

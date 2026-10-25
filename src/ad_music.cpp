@@ -200,10 +200,14 @@ private:
 
 }  // namespace
 
+bool MusicShouldPlay(Mode mode, bool adApplied) { return adApplied && mode == Mode::Music; }
+
+Mode AudioModeFor(Mode mode) { return mode == Mode::Music ? Mode::Mute : mode; }
+
 struct AdMusicPlayer::Impl {
     HWND hwnd = nullptr;
     UINT_PTR timerId = 0;
-    AdMusic mode = AdMusic::Off;
+    AdMusic mode = AdMusic::Shuffle;
     std::wstring path;
     int volume = 50;
 
@@ -396,7 +400,7 @@ struct AdMusicPlayer::Impl {
     }
 
     void Begin() {
-        if (mode == AdMusic::Off || !hwnd) return;
+        if (!hwnd) return;
         if (engine) {
             // Fading out when the next ad came: fade back in from where the level is.
             if (loaded) {
