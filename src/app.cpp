@@ -32,6 +32,8 @@ constexpr UINT_PTR kTimerTraceWindows = 6;
 constexpr UINT kTraceWindowsMs = 1000;
 // One-shot: re-checks once the media session had its settle time after a window title change.
 constexpr UINT_PTR kTimerMediaSettle = 7;
+// One-shot: re-checks when the song-like ad rule runs out for the current title.
+constexpr UINT_PTR kTimerMediaExpire = 8;
 constexpr UINT kRestoreRetryMs = 2000;
 constexpr int kMaxRestoreRetries = 15;
 constexpr UINT kMediaPollMs = 500;
@@ -56,6 +58,7 @@ struct App {
     std::wstring lastSeenTitle;
     uint64_t titleChangedAt = 0;
     MediaTrack lastTraceTrack;
+    std::wstring lastExpiredTitle;
     AdMusicPlayer music;
     bool mediaTimerRunning = false;
     std::wstring lastMediaExe;
@@ -264,6 +267,21 @@ void ReevaluateOnce() {
     } else {
         KillTimer(g.hwnd, kTimerMediaSettle);
     }
+    // The song-like ad rule ends kMaxSessionAdMs after a title change: wake up then, and note it once per title.
+    if (titleKind != TitleKind::Ad && TrackMatchesTitle(track, windowTitle) && IsAdTrack(track)) {
+        const uint64_t since = now - g.titleChangedAt;
+        if (since < kMaxSessionAdMs) {
+            SetTimer(g.hwnd, kTimerMediaExpire, static_cast<UINT>(kMaxSessionAdMs - since + 20), nullptr);
+        } else {
+            KillTimer(g.hwnd, kTimerMediaExpire);
+            if (TraceEnabled() && windowTitle != g.lastExpiredTitle) {
+                g.lastExpiredTitle = windowTitle;
+                Log("trace media_ad_expired");
+            }
+        }
+    } else {
+        KillTimer(g.hwnd, kTimerMediaExpire);
+    }
     if (TraceEnabled() && g.watch.Title() != g.lastTraceTitle) {
         // Titles stay out of the normal log; only an explicit --trace run records them.
         g.lastTraceTitle = g.watch.Title();
@@ -385,6 +403,7 @@ void Shutdown(bool endSession = false) {
     KillTimer(g.hwnd, kTimerProbe);
     KillTimer(g.hwnd, kTimerMedia);
     KillTimer(g.hwnd, kTimerMediaSettle);
+    KillTimer(g.hwnd, kTimerMediaExpire);
     g.mediaTimerRunning = false;
     StopRestoreRetry();
     g.mediaSession.Stop();
@@ -481,6 +500,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 Reevaluate();
             } else if (wParam == kTimerMediaSettle) {
                 KillTimer(hwnd, kTimerMediaSettle);
+                Reevaluate();
+            } else if (wParam == kTimerMediaExpire) {
+                KillTimer(hwnd, kTimerMediaExpire);
                 Reevaluate();
             } else if (wParam == kTimerMedia) {
                 bool before = g.media.Active();

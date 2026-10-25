@@ -46,7 +46,7 @@ TitleKind MergeMediaTrack(TitleKind kind, AdState current, const MediaTrack& t, 
                           uint64_t msSinceTitleChange) {
     if (!t.valid) return kind;
     const bool matches = TrackMatchesTitle(t, windowTitle);
-    if (matches && IsAdTrack(t)) return TitleKind::Ad;
+    if (matches && IsAdTrack(t) && msSinceTitleChange < kMaxSessionAdMs) return TitleKind::Ad;
     if (kind == TitleKind::Music && current == AdState::Ad && !matches && msSinceTitleChange < kMediaSettleMs)
         return TitleKind::Ad;
     return kind;

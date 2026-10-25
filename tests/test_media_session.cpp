@@ -76,6 +76,19 @@ TEST(media_merge_regression_song_like_ad) {
     CHECK(MergeMediaTrack(TitleKind::Music, AdState::Idle, t, title, 0) == TitleKind::Ad);
 }
 
+TEST(media_merge_ad_rule_expires) {
+    // A long item with ad traits (podcast, audiobook, untagged file) must not stay muted for its whole length.
+    const MediaTrack t = Ad(L"Episode 12", L"Some Show");
+    const std::wstring_view title = L"Some Show - Episode 12";
+    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, t, title, 30000) == TitleKind::Ad);
+    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, t, title, 66000) == TitleKind::Music);
+    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, t, title, kMaxSessionAdMs - 1) == TitleKind::Ad);
+    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, t, title, kMaxSessionAdMs) == TitleKind::Music);
+    // The title verdict itself is not touched by the limit.
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Ad, t, title, 66000) == TitleKind::Ad);
+    CHECK(MergeMediaTrack(TitleKind::IdleOrAd, AdState::Ad, t, title, 66000) == TitleKind::IdleOrAd);
+}
+
 TEST(media_merge_song_stays_music) {
     const MediaTrack song = Song();
     CHECK(MergeMediaTrack(TitleKind::Music, AdState::Music, song, L"leon chang - sleep it off", 100) == TitleKind::Music);
