@@ -46,8 +46,9 @@ public:
 
     // Starts the thread; every change of the snapshot posts `message` to `notify`.
     void Start(HWND notify, UINT message);
-    // Revokes the handlers and joins the thread.
+    // Revokes the handlers and joins the thread, waiting at most kStopWaitMs.
     void Stop();
+    static constexpr DWORD kStopWaitMs = 1500;
     MediaTrack Snapshot() const;
 
 private:

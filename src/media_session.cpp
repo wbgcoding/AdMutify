@@ -227,9 +227,10 @@ void MediaSession::Start(HWND notify, UINT message) {
     impl_->notify = notify;
     impl_->message = message;
     ResetEvent(impl_->stop);
-    impl_->thread = std::thread([this] {
+    Impl* impl = impl_.get();
+    impl->thread = std::thread([impl] {
         try {
-            impl_->Run();
+            impl->Run();
         } catch (...) {
         }
     });
@@ -238,6 +239,15 @@ void MediaSession::Start(HWND notify, UINT message) {
 void MediaSession::Stop() {
     if (!impl_->thread.joinable()) return;
     SetEvent(impl_->stop);
+    // A media session call can hang inside the system; shutdown must still go on to restore the volume. A thread
+    // that does not end in time is left behind together with its state, which lives until the process ends.
+    if (WaitForSingleObject(impl_->thread.native_handle(), kStopWaitMs) != WAIT_OBJECT_0) {
+        Log("media_session_stop_timeout");
+        impl_->thread.detach();
+        static_cast<void>(impl_.release());
+        impl_ = std::make_unique<Impl>();
+        return;
+    }
     impl_->thread.join();
     std::lock_guard<std::mutex> lock(impl_->mutex);
     impl_->snapshot = MediaTrack{};
