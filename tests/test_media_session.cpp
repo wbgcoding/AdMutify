@@ -31,7 +31,7 @@ MediaTrack Song() {
 }  // namespace
 
 TEST(media_is_ad_track_samples) {
-    CHECK(IsAdTrack(Ad(L"—", L"")));
+    CHECK(IsAdTrack(Ad(L"\x2014", L"")));
     CHECK(IsAdTrack(Ad(L"Weihnachts-Hits 2026", L"Topsify Germany")));
     CHECK(IsAdTrack(Ad(L"Hör Musik ohne Werbepausen.", L"Spotify")));
     CHECK(IsAdTrack(Ad(L"JETZT HÖREN", L"Best Christmas Playlists")));
@@ -61,9 +61,9 @@ TEST(media_track_matches_title) {
     CHECK(!TrackMatchesTitle(song, L"Spotify Free"));
     CHECK(!TrackMatchesTitle(MediaTrack{}, L"sleep it off"));
 
-    const MediaTrack dash = Ad(L"—", L"");
-    CHECK(TrackMatchesTitle(dash, L"—"));
-    CHECK(!TrackMatchesTitle(dash, L" - —"));
+    const MediaTrack dash = Ad(L"\x2014", L"");
+    CHECK(TrackMatchesTitle(dash, L"\x2014"));
+    CHECK(!TrackMatchesTitle(dash, L" - \x2014"));
     // A track without a title never matches, not even an empty window title.
     CHECK(!TrackMatchesTitle(Ad(L"", L""), L""));
 }
