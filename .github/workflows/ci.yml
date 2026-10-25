@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Configure
+        run: cmake -S . -B build/x64 -A x64
+
+      - name: Build tests
+        run: cmake --build build/x64 --config Release --target admutify_tests
+
+      - name: Run tests
+        run: ctest --test-dir build/x64 -C Release --output-on-failure
