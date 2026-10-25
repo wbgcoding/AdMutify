@@ -31,6 +31,7 @@ constexpr UINT_PTR kTimerRestoreRetry = 5;
 // --trace only: records Spotify's window set, so popups and overlays (surveys, banners) can be told apart later.
 constexpr UINT_PTR kTimerTraceWindows = 6;
 constexpr UINT kTraceWindowsMs = 1000;
+constexpr uint64_t kTraceCallbacksMs = 60000;
 // One-shot: re-checks once the media session had its settle time after a window title change.
 constexpr UINT_PTR kTimerMediaSettle = 7;
 // One-shot: re-checks when the song-like ad rule runs out for the current title.
@@ -58,6 +59,7 @@ struct App {
     MediaSession mediaSession;
     std::wstring lastSeenTitle;
     uint64_t titleChangedAt = 0;
+    uint64_t lastCallbacksLog = 0;
     MediaTrack lastTraceTrack;
     std::wstring lastExpiredTitle;
     AdMusicPlayer music;
@@ -376,7 +378,11 @@ void ReevaluateOnce() {
     // Own music plays while an ad is muted in the music mode; video reactions stay quiet.
     g.music.SetActive(MusicShouldPlay(g.settings.mode, g.applied && g.appliedReason == Reason::Ad));
 
-    if (TraceEnabled()) Log("trace callbacks=%lu", g.watch.CallbackCount());
+    // At most once a minute: a long trace run must not rotate the interesting lines out of the log.
+    if (TraceEnabled() && now - g.lastCallbacksLog >= kTraceCallbacksMs) {
+        g.lastCallbacksLog = now;
+        Log("trace callbacks=%lu", g.watch.CallbackCount());
+    }
     UpdateTray();
 }
 
