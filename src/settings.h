@@ -28,6 +28,9 @@ struct Settings {
     AdMusic adMusic = AdMusic::Off;
     std::wstring adMusicPath;
     int adMusicVolume = 50;
+    // Hidden key `trace=1`: turns on the troubleshooting trace at start like --trace. Not in the window; only written
+    // when set, and cleared by a reset.
+    bool trace = false;
 };
 
 struct LoadResult {

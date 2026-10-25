@@ -38,6 +38,34 @@ TEST(settings_roundtrip) {
     CHECK(back.language == Language::English);
 }
 
+TEST(settings_trace_key) {
+    Settings s;
+    CHECK(!s.trace);
+    // Written only when set.
+    CHECK(FormatSettings(s).find("trace") == std::string::npos);
+    Settings back;
+    back.trace = true;
+    CHECK(ParseSettings(FormatSettings(s), back));
+    CHECK(!back.trace);
+    s.trace = true;
+    CHECK(FormatSettings(s).find("trace=1\r\n") != std::string::npos);
+    CHECK(ParseSettings(FormatSettings(s), back));
+    CHECK(back.trace);
+    CHECK(ParseSettings("version=1\r\ntrace=0\r\n", back));
+    CHECK(!back.trace);
+    CHECK(ParseSettings("version=1\r\ntrace=yes\r\n", back));
+    CHECK(!back.trace);
+    // A reset (default settings) clears it.
+    CHECK(FormatSettings(Settings{}).find("trace") == std::string::npos);
+    // The merge after a failed read keeps the file's value unless the user changed it.
+    Settings fromFile;
+    fromFile.trace = true;
+    CHECK(MergeSettingsChange(fromFile, Settings{}, Settings{}).trace);
+    Settings shown;
+    shown.trace = true;
+    CHECK(!MergeSettingsChange(fromFile, shown, Settings{}).trace);
+}
+
 TEST(settings_language_codes) {
     struct Case {
         Language language;

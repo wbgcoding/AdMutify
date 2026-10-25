@@ -673,6 +673,7 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
     LoadResult loaded = LoadOrCreateSettings();
     g.settings = loaded.settings;
     SetLanguage(g.settings.language);
+    if (g.settings.trace) SetTraceEnabled(true);
 
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof(wc);

@@ -107,6 +107,7 @@ std::string FormatSettings(const Settings& s) {
     out += "\r\nad_music_volume=";
     out += std::to_string(s.adMusicVolume);
     out += "\r\n";
+    if (s.trace) out += "trace=1\r\n";
     return out;
 }
 
@@ -162,6 +163,8 @@ bool ParseSettings(std::string_view text, Settings& out) {
             s.adMusicPath = Utf8ToWide(val);
         } else if (key == "ad_music_volume") {
             if (ParseInt(val, n)) s.adMusicVolume = ClampVolumePercent(n);
+        } else if (key == "trace") {
+            if (ParseBool(val, b)) s.trace = b;
         }
     }
     if (newer) {
@@ -384,5 +387,6 @@ Settings MergeSettingsChange(const Settings& fromFile, const Settings& shown, co
     if (current.adMusic != shown.adMusic) out.adMusic = current.adMusic;
     if (current.adMusicPath != shown.adMusicPath) out.adMusicPath = current.adMusicPath;
     if (current.adMusicVolume != shown.adMusicVolume) out.adMusicVolume = current.adMusicVolume;
+    if (current.trace != shown.trace) out.trace = current.trace;
     return out;
 }

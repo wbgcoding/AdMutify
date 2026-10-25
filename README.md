@@ -62,7 +62,7 @@ Settings are stored in `%APPDATA%\AdMutify` (portable: next to the exe), logs in
 
 ## Privacy
 
-AdMutify makes no network connections at all and sends nothing anywhere. It only keeps a small log file and, after a crash, a crash report on your own PC; both are deleted automatically after 7 days. The log only records state changes such as "music" or "ad", never song titles. Titles are only written when you start AdMutify yourself with the `--trace` switch for troubleshooting. A crash report can contain file paths of your PC, such as your user folder, so look at it before you share it.
+AdMutify makes no network connections at all and sends nothing anywhere. It only keeps a small log file and, after a crash, a crash report on your own PC; both are deleted automatically after 7 days. The log only records state changes such as "music" or "ad", never song titles. Titles are only written when you start AdMutify yourself with the `--trace` switch or the hidden `trace=1` line in `settings.ini` for troubleshooting. A crash report can contain file paths of your PC, such as your user folder, so look at it before you share it.
 
 ## Build from source
 
