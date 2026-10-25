@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows Keep a Changelog; versions follow semantic versioning.
 
-## [Unreleased]
+## [1.2.0] - 2026-10-25
 
 ### Added
 - The settings window shows at the top how many ads were muted so far.
