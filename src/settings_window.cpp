@@ -742,7 +742,7 @@ std::wstring PickMusicPath(AdMusic mode, const std::wstring& current) {
         if (chosen) chosen->Release();
         if (!folder || result.empty() || !ScanMusicFolder(result, 1).empty()) break;
         wchar_t text[512];
-        swprintf_s(text, Str(StrId::ErrMusicEmpty), MusicTypeList().c_str());
+        swprintf_s(text, Str(StrId::ErrMusicEmpty), MusicTypeList(ResolveLanguage(CurrentSettings().language)).c_str());
         MessageBoxW(w.hwnd, text, Str(StrId::SettingsTitle), MB_OK | MB_ICONWARNING);
         result.clear();
     }

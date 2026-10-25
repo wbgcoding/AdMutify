@@ -40,10 +40,12 @@ std::wstring MusicFilterSpec() {
     return spec;
 }
 
-std::wstring MusicTypeList() {
+std::wstring MusicTypeList(Language language) {
+    // Japanese and Chinese separate list items with the ideographic comma.
+    const bool cjk = language == Language::Japanese || language == Language::Chinese;
     std::wstring list;
     for (const wchar_t* ext : kMusicExtensions) {
-        if (!list.empty()) list += L", ";
+        if (!list.empty()) list += cjk ? L"、" : L", ";
         for (const wchar_t* c = ext + 1; *c; ++c) list += static_cast<wchar_t>(towupper(*c));
     }
     return list;

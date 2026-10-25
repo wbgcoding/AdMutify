@@ -92,7 +92,10 @@ TEST(ad_music_file_types) {
 
 TEST(ad_music_type_lists) {
     CHECK(MusicFilterSpec() == L"*.mp3;*.m4a;*.aac;*.wma;*.wav;*.flac;*.ogg;*.oga;*.opus;*.webm;*.mka;*.mp2");
-    CHECK(MusicTypeList() == L"MP3, M4A, AAC, WMA, WAV, FLAC, OGG, OGA, OPUS, WEBM, MKA, MP2");
+    CHECK(MusicTypeList(Language::German) == L"MP3, M4A, AAC, WMA, WAV, FLAC, OGG, OGA, OPUS, WEBM, MKA, MP2");
+    CHECK(MusicTypeList(Language::Japanese) ==
+          L"MP3、M4A、AAC、WMA、WAV、FLAC、OGG、OGA、OPUS、WEBM、MKA、MP2");
+    CHECK(MusicTypeList(Language::Chinese).find(L"、") != std::wstring::npos);
 }
 
 TEST(ad_music_name_order) {
