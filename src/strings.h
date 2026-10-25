@@ -17,6 +17,7 @@ enum class StrId {
     MenuSettings,
     MenuExit,
     SettingsTitle,
+    AdsMutedCount,
     OptAutostart,
     OptHideTray,
     OptHideTrayHint,

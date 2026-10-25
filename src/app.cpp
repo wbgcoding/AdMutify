@@ -14,6 +14,7 @@
 #include "media_session.h"
 #include "settings_window.h"
 #include "spotify_watch.h"
+#include "stats.h"
 #include "strings.h"
 #include "theme.h"
 #include "tray.h"
@@ -320,6 +321,7 @@ void ReevaluateOnce() {
             wantPercent = g.settings.mediaPercent;
         }
     }
+    const bool adWasApplied = g.applied && g.appliedReason == Reason::Ad;
     if (want == Reason::None) {
         if (g.applied) DoRestore();
     } else if (!g.applied) {
@@ -346,6 +348,11 @@ void ReevaluateOnce() {
     if (g.applied && g.appliedReason != want && want != Reason::None) {
         Log("reason %s -> %s", ReasonName(g.appliedReason), ReasonName(want));
         g.appliedReason = want;
+    }
+    // One count per ad, at the moment its reaction first applies (also when it takes over from a video reaction).
+    if (g.applied && CountsAsNewAdMute(adWasApplied, want == Reason::Ad)) {
+        StatsCountAdMute();
+        SettingsWindowUpdateCounter();
     }
 
     if (before == AdState::NoSpotify && after != AdState::NoSpotify) g.audio.WatchSessions();
@@ -672,6 +679,7 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
 
     LoadResult loaded = LoadOrCreateSettings();
     g.settings = loaded.settings;
+    StatsLoad();
     SetLanguage(g.settings.language);
     if (g.settings.trace) SetTraceEnabled(true);
 

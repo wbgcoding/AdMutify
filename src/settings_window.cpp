@@ -22,6 +22,7 @@ using std::min;
 #include "ad_music.h"
 #include "app.h"
 #include "autostart.h"
+#include "stats.h"
 #include "strings.h"
 #include "theme.h"
 #include "tray.h"
@@ -196,7 +197,7 @@ void MakeFonts() {
     LOGFONTW head = ncm.lfMessageFont;
     head.lfWeight = FW_SEMIBOLD;
     w.headFont = CreateFontIndirectW(&head);
-    for (int id = IDC_AUTOSTART; id <= IDC_MUSIC_VOLUME_VALUE; ++id)
+    for (int id = IDC_AUTOSTART; id <= IDC_ADS_COUNT; ++id)
         if (HWND c = Ctl(id)) SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(id == IDC_GROUP_ADS ? w.headFont : w.font), TRUE);
     if (w.tip) {
         SendMessageW(w.tip, WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
@@ -217,6 +218,7 @@ void MakeFonts() {
 }
 
 void CreateControls() {
+    Make(L"STATIC", IDC_ADS_COUNT, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"BUTTON", IDC_AUTOSTART, BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP);
     Make(L"BUTTON", IDC_HIDETRAY, BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP);
     Make(L"STATIC", IDC_GROUP_ADS, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
@@ -309,8 +311,15 @@ void UpdateMusicPath() {
     InvalidateRect(Ctl(IDC_MUSIC_PATH), nullptr, TRUE);
 }
 
+void UpdateCounterText() {
+    wchar_t buf[96];
+    swprintf_s(buf, Str(StrId::AdsMutedCount), static_cast<unsigned long long>(StatsAdsMuted()));
+    SetText(IDC_ADS_COUNT, buf);
+}
+
 void ApplyTexts() {
     SetWindowTextW(w.hwnd, Str(StrId::SettingsTitle));
+    UpdateCounterText();
     SetText(IDC_AUTOSTART, Str(StrId::OptAutostart));
     SetText(IDC_HIDETRAY, Str(StrId::OptHideTray));
     if (w.tip) {
@@ -444,7 +453,8 @@ void Layout(Placement placement, int density = 0) {
     const int languageItemsW = WidestItem(dc, w.font, kCombos[1]);
     const int musicItemsW = WidestItem(dc, w.font, kCombos[2]);
     const int comboExtra = 3 * u;
-    int need = std::max({indent + std::max({TextWidth(dc, w.font, IDC_AUTOSTART), TextWidth(dc, w.font, IDC_HIDETRAY),
+    int need = std::max({TextWidth(dc, w.font, IDC_ADS_COUNT) + u,
+                         indent + std::max({TextWidth(dc, w.font, IDC_AUTOSTART), TextWidth(dc, w.font, IDC_HIDETRAY),
                                             TextWidth(dc, w.font, IDC_MODE_MUTE)}) + u,
                          indent + lowerTextW + u + sliderMin + valW,
                          mediaLevelLabelW + u + sliderMin + valW,
@@ -467,6 +477,10 @@ void Layout(Placement placement, int density = 0) {
     const int muteH = wrapRowH(IDC_MODE_MUTE);
     ReleaseDC(w.hwnd, dc);
     int y = margin;
+
+    // Counter: plain text above the first card.
+    Place(IDC_ADS_COUNT, margin + u / 4, y, cardW - u / 4, rowH);
+    y += rowH + cardGap;
 
     // Card 1: start options.
     w.cards[0] = {margin, y, margin + cardW, 0};
@@ -1128,7 +1142,7 @@ void OnPaint(HWND hwnd) {
     EndPaint(hwnd, &ps);
 }
 
-bool OnCard(int id) { return id != IDC_GROUP_ADS && id != IDC_VERSION; }
+bool OnCard(int id) { return id != IDC_GROUP_ADS && id != IDC_VERSION && id != IDC_ADS_COUNT; }
 
 LRESULT OnCtlColor(HDC dc, HWND ctl) {
     int id = GetDlgCtrlID(ctl);
@@ -1235,6 +1249,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 }  // namespace
 
 HWND SettingsWindowHandle() { return w.hwnd; }
+
+void SettingsWindowUpdateCounter() {
+    if (w.hwnd) UpdateCounterText();
+}
 
 void OpenSettingsWindow() {
     if (w.hwnd) {

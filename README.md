@@ -51,6 +51,7 @@ AdMutify does not modify Spotify in any way: no patching, no code injection, no 
 
 | Setting | What it does |
 |---|---|
+| Ads muted counter | The first line of the window shows how many ads AdMutify has muted so far. It is kept in `stats.ini` next to the settings and is not changed by "Reset settings". |
 | Start with Windows | Adds AdMutify to your Windows startup apps. |
 | No tray icon when starting with Windows | AdMutify runs invisibly after the Windows start. Open it again to show the icon. Starting it yourself always shows the icon. |
 | During ads | Mute Spotify, or lower it to 0 to 90 percent of its current volume. |

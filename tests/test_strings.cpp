@@ -29,7 +29,7 @@ int CountSubstr(const std::wstring& s, const wchar_t* sub) {
 // The printf conversions of a text in order of appearance ("?" for anything the app does not use). A literal percent
 // sign takes no argument, so it may sit anywhere ("%50" in Turkish) and is left out.
 std::vector<std::wstring> Specifiers(const std::wstring& s) {
-    static const wchar_t* const known[] = {L"%%", L"%hs", L"%lu", L"%d", L"%s"};
+    static const wchar_t* const known[] = {L"%%", L"%hs", L"%lu", L"%llu", L"%d", L"%s"};
     std::vector<std::wstring> out;
     for (size_t i = 0; i < s.size(); ++i) {
         if (s[i] != L'%') continue;
