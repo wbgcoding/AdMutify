@@ -313,11 +313,12 @@ bool WriteFileAtomic(const std::wstring& path, std::string_view data, unsigned l
         for (int attempt = 0;; ++attempt) {
             if (MoveFileExW(tmp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) break;
             err = GetLastError();
-            if (attempt >= 4 || (err != ERROR_SHARING_VIOLATION && err != ERROR_ACCESS_DENIED)) {
+            // Growing waits, about half a second in all: a scan or a second writer can outlast a fixed 100 ms.
+            if (attempt >= 9 || (err != ERROR_SHARING_VIOLATION && err != ERROR_ACCESS_DENIED)) {
                 ok = false;
                 break;
             }
-            Sleep(20);
+            Sleep(10 + 10 * attempt);
         }
     }
     if (!ok) {
