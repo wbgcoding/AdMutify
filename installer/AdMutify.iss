@@ -149,8 +149,8 @@ chinesesimplified.OtherModeInstalled=AdMutify 已以另一种模式安装（仅�
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Check: not IsPortableMode
-; On by default; only offered on a first install, an update keeps what the user set in AdMutify since.
-Name: "autostart"; Description: "{cm:AutostartTask}"; Check: IsFirstInstall
+; On by default; only offered on a first per-user install, an update keeps what the user set in AdMutify since.
+Name: "autostart"; Description: "{cm:AutostartTask}"; Check: OffersAutostart
 
 [Files]
 Source: "..\build\x64\Release\AdMutify.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -192,9 +192,10 @@ begin
   Result := ((PortableCheck <> nil) and PortableCheck.Checked) or (ExpandConstant('{param:PORTABLE|0}') = '1');
 end;
 
-function IsFirstInstall: Boolean;
+// First per-user install only: an all-users setup may run elevated under another account, whose Run key would get the entry.
+function OffersAutostart: Boolean;
 begin
-  Result := not IsPortableMode and (InstalledVersion = '');
+  Result := not IsPortableMode and not IsAdminInstallMode and (InstalledVersion = '');
 end;
 
 function GetDefaultDir(Param: String): String;
@@ -439,7 +440,7 @@ begin
   if (CurStep = ssPostInstall) and WizardSilent and WasRunning then
     ExecAsOriginalUser(ExpandConstant('{app}\AdMutify.exe'), '', '', SW_SHOWNORMAL, ewNoWait, Code);
   // Same entry as the app writes itself; a Task Manager "disabled" mark from an older install is cleared.
-  if (CurStep = ssPostInstall) and IsFirstInstall and WizardIsTaskSelected('autostart') then
+  if (CurStep = ssPostInstall) and OffersAutostart and WizardIsTaskSelected('autostart') then
   begin
     RegWriteStringValue(HKCU, RunKey, 'AdMutify', '"' + ExpandConstant('{app}\AdMutify.exe') + '" --autostart');
     RegDeleteValue(HKCU, StartupApprovedKey, 'AdMutify');
