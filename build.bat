@@ -125,7 +125,9 @@ if errorlevel 1 ( set "RC=1" & goto :end )
 for %%f in ("dist\AdMutify.exe") do echo AdMutify.exe: %%~zf bytes
 echo Build %VER% done.
 
-if not defined NOSTART start "" "build\x64\Release\AdMutify.exe"
+rem Launched through Explorer so the app does not inherit this script's output handles (a caller that
+rem captures the build output would otherwise wait until AdMutify exits).
+if not defined NOSTART explorer.exe "%CD%\build\x64\Release\AdMutify.exe"
 
 :end
 if not "%RC%"=="0" (
