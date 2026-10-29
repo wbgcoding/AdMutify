@@ -20,7 +20,7 @@ AdMutify is a tiny Windows tray tool that mutes the Spotify desktop app while an
 - Optionally lowers, mutes or pauses Spotify while a browser or video player plays sound for a few seconds. The lowered level is its own setting. Off by default; short sounds, games and calls are ignored.
 - Restores the exact previous volume afterwards, even if AdMutify was closed or crashed in the middle of an ad.
 - If you change Spotify's volume yourself during an ad, AdMutify leaves it alone.
-- Tray menu with status line (for example "Ad: muted"), on/off switch and settings.
+- Tray menu with status line (for example "Ad: muted"), on/off switch, settings and "Hide from tray". Open AdMutify again to bring a hidden icon back; this also opens the settings.
 - Start with Windows, optionally without a tray icon. Open AdMutify again to bring the icon back. The setting stays in sync with the startup apps switch in Task Manager.
 - Finds Spotify even when it starts minimized to the tray.
 - Ten languages: English, German (Deutsch), Spanish (Español), Portuguese (Português, Brasil), Italian (Italiano), Dutch (Nederlands), Polish (Polski), Turkish (Türkçe), Japanese (日本語) and Simplified Chinese (简体中文). By default AdMutify follows the Windows display language; the installer speaks the same languages.
@@ -51,7 +51,7 @@ AdMutify does not modify Spotify in any way: no patching, no code injection, no 
 
 | Setting | What it does |
 |---|---|
-| Ads muted counter | The first line of the window shows how many ads AdMutify has muted so far. It is kept in `stats.ini` next to the settings and is not changed by "Reset settings". |
+| Top of the window | An on/off switch, the current status (for example "Ad: muted") and how many ads AdMutify has muted so far. It is kept in `stats.ini` next to the settings and is not changed by "Reset settings". |
 | During ads | Mute Spotify, lower it to 0 to 90 percent of its current volume, or play your own music while it is muted. For music, pick the source (one file, a folder shuffled or a folder in order, subfolders included; MP3, M4A, AAC, WMA, WAV, FLAC, MP2, WEBM, plus OGG, OGA, OPUS and MKA with the Web Media Extensions that come with Windows), choose the file or folder with "Choose" and set "Volume" (0 to 100 percent). |
 | During videos in other apps | Do nothing, lower Spotify, mute Spotify or pause Spotify while a browser or video player plays sound for a few seconds. Off by default. Lowering uses its own "Lower to" level (0 to 90 percent). Pausing continues playback when the video ends. |
 | Language | System (follows Windows), or one of English, Deutsch, Español, Português (Brasil), Italiano, Nederlands, Polski, Türkçe, 日本語 and 简体中文. The installer speaks the same languages. |
