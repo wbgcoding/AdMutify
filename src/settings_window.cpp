@@ -565,7 +565,7 @@ void Layout(Placement placement, int density = 0) {
     const int toggleW = std::max(trackH * 2 + trackH / 4, toggleTextW) + Scale(8);
     const int toggleH = trackH + Scale(8) + u * 5 / 4;
     const int headerTextX = toggleW + u;
-    int need = std::max({headerTextX + std::max({TextWidth(dc, w.bigFont, IDC_ADS_COUNT), TextWidth(dc, w.font, IDC_ADS_CAPTION),
+    int need = std::max({2 * pad + headerTextX + std::max({TextWidth(dc, w.bigFont, IDC_ADS_COUNT), TextWidth(dc, w.font, IDC_ADS_CAPTION),
                                                  statusTextW}) + u,
                          indent + std::max({TextWidth(dc, w.font, IDC_AUTOSTART), TextWidth(dc, w.font, IDC_HIDETRAY),
                                             TextWidth(dc, w.font, IDC_MODE_MUTE), TextWidth(dc, w.font, IDC_MODE_MUSIC)}) + u,
@@ -592,13 +592,14 @@ void Layout(Placement placement, int density = 0) {
     ReleaseDC(w.hwnd, dc);
     int y = u / 3;
 
-    // Header, no card: the on/off switch at the left edge of the cards; the three lines (status, counter number,
-    // caption) are centred in the space right of it.
+    // Header, no card: the on/off switch indented like the card content (its track lines up with the radio buttons);
+    // the three lines (status, counter number, caption) are centred in the space right of it.
     {
         const int top = y;
-        Place(IDC_ENABLED, margin, top + (headerH - toggleH) / 2, toggleW, toggleH);
-        const int tx = margin + headerTextX;
-        const int tw = cardW - headerTextX;
+        const int toggleX = x0 - (toggleW - (trackH * 2 + trackH / 4)) / 2;
+        Place(IDC_ENABLED, toggleX, top + (headerH - toggleH) / 2, toggleW, toggleH);
+        const int tx = toggleX + headerTextX;
+        const int tw = margin + cardW - pad - tx;
         Place(IDC_STATUS, tx, y, tw, u);
         y += u;
         // Digits do not use the descent: the control ends at the baseline, so number and caption sit close together.
