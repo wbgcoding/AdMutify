@@ -367,13 +367,20 @@ void UpdateCounterText() {
     InvalidateRect(Ctl(IDC_ADS_COUNT), nullptr, TRUE);
 }
 
+// Sets a text and repaints only when it changed: the status is pushed on every state check.
+void SetTextIfChanged(int id, const wchar_t* text) {
+    wchar_t current[256];
+    GetWindowTextW(Ctl(id), current, static_cast<int>(std::size(current)));
+    if (wcscmp(current, text) == 0) return;
+    SetText(id, text);
+    InvalidateRect(Ctl(id), nullptr, TRUE);
+}
+
 void UpdateStatusText() {
     const bool enabled = CurrentSettings().enabled;
-    SetText(IDC_ENABLED, Str(enabled ? StrId::ToggleOn : StrId::ToggleOff));
-    InvalidateRect(Ctl(IDC_ENABLED), nullptr, TRUE);
+    SetTextIfChanged(IDC_ENABLED, Str(enabled ? StrId::ToggleOn : StrId::ToggleOff));
     // Before the first state check (review shots) there is no status yet.
-    SetText(IDC_STATUS, CurrentStatus().empty() ? Str(StrId::StatusActive) : CurrentStatus().c_str());
-    InvalidateRect(Ctl(IDC_STATUS), nullptr, TRUE);
+    SetTextIfChanged(IDC_STATUS, CurrentStatus().empty() ? Str(StrId::StatusActive) : CurrentStatus().c_str());
 }
 
 void ApplyTexts() {

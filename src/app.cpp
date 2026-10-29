@@ -267,16 +267,6 @@ void ReevaluateOnce() {
     // it has caught up with a new window title. Without a session this changes nothing.
     const MediaTrack track = g.mediaSession.Snapshot();
     TitleKind kind = MergeMediaTrack(titleKind, g.machine.Current(), track, windowTitle, now - g.titleChangedAt);
-    // The session is only asked while an ad title is up; a silent player behind it means the ad has ended.
-    const bool inAd = g.machine.Current() == AdState::Ad;
-    const bool adTitle = kind == TitleKind::Ad;
-    const bool adSessionActive = adTitle && (inAd || g.adGone) ? g.audio.IsSpotifyAudioActive() : true;
-    const bool adGone = g.adGuard.Update(inAd, adTitle, adSessionActive, now);
-    if (adGone != g.adGone) {
-        g.adGone = adGone;
-        Log(adGone ? "ad_silent" : "ad_silent_end");
-    }
-    if (adGone) kind = TitleKind::IdleOrAd;
     // Either verdict may wait for the session to catch up with a new title; a one-shot timer ends the wait.
     const bool heldForSession = titleKind != kind && (titleKind == TitleKind::Music || titleKind == TitleKind::Ad) &&
                                 !TrackMatchesTitle(track, windowTitle);
@@ -287,6 +277,16 @@ void ReevaluateOnce() {
     } else {
         KillTimer(g.hwnd, kTimerMediaSettle);
     }
+    // After the settle check, so a silent ad does not count as a held verdict. The session is only asked while an ad title is up; a silent player behind it means the ad has ended.
+    const bool inAd = g.machine.Current() == AdState::Ad;
+    const bool adTitle = kind == TitleKind::Ad;
+    const bool adSessionActive = adTitle && (inAd || g.adGone) ? g.audio.IsSpotifyAudioActive() : true;
+    const bool adGone = g.adGuard.Update(inAd, adTitle, adSessionActive, now);
+    if (adGone != g.adGone) {
+        g.adGone = adGone;
+        Log(adGone ? "ad_silent" : "ad_silent_end");
+    }
+    if (adGone) kind = TitleKind::IdleOrAd;
     if (TraceEnabled() && g.watch.Title() != g.lastTraceTitle) {
         // Titles stay out of the normal log; only an explicit --trace run records them.
         g.lastTraceTitle = g.watch.Title();
@@ -309,8 +309,9 @@ void ReevaluateOnce() {
     if (after != before) Log("state %s -> %s", AdStateName(before), AdStateName(after));
 
     UpdateMediaTimer(after);
-    if (after == AdState::Ad) SetTimer(g.hwnd, kTimerAdCheck, kAdCheckMs, nullptr);
-    else KillTimer(g.hwnd, kTimerAdCheck);
+    // Started once on entering Ad: setting it on every pass would keep restarting it before it fires.
+    if (after == AdState::Ad && before != AdState::Ad) SetTimer(g.hwnd, kTimerAdCheck, kAdCheckMs, nullptr);
+    else if (after != AdState::Ad) KillTimer(g.hwnd, kTimerAdCheck);
     HandlePause(after, now);
     // The play/pause send pumps messages: Windows may have ended the session meanwhile (Shutdown ran nested).
     if (g.closing) return;
@@ -754,6 +755,7 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
         g.tray.Show();
         Log("show_icon reason=second_instance");
     }
+    if (g.showRequested) OpenSettingsWindow();
 
     g.watch.Start([](const std::wstring&) { Reevaluate(); });
     g.mediaSession.Start(g.hwnd, WM_APP_MEDIA_SESSION);
