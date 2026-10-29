@@ -213,7 +213,7 @@ void MakeFonts() {
             SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(id == IDC_GROUP_ADS ? w.headFont : id == IDC_ADS_COUNT ? w.bigFont : w.font), TRUE);
     SendMessageW(Ctl(IDC_ADS_CAPTION), WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
     SendMessageW(Ctl(IDC_STATUS), WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
-    SendMessageW(Ctl(IDC_ENABLED), WM_SETFONT, reinterpret_cast<WPARAM>(w.headFont), TRUE);
+    SendMessageW(Ctl(IDC_ENABLED), WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
     if (w.tip) {
         SendMessageW(w.tip, WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
         SendMessageW(w.tip, TTM_SETMAXTIPWIDTH, 0, Scale(320));
@@ -249,9 +249,9 @@ void SetComboHeights() {
 void CreateControls() {
     // Header: the on/off button, right of it the status, the counter and its caption.
     SetWindowSubclass(Make(L"BUTTON", IDC_ENABLED, BS_OWNERDRAW | WS_TABSTOP), FlatButtonProc, 1, 0);
-    Make(L"STATIC", IDC_STATUS, SS_LEFT | SS_CENTERIMAGE | SS_ENDELLIPSIS | SS_NOPREFIX);
-    Make(L"STATIC", IDC_ADS_COUNT, SS_LEFT | SS_NOPREFIX);
-    Make(L"STATIC", IDC_ADS_CAPTION, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
+    Make(L"STATIC", IDC_STATUS, SS_CENTER | SS_CENTERIMAGE | SS_ENDELLIPSIS | SS_NOPREFIX);
+    Make(L"STATIC", IDC_ADS_COUNT, SS_CENTER | SS_NOPREFIX);
+    Make(L"STATIC", IDC_ADS_CAPTION, SS_CENTER | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"STATIC", IDC_GROUP_ADS, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"BUTTON", IDC_MODE_MUTE, BS_AUTORADIOBUTTON | BS_MULTILINE | WS_GROUP | WS_TABSTOP);
     Make(L"BUTTON", IDC_MODE_LOWER, BS_AUTORADIOBUTTON);
@@ -530,10 +530,10 @@ void Layout(Placement placement, int density = 0) {
     const int languageItemsW = WidestItem(dc, w.font, kCombos[1]);
     const int musicItemsW = WidestItem(dc, w.font, kCombos[2]);
     const int comboExtra = 3 * u;
-    // The on/off button is as tall as the three header lines and at least as wide as tall.
+    // The on/off switch: a rounded track with its state word below, centred beside the three header lines.
     int toggleTextW = 0;
     {
-        HGDIOBJ oldFont3 = SelectObject(dc, w.headFont);
+        HGDIOBJ oldFont3 = SelectObject(dc, w.font);
         for (StrId id : {StrId::ToggleOn, StrId::ToggleOff}) {
             const wchar_t* text = Str(id);
             SIZE size{};
@@ -561,7 +561,9 @@ void Layout(Placement placement, int density = 0) {
         SelectObject(dc, oldBig);
     }
     const int headerH = u + bigTm.tmAscent + u / 6 + u;
-    const int toggleW = std::max(headerH, toggleTextW + 2 * u);
+    const int trackH = u * 5 / 4;
+    const int toggleW = std::max(trackH * 2 + trackH / 4, toggleTextW) + Scale(8);
+    const int toggleH = trackH + Scale(8) + u * 5 / 4;
     const int headerTextX = toggleW + u;
     int need = std::max({headerTextX + std::max({TextWidth(dc, w.bigFont, IDC_ADS_COUNT), TextWidth(dc, w.font, IDC_ADS_CAPTION),
                                                  statusTextW}) + u,
@@ -590,11 +592,11 @@ void Layout(Placement placement, int density = 0) {
     ReleaseDC(w.hwnd, dc);
     int y = u / 3;
 
-    // Header, no card: the on/off button at the left edge of the cards, right of it three lines: status, counter
-    // number, caption.
+    // Header, no card: the on/off switch at the left edge of the cards; the three lines (status, counter number,
+    // caption) are centred in the space right of it.
     {
         const int top = y;
-        Place(IDC_ENABLED, margin, top, toggleW, headerH);
+        Place(IDC_ENABLED, margin, top + (headerH - toggleH) / 2, toggleW, toggleH);
         const int tx = margin + headerTextX;
         const int tw = cardW - headerTextX;
         Place(IDC_STATUS, tx, y, tw, u);
@@ -1264,8 +1266,7 @@ LRESULT OnCustomDraw(NMCUSTOMDRAW* nm) {
 bool ShowFocus(const DRAWITEMSTRUCT* di) { return (di->itemState & ODS_FOCUS) && !(di->itemState & ODS_NOFOCUSRECT); }
 
 // Drawn off screen first: GDI+ output and GDI text on the same window DC can land out of order.
-// The close button and the on/off button while on are accent buttons; reset uses the standard button look, red while it
-// waits for the second click.
+// The close button is the accent button; reset uses the standard button look, red while it waits for the second click.
 void DrawButton(const DRAWITEMSTRUCT* di, bool accent) {
     const int cx = di->rcItem.right - di->rcItem.left;
     const int cy = di->rcItem.bottom - di->rcItem.top;
@@ -1296,13 +1297,83 @@ void DrawButton(const DRAWITEMSTRUCT* di, bool accent) {
     const float radius = static_cast<float>(Scale(5));
     FillRounded(dc, body, radius, fill, border);
     if (ShowFocus(di)) StrokeRounded(dc, all, radius + ring, ThemeText(), static_cast<float>(Scale(2)));
-    HGDIOBJ oldFont = SelectObject(dc, di->CtlID == IDC_ENABLED ? w.headFont : w.font);
+    HGDIOBJ oldFont = SelectObject(dc, w.font);
     wchar_t text[256];
     GetWindowTextW(di->hwndItem, text, static_cast<int>(std::size(text)));
     SetBkMode(dc, TRANSPARENT);
     SetTextColor(dc, critical ? ThemeCriticalText() : (accent ? ThemeAccentText() : ThemeText()));
     DrawTextW(dc, text, -1, &body, DT_SINGLELINE | DT_VCENTER | DT_CENTER | DT_NOPREFIX);
     SelectObject(dc, oldFont);
+    BitBlt(di->hDC, di->rcItem.left, di->rcItem.top, cx, cy, dc, 0, 0, SRCCOPY);
+    SelectObject(dc, oldBmp);
+    DeleteObject(bmp);
+    DeleteDC(dc);
+}
+
+// The on/off switch: a pill track (accent fill with a light knob on the right while on, outline with the knob on the
+// left while off) and the state word below it. Drawn off screen like the buttons.
+void DrawToggle(const DRAWITEMSTRUCT* di) {
+    const int cx = di->rcItem.right - di->rcItem.left;
+    const int cy = di->rcItem.bottom - di->rcItem.top;
+    HDC dc = CreateCompatibleDC(di->hDC);
+    HBITMAP bmp = CreateCompatibleBitmap(di->hDC, cx, cy);
+    HGDIOBJ oldBmp = SelectObject(dc, bmp);
+    RECT all{0, 0, cx, cy};
+    FillRect(dc, &all, w.bg);
+    const bool on = CurrentSettings().enabled;
+    const bool pressed = (di->itemState & ODS_SELECTED) != 0;
+    const bool hot = w.hotId == static_cast<int>(di->CtlID);
+    HDC measure = dc;
+    HGDIOBJ oldFont = SelectObject(measure, w.font);
+    TEXTMETRICW tm{};
+    GetTextMetricsW(measure, &tm);
+    const int u = tm.tmHeight;
+    const int ring = Scale(4);
+    const int trackH = u * 5 / 4;
+    const int trackW = trackH * 2 + trackH / 4;
+    RECT track{(cx - trackW) / 2, ring, (cx - trackW) / 2 + trackW, ring + trackH};
+    const float radius = trackH / 2.0f;
+    {
+        Gdiplus::Graphics g(dc);
+        g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+        const float border = static_cast<float>(Scale(1));
+        Gdiplus::RectF r(track.left + border / 2, track.top + border / 2, trackW - border, trackH - border);
+        Gdiplus::GraphicsPath path;
+        RoundedPath(path, r, radius - border / 2);
+        COLORREF knob;
+        if (on) {
+            const COLORREF fill = pressed ? ThemeAccentPressed() : (hot ? ThemeAccentHot() : ThemeAccent());
+            Gdiplus::SolidBrush brush(ToColor(fill));
+            g.FillPath(&brush, &path);
+            knob = ThemeAccentText();
+        } else {
+            const COLORREF fill = pressed ? ThemeControlPressed() : (hot ? ThemeControlHot() : ThemeControl());
+            Gdiplus::SolidBrush brush(ToColor(fill));
+            g.FillPath(&brush, &path);
+            Gdiplus::Pen pen(ToColor(ThemeText()), border);
+            g.DrawPath(&pen, &path);
+            knob = ThemeText();
+        }
+        // The knob grows a little under the mouse, like the Windows switch.
+        const float knobD = trackH * (hot && !pressed ? 0.62f : 0.54f);
+        const float knobY = track.top + (trackH - knobD) / 2;
+        const float gap = (trackH - knobD) / 2;
+        const float knobX = on ? track.right - gap - knobD : track.left + gap;
+        Gdiplus::SolidBrush knobBrush(ToColor(knob));
+        g.FillEllipse(&knobBrush, knobX, knobY, knobD, knobD);
+    }
+    if (ShowFocus(di)) {
+        RECT focus = track;
+        InflateRect(&focus, ring - Scale(1), ring - Scale(1));
+        StrokeRounded(dc, focus, radius + ring, ThemeText(), static_cast<float>(Scale(2)));
+    }
+    wchar_t text[64];
+    GetWindowTextW(di->hwndItem, text, static_cast<int>(std::size(text)));
+    RECT label{0, track.bottom + ring, cx, cy};
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, ThemeText());
+    DrawTextW(dc, text, -1, &label, DT_SINGLELINE | DT_VCENTER | DT_CENTER | DT_NOPREFIX);
+    SelectObject(measure, oldFont);
     BitBlt(di->hDC, di->rcItem.left, di->rcItem.top, cx, cy, dc, 0, 0, SRCCOPY);
     SelectObject(dc, oldBmp);
     DeleteObject(bmp);
@@ -1378,7 +1449,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             auto* di = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
             if (TrayMenuDraw(di)) return TRUE;
             if (di->CtlID == IDC_ENABLED) {
-                DrawButton(di, CurrentSettings().enabled);
+                DrawToggle(di);
                 return TRUE;
             }
             if (di->CtlID == IDC_RESET || di->CtlID == IDC_CLOSE || di->CtlID == IDC_MUSIC_PICK) {
