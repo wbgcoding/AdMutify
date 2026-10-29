@@ -2,19 +2,11 @@
 
 All notable changes to this project are documented here. The format follows Keep a Changelog; versions follow semantic versioning.
 
-## [Unreleased]
+## [1.2.0] - 2026-10-29
 
 ### Added
+- The settings window shows at the top how many ads were muted so far, whether an ad is being muted right now, and an on/off switch.
 - The tray menu can hide the icon. Opening AdMutify again brings it back and opens the settings.
-- The top of the settings window has an on/off switch and shows whether an ad is being muted right now.
-
-### Fixed
-- An ad that was playing when Spotify was closed no longer keeps AdMutify in the muted state.
-
-## [1.2.0] - 2026-10-25
-
-### Added
-- The settings window shows at the top how many ads were muted so far.
 - Own music during ads, as the third choice next to muting and lowering: play one file, or a folder shuffled or in name order, at a volume you choose. The music fades in when the ad starts, fades out when it ends and continues at the same spot during the next ad.
 - Music during ads plays OGG, OGA, OPUS, WEBM, MKA and MP2 files besides MP3, M4A, AAC, WMA, WAV and FLAC. OGG, OGA, OPUS and MKA need the Web Media Extensions that come with Windows (missing on N editions).
 - Reset settings asks with a second click on the button instead of a dialog.
@@ -24,6 +16,8 @@ All notable changes to this project are documented here. The format follows Keep
 - Troubleshooting: the hidden line `trace=1` in `settings.ini` turns on the trace like the `--trace` switch.
 
 ### Fixed
+- An ad that was playing when Spotify was closed no longer keeps AdMutify in the muted state.
+- Turning AdMutify off and on during an ad no longer counts that ad again.
 - Ads whose title looks like a song are muted too.
 - Spots titled just "Spotify" or a brand name are muted at once instead of after a few seconds.
 - Choosing own music no longer opens a folder picker by itself; the source row below picks the file or folder.
