@@ -115,3 +115,10 @@ TEST(stats_newer_and_garbage_files_stay) {
     DeleteFileW(StatsPath().c_str());
     StatsLoad();
 }
+
+TEST(stats_toggle_during_ad_counts_once) {
+    // First apply of the break counts; off and on again during the same break does not.
+    CHECK(CountsAsNewAdMute(false, true, false));
+    CHECK(!CountsAsNewAdMute(false, true, true));
+    CHECK(!CountsAsNewAdMute(true, true, false));
+}

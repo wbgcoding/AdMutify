@@ -57,7 +57,9 @@ bool ParseStats(std::string_view text, uint64_t& adsMuted) {
     return true;
 }
 
-bool CountsAsNewAdMute(bool adAlreadyApplied, bool adWanted) { return adWanted && !adAlreadyApplied; }
+bool CountsAsNewAdMute(bool adAlreadyApplied, bool adWanted, bool adAlreadyCounted) {
+    return adWanted && !adAlreadyApplied && !adAlreadyCounted;
+}
 
 std::wstring StatsPath() { return DataDir() + L"\\stats.ini"; }
 

@@ -74,6 +74,8 @@ struct App {
     bool reevaluateAgain = false;
     bool probeRunning = false;
     bool adGone = false;
+    // The running ad break was counted; turning AdMutify off and on during it must not count it again.
+    bool adCounted = false;
     int probes = 0;
     // Records of sessions whose restore failed are retried on a slow timer until they resolve or give up.
     bool restoreRetryRunning = false;
@@ -354,10 +356,12 @@ void ReevaluateOnce() {
         g.appliedReason = want;
     }
     // One count per ad, at the moment its reaction first applies (also when it takes over from a video reaction).
-    if (g.applied && CountsAsNewAdMute(adWasApplied, want == Reason::Ad)) {
+    if (g.applied && CountsAsNewAdMute(adWasApplied, want == Reason::Ad, g.adCounted)) {
+        g.adCounted = true;
         StatsCountAdMute();
         SettingsWindowUpdateCounter();
     }
+    if (after != AdState::Ad) g.adCounted = false;
 
     if (before == AdState::NoSpotify && after != AdState::NoSpotify) g.audio.WatchSessions();
     if (before != AdState::NoSpotify && after == AdState::NoSpotify) g.audio.UnwatchSessions();
