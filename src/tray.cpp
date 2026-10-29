@@ -223,6 +223,7 @@ HMENU BuildTrayMenu(bool enabled, const std::wstring& status) {
     AddSeparator(menu);
     AddItem(menu, IDM_TRAY_ENABLED, Str(StrId::MenuEnabled), enabled ? MFS_CHECKED : MFS_UNCHECKED);
     AddItem(menu, IDM_TRAY_SETTINGS, Str(StrId::MenuSettings), 0);
+    AddItem(menu, IDM_TRAY_HIDE, Str(StrId::MenuHideTray), 0);
     AddSeparator(menu);
     AddItem(menu, IDM_TRAY_EXIT, Str(StrId::MenuExit), 0);
     FinishMenu(menu);

@@ -33,3 +33,20 @@ private:
     uint64_t pendingSince_ = 0;
     uint64_t pendingNeed_ = 0;
 };
+
+// An ad title that outlives its sound: Spotify can quit or stop during an ad without a window event (a process that
+// ends takes its windows along unannounced) and leave the ad title behind. While in Ad, an ad title whose Spotify
+// session has not been playing for kAdSessionGoneMs counts as over until the session plays or the title changes.
+// Entering Ad is never held back: a silent session at the start of an ad is normal.
+constexpr uint64_t kAdSessionGoneMs = 5000;
+
+class AdSessionGuard {
+public:
+    // Returns true when the ad title is to be read as "not playing".
+    bool Update(bool inAd, bool adTitle, bool sessionActive, uint64_t nowMs);
+
+private:
+    bool counting_ = false;
+    bool gone_ = false;
+    uint64_t since_ = 0;
+};

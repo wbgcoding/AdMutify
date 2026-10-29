@@ -31,6 +31,8 @@ enum SettingsControlId {
     IDC_MUSIC_VOLUME_VALUE = 125,
     IDC_ADS_COUNT = 126,
     IDC_ADS_CAPTION = 128,
+    IDC_ENABLED = 129,
+    IDC_STATUS = 130,
 };
 
 // Opens the settings window, or brings the open one to the front.
@@ -43,3 +45,5 @@ void SettingsWindowArmReset();
 HWND SettingsWindowHandle();
 // Shows the current ad counter in the open window (no-op when closed).
 void SettingsWindowUpdateCounter();
+// Shows the current status and the on/off state in the open window (no-op when closed).
+void SettingsWindowUpdateStatus();

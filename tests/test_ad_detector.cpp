@@ -187,3 +187,22 @@ TEST(state_plain_title_ad_needs_audible_sound_table) {
         }
     }
 }
+
+TEST(ad_session_guard_ends_ad_without_sound) {
+    AdSessionGuard g;
+    // Entering Ad with a silent session is left alone.
+    CHECK(!g.Update(false, true, false, 0));
+    CHECK(!g.Update(true, true, false, 100));
+    CHECK(!g.Update(true, true, false, 100 + kAdSessionGoneMs - 1));
+    CHECK(g.Update(true, true, false, 100 + kAdSessionGoneMs));
+    // Stays over after the machine left Ad, until the session plays again.
+    CHECK(g.Update(false, true, false, 100 + kAdSessionGoneMs + 1000));
+    CHECK(!g.Update(false, true, true, 100 + kAdSessionGoneMs + 2000));
+    // Sound in between restarts the wait.
+    CHECK(!g.Update(true, true, false, 20000));
+    CHECK(!g.Update(true, true, true, 20000 + kAdSessionGoneMs));
+    CHECK(!g.Update(true, true, false, 20000 + kAdSessionGoneMs + 1));
+    // A song title resets it.
+    CHECK(!g.Update(true, false, false, 40000));
+}
+

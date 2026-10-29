@@ -34,6 +34,9 @@ constexpr UINT kTraceWindowsMs = 1000;
 constexpr uint64_t kTraceCallbacksMs = 60000;
 // One-shot: re-checks once the media session had its settle time after a window title change.
 constexpr UINT_PTR kTimerMediaSettle = 7;
+// While in Ad: checks that Spotify's window and sound are still there (see AdSessionGuard).
+constexpr UINT_PTR kTimerAdCheck = 8;
+constexpr UINT kAdCheckMs = 2000;
 constexpr UINT kRestoreRetryMs = 2000;
 constexpr int kMaxRestoreRetries = 15;
 constexpr UINT kMediaPollMs = 500;
@@ -49,6 +52,7 @@ struct App {
     AudioControl audio;
     SpotifyWatch watch;
     AdStateMachine machine;
+    AdSessionGuard adGuard;
     bool applied = false;
     Mode appliedMode = Mode::Mute;
     int appliedPercent = 0;
@@ -69,6 +73,7 @@ struct App {
     bool reevaluating = false;
     bool reevaluateAgain = false;
     bool probeRunning = false;
+    bool adGone = false;
     int probes = 0;
     // Records of sessions whose restore failed are retried on a slow timer until they resolve or give up.
     bool restoreRetryRunning = false;
@@ -120,6 +125,7 @@ void UpdateTray() {
         g.status = Str(StrId::StatusActive);
     }
     g.tray.Update(icon, TooltipText(g.status.c_str()));
+    SettingsWindowUpdateStatus();
 }
 
 void DoApply(Mode mode, int percent, Reason reason) {
@@ -259,6 +265,16 @@ void ReevaluateOnce() {
     // it has caught up with a new window title. Without a session this changes nothing.
     const MediaTrack track = g.mediaSession.Snapshot();
     TitleKind kind = MergeMediaTrack(titleKind, g.machine.Current(), track, windowTitle, now - g.titleChangedAt);
+    // The session is only asked while an ad title is up; a silent player behind it means the ad has ended.
+    const bool inAd = g.machine.Current() == AdState::Ad;
+    const bool adTitle = kind == TitleKind::Ad;
+    const bool adSessionActive = adTitle && (inAd || g.adGone) ? g.audio.IsSpotifyAudioActive() : true;
+    const bool adGone = g.adGuard.Update(inAd, adTitle, adSessionActive, now);
+    if (adGone != g.adGone) {
+        g.adGone = adGone;
+        Log(adGone ? "ad_silent" : "ad_silent_end");
+    }
+    if (adGone) kind = TitleKind::IdleOrAd;
     // Either verdict may wait for the session to catch up with a new title; a one-shot timer ends the wait.
     const bool heldForSession = titleKind != kind && (titleKind == TitleKind::Music || titleKind == TitleKind::Ad) &&
                                 !TrackMatchesTitle(track, windowTitle);
@@ -291,6 +307,8 @@ void ReevaluateOnce() {
     if (after != before) Log("state %s -> %s", AdStateName(before), AdStateName(after));
 
     UpdateMediaTimer(after);
+    if (after == AdState::Ad) SetTimer(g.hwnd, kTimerAdCheck, kAdCheckMs, nullptr);
+    else KillTimer(g.hwnd, kTimerAdCheck);
     HandlePause(after, now);
     // The play/pause send pumps messages: Windows may have ended the session meanwhile (Shutdown ran nested).
     if (g.closing) return;
@@ -400,6 +418,7 @@ void Shutdown(bool endSession = false) {
     KillTimer(g.hwnd, kTimerProbe);
     KillTimer(g.hwnd, kTimerMedia);
     KillTimer(g.hwnd, kTimerMediaSettle);
+    KillTimer(g.hwnd, kTimerAdCheck);
     g.mediaTimerRunning = false;
     StopRestoreRetry();
     // Spotify must not stay paused because of AdMutify.
@@ -432,6 +451,15 @@ void ShowTrayMenu(POINT pt) {
             break;
         }
         case IDM_TRAY_SETTINGS: OpenSettingsWindow(); break;
+        case IDM_TRAY_HIDE: {
+            // Hidden for this run and at the next start with Windows; opening AdMutify again brings it back.
+            g.tray.Hide();
+            Log("hide_icon reason=menu");
+            Settings s = g.settings;
+            s.hideTray = true;
+            CommitSettings(s);
+            break;
+        }
         case IDM_TRAY_EXIT: PostMessageW(g.hwnd, WM_CLOSE, 0, 0); break;
         default: break;
     }
@@ -458,9 +486,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_APP_SHOW:
             if (!g.trayReady) {
                 g.showRequested = true;
-            } else if (!g.tray.Visible()) {
-                g.tray.Show();
-                Log("show_icon reason=second_instance");
+            } else {
+                if (!g.tray.Visible()) {
+                    g.tray.Show();
+                    Log("show_icon reason=second_instance");
+                }
+                // Opening AdMutify again is also the way back to the settings while the icon is hidden.
+                OpenSettingsWindow();
             }
             return 0;
         case WM_APP_AUDIO_STATE: Reevaluate(); return 0;
@@ -494,6 +526,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_TIMER:
             if (wParam == kTimerExit) {
                 KillTimer(hwnd, kTimerExit);
+                Reevaluate();
+            } else if (wParam == kTimerAdCheck) {
+                g.watch.RescanIfStale();
                 Reevaluate();
             } else if (wParam == kTimerMediaSettle) {
                 KillTimer(hwnd, kTimerMediaSettle);
@@ -556,6 +591,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 }  // namespace
 
+const std::wstring& CurrentStatus() { return g.status; }
+
 const Settings& CurrentSettings() { return g.settings; }
 
 static void ShowSaveError(HWND owner, unsigned long error, const std::wstring& path) {
@@ -607,6 +644,10 @@ void ApplyCommit(const Settings& requested) {
     if (!SaveSettings(s, &err)) ShowSaveError(owner, err, SettingsPath());
 
     if (s.enabled != old.enabled) Log("enabled=%d", s.enabled ? 1 : 0);
+    if (old.hideTray && !s.hideTray && g.trayReady && !g.tray.Visible()) {
+        g.tray.Show();
+        Log("show_icon reason=settings");
+    }
     if (s.darkMenus != old.darkMenus) ApplyMenuAppMode(s.darkMenus ? 1 : 3);
     g.music.Configure(s.adMusic, s.adMusicPath, s.adMusicVolume);
     // Reevaluate re-applies a changed mode or level and drops a reaction that is no longer wanted.

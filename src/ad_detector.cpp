@@ -86,3 +86,22 @@ uint64_t AdStateMachine::PendingMs(uint64_t nowMs) const {
     uint64_t elapsed = nowMs - pendingSince_;
     return elapsed >= pendingNeed_ ? 0 : pendingNeed_ - elapsed;
 }
+
+bool AdSessionGuard::Update(bool inAd, bool adTitle, bool sessionActive, uint64_t nowMs) {
+    if (!adTitle || sessionActive) {
+        counting_ = false;
+        gone_ = false;
+        return false;
+    }
+    if (gone_) return true;
+    if (!inAd) {
+        counting_ = false;
+        return false;
+    }
+    if (!counting_) {
+        counting_ = true;
+        since_ = nowMs;
+    }
+    gone_ = nowMs - since_ >= kAdSessionGoneMs;
+    return gone_;
+}

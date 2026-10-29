@@ -212,6 +212,8 @@ void MakeFonts() {
         if (HWND c = Ctl(id))
             SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(id == IDC_GROUP_ADS ? w.headFont : id == IDC_ADS_COUNT ? w.bigFont : w.font), TRUE);
     SendMessageW(Ctl(IDC_ADS_CAPTION), WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
+    SendMessageW(Ctl(IDC_STATUS), WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
+    SendMessageW(Ctl(IDC_ENABLED), WM_SETFONT, reinterpret_cast<WPARAM>(w.headFont), TRUE);
     if (w.tip) {
         SendMessageW(w.tip, WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
         SendMessageW(w.tip, TTM_SETMAXTIPWIDTH, 0, Scale(320));
@@ -245,8 +247,11 @@ void SetComboHeights() {
 }
 
 void CreateControls() {
-    Make(L"STATIC", IDC_ADS_COUNT, SS_CENTER | SS_NOPREFIX);
-    Make(L"STATIC", IDC_ADS_CAPTION, SS_CENTER | SS_CENTERIMAGE | SS_NOPREFIX);
+    // Header: the on/off button, right of it the status, the counter and its caption.
+    SetWindowSubclass(Make(L"BUTTON", IDC_ENABLED, BS_OWNERDRAW | WS_TABSTOP), FlatButtonProc, 1, 0);
+    Make(L"STATIC", IDC_STATUS, SS_LEFT | SS_CENTERIMAGE | SS_ENDELLIPSIS | SS_NOPREFIX);
+    Make(L"STATIC", IDC_ADS_COUNT, SS_LEFT | SS_NOPREFIX);
+    Make(L"STATIC", IDC_ADS_CAPTION, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"STATIC", IDC_GROUP_ADS, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"BUTTON", IDC_MODE_MUTE, BS_AUTORADIOBUTTON | BS_MULTILINE | WS_GROUP | WS_TABSTOP);
     Make(L"BUTTON", IDC_MODE_LOWER, BS_AUTORADIOBUTTON);
@@ -362,9 +367,19 @@ void UpdateCounterText() {
     InvalidateRect(Ctl(IDC_ADS_COUNT), nullptr, TRUE);
 }
 
+void UpdateStatusText() {
+    const bool enabled = CurrentSettings().enabled;
+    SetText(IDC_ENABLED, Str(enabled ? StrId::ToggleOn : StrId::ToggleOff));
+    InvalidateRect(Ctl(IDC_ENABLED), nullptr, TRUE);
+    // Before the first state check (review shots) there is no status yet.
+    SetText(IDC_STATUS, CurrentStatus().empty() ? Str(StrId::StatusActive) : CurrentStatus().c_str());
+    InvalidateRect(Ctl(IDC_STATUS), nullptr, TRUE);
+}
+
 void ApplyTexts() {
     SetWindowTextW(w.hwnd, Str(StrId::SettingsTitle));
     UpdateCounterText();
+    UpdateStatusText();
     SetText(IDC_ADS_CAPTION, Str(StrId::AdsMutedCaption));
     SetText(IDC_AUTOSTART, Str(StrId::OptAutostart));
     SetText(IDC_HIDETRAY, Str(StrId::OptHideTray));
@@ -515,7 +530,41 @@ void Layout(Placement placement, int density = 0) {
     const int languageItemsW = WidestItem(dc, w.font, kCombos[1]);
     const int musicItemsW = WidestItem(dc, w.font, kCombos[2]);
     const int comboExtra = 3 * u;
-    int need = std::max({TextWidth(dc, w.bigFont, IDC_ADS_COUNT) + u, TextWidth(dc, w.font, IDC_ADS_CAPTION) + u,
+    // The on/off button is as tall as the three header lines and at least as wide as tall.
+    int toggleTextW = 0;
+    {
+        HGDIOBJ oldFont3 = SelectObject(dc, w.headFont);
+        for (StrId id : {StrId::ToggleOn, StrId::ToggleOff}) {
+            const wchar_t* text = Str(id);
+            SIZE size{};
+            GetTextExtentPoint32W(dc, text, static_cast<int>(wcslen(text)), &size);
+            toggleTextW = std::max(toggleTextW, static_cast<int>(size.cx));
+        }
+        SelectObject(dc, oldFont3);
+    }
+    // The status line changes while the window is open, so the widest of its texts counts.
+    int statusTextW = 0;
+    {
+        HGDIOBJ oldFont4 = SelectObject(dc, w.font);
+        for (int i = static_cast<int>(StrId::StatusActive); i <= static_cast<int>(StrId::StatusDisabled); ++i) {
+            const std::wstring text = FormatPercent(static_cast<StrId>(i), 90);
+            SIZE size{};
+            GetTextExtentPoint32W(dc, text.c_str(), static_cast<int>(text.size()), &size);
+            statusTextW = std::max(statusTextW, static_cast<int>(size.cx));
+        }
+        SelectObject(dc, oldFont4);
+    }
+    TEXTMETRICW bigTm{};
+    {
+        HGDIOBJ oldBig = SelectObject(dc, w.bigFont);
+        GetTextMetricsW(dc, &bigTm);
+        SelectObject(dc, oldBig);
+    }
+    const int headerH = u + bigTm.tmAscent + u / 6 + u;
+    const int toggleW = std::max(headerH, toggleTextW + 2 * u);
+    const int headerTextX = toggleW + u;
+    int need = std::max({headerTextX + std::max({TextWidth(dc, w.bigFont, IDC_ADS_COUNT), TextWidth(dc, w.font, IDC_ADS_CAPTION),
+                                                 statusTextW}) + u,
                          indent + std::max({TextWidth(dc, w.font, IDC_AUTOSTART), TextWidth(dc, w.font, IDC_HIDETRAY),
                                             TextWidth(dc, w.font, IDC_MODE_MUTE), TextWidth(dc, w.font, IDC_MODE_MUSIC)}) + u,
                          indent + lowerTextW + u + sliderMin + valW,
@@ -541,23 +590,21 @@ void Layout(Placement placement, int density = 0) {
     ReleaseDC(w.hwnd, dc);
     int y = u / 3;
 
-    // Counter: number over caption, centred over the content, no card.
+    // Header, no card: the on/off button at the left edge of the cards, right of it three lines: status, counter
+    // number, caption.
     {
-        TEXTMETRICW bigTm{}, capTm{};
-        HDC cdc = GetDC(w.hwnd);
-        HGDIOBJ oldBig = SelectObject(cdc, w.bigFont);
-        GetTextMetricsW(cdc, &bigTm);
-        SelectObject(cdc, w.font);
-        GetTextMetricsW(cdc, &capTm);
-        SelectObject(cdc, oldBig);
-        ReleaseDC(w.hwnd, cdc);
-        // Digits use neither the internal leading above nor the descent below: the control starts that much
-        // higher and ends at the baseline, so number and caption sit close together.
-        const int lead = std::min<int>(bigTm.tmInternalLeading, y);
-        Place(IDC_ADS_COUNT, margin, y - lead, cardW, bigTm.tmAscent);
-        y += bigTm.tmAscent - lead + u / 6;
-        Place(IDC_ADS_CAPTION, margin, y, cardW, capTm.tmHeight);
-        y += capTm.tmHeight + u / 3;
+        const int top = y;
+        Place(IDC_ENABLED, margin, top, toggleW, headerH);
+        const int tx = margin + headerTextX;
+        const int tw = cardW - headerTextX;
+        Place(IDC_STATUS, tx, y, tw, u);
+        y += u;
+        // Digits do not use the descent: the control ends at the baseline, so number and caption sit close together.
+        // It starts below the status line; its internal leading is the gap to it.
+        Place(IDC_ADS_COUNT, tx, y, tw, bigTm.tmAscent);
+        y += bigTm.tmAscent + u / 6;
+        Place(IDC_ADS_CAPTION, tx, y, tw, u);
+        y = top + headerH + u / 2;
     }
 
     // Section heading and card 1: what happens during an ad.
@@ -834,6 +881,13 @@ void OnCommand(int id, int code) {
                     MessageBoxW(w.hwnd, Str(StrId::ErrAutostart), Str(StrId::SettingsTitle), MB_OK | MB_ICONWARNING);
                     SendMessageW(Ctl(id), BM_SETCHECK, IsAutostartEnabled() ? BST_CHECKED : BST_UNCHECKED, 0);
                 }
+            }
+            break;
+        case IDC_ENABLED:
+            if (code == BN_CLICKED) {
+                s.enabled = !s.enabled;
+                CommitSettings(s);
+                UpdateStatusText();
             }
             break;
         case IDC_HIDETRAY:
@@ -1210,7 +1264,8 @@ LRESULT OnCustomDraw(NMCUSTOMDRAW* nm) {
 bool ShowFocus(const DRAWITEMSTRUCT* di) { return (di->itemState & ODS_FOCUS) && !(di->itemState & ODS_NOFOCUSRECT); }
 
 // Drawn off screen first: GDI+ output and GDI text on the same window DC can land out of order.
-// The close button is the accent button; reset uses the standard button look, red while it waits for the second click.
+// The close button and the on/off button while on are accent buttons; reset uses the standard button look, red while it
+// waits for the second click.
 void DrawButton(const DRAWITEMSTRUCT* di, bool accent) {
     const int cx = di->rcItem.right - di->rcItem.left;
     const int cy = di->rcItem.bottom - di->rcItem.top;
@@ -1241,7 +1296,7 @@ void DrawButton(const DRAWITEMSTRUCT* di, bool accent) {
     const float radius = static_cast<float>(Scale(5));
     FillRounded(dc, body, radius, fill, border);
     if (ShowFocus(di)) StrokeRounded(dc, all, radius + ring, ThemeText(), static_cast<float>(Scale(2)));
-    HGDIOBJ oldFont = SelectObject(dc, w.font);
+    HGDIOBJ oldFont = SelectObject(dc, di->CtlID == IDC_ENABLED ? w.headFont : w.font);
     wchar_t text[256];
     GetWindowTextW(di->hwndItem, text, static_cast<int>(std::size(text)));
     SetBkMode(dc, TRANSPARENT);
@@ -1274,7 +1329,7 @@ void OnPaint(HWND hwnd) {
 }
 
 bool OnCard(int id) { return id != IDC_GROUP_ADS && id != IDC_VERSION && id != IDC_ADS_COUNT &&
-                                                   id != IDC_ADS_CAPTION; }
+                                                   id != IDC_ADS_CAPTION && id != IDC_STATUS; }
 
 LRESULT OnCtlColor(HDC dc, HWND ctl) {
     int id = GetDlgCtrlID(ctl);
@@ -1322,6 +1377,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_DRAWITEM: {
             auto* di = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
             if (TrayMenuDraw(di)) return TRUE;
+            if (di->CtlID == IDC_ENABLED) {
+                DrawButton(di, CurrentSettings().enabled);
+                return TRUE;
+            }
             if (di->CtlID == IDC_RESET || di->CtlID == IDC_CLOSE || di->CtlID == IDC_MUSIC_PICK) {
                 DrawButton(di, di->CtlID == IDC_CLOSE);
                 return TRUE;
@@ -1395,6 +1454,13 @@ HWND SettingsWindowHandle() { return w.hwnd; }
 
 void SettingsWindowUpdateCounter() {
     if (w.hwnd) UpdateCounterText();
+}
+
+void SettingsWindowUpdateStatus() {
+    if (!w.hwnd) return;
+    UpdateStatusText();
+    // The tray menu can hide the icon while the window is open.
+    SendMessageW(Ctl(IDC_HIDETRAY), BM_SETCHECK, CurrentSettings().hideTray ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
 void OpenSettingsWindow() {

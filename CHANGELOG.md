@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. The format follows Keep a Changelog; versions follow semantic versioning.
 
+## [Unreleased]
+
+### Added
+- The tray menu can hide the icon. Opening AdMutify again brings it back and opens the settings.
+- The top of the settings window has an on/off button and shows whether an ad is being muted right now.
+
+### Fixed
+- An ad that was playing when Spotify was closed no longer keeps AdMutify in the muted state.
+
 ## [1.2.0] - 2026-10-25
 
 ### Added

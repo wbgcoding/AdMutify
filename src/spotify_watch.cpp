@@ -147,6 +147,10 @@ void SpotifyWatch::RescanIfUnknown() {
     if (hookRange_ && !main_) Rescan(true);
 }
 
+void SpotifyWatch::RescanIfStale() {
+    if (hookRange_ && main_ && !IsWindow(main_)) Rescan(true);
+}
+
 void SpotifyWatch::SyncNameHooks() {
     std::unordered_set<DWORD> pids;
     for (const auto& entry : lastChange_) {

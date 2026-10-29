@@ -11,6 +11,7 @@ enum TrayCommand : UINT {
     IDM_TRAY_SETTINGS = 1002,
     IDM_TRAY_EXIT = 1003,
     IDM_TRAY_STATUS = 1004,
+    IDM_TRAY_HIDE = 1005,
 };
 
 // Dark menu support through undocumented uxtheme ordinals; mode 1 = allow dark, 2 = force dark, 3 = force light.
