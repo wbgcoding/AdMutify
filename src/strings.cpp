@@ -147,7 +147,7 @@ constexpr const wchar_t* kEs[] = {  // Spanish
     L"Activado",  // MenuEnabled
     L"Configuración",  // MenuSettings
     L"Salir",  // MenuExit
-    L"Ocultar de la bandeja",  // MenuHideTray
+    L"Ocultar del área de notificación",  // MenuHideTray
     L"Configuración de AdMutify",  // SettingsTitle
     L"Anuncios silenciados",  // AdsMutedCaption
     L"Encendido",  // ToggleOn
@@ -209,7 +209,7 @@ constexpr const wchar_t* kPt[] = {  // Brazilian Portuguese
     L"Ativado",  // MenuEnabled
     L"Configurações",  // MenuSettings
     L"Sair",  // MenuExit
-    L"Ocultar da bandeja",  // MenuHideTray
+    L"Ocultar da área de notificação",  // MenuHideTray
     L"Configurações do AdMutify",  // SettingsTitle
     L"Anúncios silenciados",  // AdsMutedCaption
     L"Ligado",  // ToggleOn
@@ -333,7 +333,7 @@ constexpr const wchar_t* kNl[] = {  // Dutch
     L"Ingeschakeld",  // MenuEnabled
     L"Instellingen",  // MenuSettings
     L"Afsluiten",  // MenuExit
-    L"Verbergen uit systeemvak",  // MenuHideTray
+    L"Pictogram in het systeemvak verbergen",  // MenuHideTray
     L"Instellingen voor AdMutify",  // SettingsTitle
     L"Advertenties gedempt",  // AdsMutedCaption
     L"Aan",  // ToggleOn
@@ -395,7 +395,7 @@ constexpr const wchar_t* kPl[] = {  // Polish
     L"Włączone",  // MenuEnabled
     L"Ustawienia",  // MenuSettings
     L"Zakończ",  // MenuExit
-    L"Ukryj z zasobnika",  // MenuHideTray
+    L"Ukryj ikonę w obszarze powiadomień",  // MenuHideTray
     L"Ustawienia AdMutify",  // SettingsTitle
     L"Wyciszone reklamy",  // AdsMutedCaption
     L"Włączone",  // ToggleOn
@@ -457,7 +457,7 @@ constexpr const wchar_t* kTr[] = {  // Turkish
     L"Etkin",  // MenuEnabled
     L"Ayarlar",  // MenuSettings
     L"Çıkış",  // MenuExit
-    L"Sistem tepsisinden gizle",  // MenuHideTray
+    L"Bildirim alanından gizle",  // MenuHideTray
     L"AdMutify Ayarları",  // SettingsTitle
     L"Sessize alınan reklamlar",  // AdsMutedCaption
     L"Açık",  // ToggleOn
@@ -519,7 +519,7 @@ constexpr const wchar_t* kJa[] = {  // Japanese
     L"有効",  // MenuEnabled
     L"設定",  // MenuSettings
     L"終了",  // MenuExit
-    L"トレイから隠す",  // MenuHideTray
+    L"通知領域から隠す",  // MenuHideTray
     L"AdMutify の設定",  // SettingsTitle
     L"ミュートした広告",  // AdsMutedCaption
     L"オン",  // ToggleOn
@@ -581,7 +581,7 @@ constexpr const wchar_t* kZh[] = {  // Simplified Chinese
     L"已启用",  // MenuEnabled
     L"设置",  // MenuSettings
     L"退出",  // MenuExit
-    L"从托盘隐藏",  // MenuHideTray
+    L"从通知区域隐藏",  // MenuHideTray
     L"AdMutify 设置",  // SettingsTitle
     L"已静音的广告",  // AdsMutedCaption
     L"开",  // ToggleOn
