@@ -548,6 +548,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     g.lastMediaExe = exe;
                     Log("trace media_exe \"%s\"", WideToUtf8(exe).c_str());
                 }
+                // A Spotify that ended without a destroy event left its last song title behind; every video then
+                // tried to pause a window that no longer exists.
+                g.watch.RescanIfStale();
                 Reevaluate();
             } else if (wParam == kTimerMusic) {
                 g.music.OnTimer();
@@ -574,6 +577,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (TrayMenuDraw(reinterpret_cast<const DRAWITEMSTRUCT*>(lParam))) return TRUE;
             break;
         case WM_DPICHANGED: g.tray.ReloadIcons(); return 0;
+        case WM_POWERBROADCAST:
+            // Window events that fell into the sleep are gone: a Spotify that ended meanwhile is only seen by asking.
+            if (wParam == PBT_APMRESUMEAUTOMATIC || wParam == PBT_APMRESUMESUSPEND) {
+                g.watch.RescanIfStale();
+                Reevaluate();
+            }
+            return TRUE;
         case WM_SETTINGCHANGE:
             if (wParam == SPI_SETHIGHCONTRAST ||
                 (lParam && wcscmp(reinterpret_cast<const wchar_t*>(lParam), L"ImmersiveColorSet") == 0))
