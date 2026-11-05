@@ -89,6 +89,28 @@ TEST(media_track_matches_title) {
     CHECK(!TrackMatchesTitle(Ad(L"", L""), L""));
 }
 
+TEST(media_merge_spot_with_trailing_space_mutes_at_once) {
+    // Real spot: Spotify keeps the trailing space in the session title too. Read untrimmed, it never matched the
+    // window title and the spot stayed audible for the whole settle time.
+    MediaTrack spot = Ad(L"Good Food f\x00fcr deinen Alltag ", L"REWE.Dein Markt.");
+    const std::wstring_view title = L"Good Food f\x00fcr deinen Alltag ";
+    CHECK(TrackMatchesTitle(spot, title));
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Music, spot, title, 120) == TitleKind::Ad);
+    spot.prevEnabled = true;
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Music, spot, title, 120) == TitleKind::Ad);
+    CHECK(TrackMatchesTitle(Ad(L" demo ", L" band "), L"band - demo"));
+    CHECK(!TrackMatchesTitle(Ad(L"  ", L"band"), L"band -"));
+}
+
+TEST(media_merge_dash_title_mutes_before_session_catches_up) {
+    // Real spot: the window title turns into a bare dash while the session still shows the song before.
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Music, Song(), L"\x2014", 5) == TitleKind::Ad);
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Idle, Song(), L" \x2014 ", 5) == TitleKind::Ad);
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Music, Song(), L"-", 5) == TitleKind::Ad);
+    // Any other plain title still waits for the session.
+    CHECK(MergeMediaTrack(TitleKind::Ad, AdState::Music, Song(), L"\x2014 Folge 3", 5) == TitleKind::Music);
+}
+
 TEST(media_merge_regression_song_like_ad) {
     MediaTrack t = Ad(L"Alle Oasis Hits!", L"Because Maybeeee");
     const std::wstring_view title = L"Because Maybeeee - Alle Oasis Hits!";

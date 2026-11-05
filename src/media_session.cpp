@@ -28,6 +28,15 @@ bool ContainsNoCase(std::wstring_view hay, std::wstring_view needle) {
     return false;
 }
 
+// Spotify shows a bare dash as the window title of an unnamed spot; no song or episode is titled like that.
+bool IsDashOnly(std::wstring_view title) {
+    const std::wstring t = Trim(title);
+    if (t.empty()) return false;
+    for (wchar_t c : t)
+        if (c != L'-' && c != L'\x2013' && c != L'\x2014') return false;
+    return true;
+}
+
 }  // namespace
 
 bool IsAdTrack(const MediaTrack& t) {
@@ -37,9 +46,14 @@ bool IsAdTrack(const MediaTrack& t) {
 bool TrackMatchesTitle(const MediaTrack& t, std::wstring_view windowTitle) {
     // A track without a title cannot vouch for any window title.
     if (!t.valid || t.title.empty()) return false;
+    // Spotify keeps stray spaces in session fields (a spot titled "Good Food für deinen Alltag " in both places);
+    // comparing them untrimmed held such an ad audible for the whole settle time.
     const std::wstring title = Trim(windowTitle);
-    if (title == t.title) return true;
-    return !t.artist.empty() && title == t.artist + L" - " + t.title;
+    const std::wstring trackTitle = Trim(t.title);
+    if (trackTitle.empty()) return false;
+    if (title == trackTitle) return true;
+    const std::wstring artist = Trim(t.artist);
+    return !artist.empty() && title == artist + L" - " + trackTitle;
 }
 
 bool IsContentTrack(const MediaTrack& t) { return t.valid && !t.album.empty(); }
@@ -58,7 +72,8 @@ TitleKind MergeMediaTrack(TitleKind kind, AdState current, const MediaTrack& t, 
     // their show as album, which a Spotify spot never has.
     if (kind == TitleKind::Ad && matches && IsContentTrack(t)) return TitleKind::Music;
     // Such a title is not muted before the session has caught up with it, so an episode start does not dip.
-    if (kind == TitleKind::Ad && current != AdState::Ad && !matches && msSinceTitleChange < kMediaSettleMs)
+    if (kind == TitleKind::Ad && current != AdState::Ad && !matches && msSinceTitleChange < kMediaSettleMs &&
+        !IsDashOnly(windowTitle))
         return TitleKind::Music;
     if (kind == TitleKind::Music && current == AdState::Ad && !matches && msSinceTitleChange < kMediaSettleMs)
         return TitleKind::Ad;

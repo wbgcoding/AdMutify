@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows Keep a Changelog; versions follow semantic versioning.
 
+## [Unreleased]
+
+### Fixed
+- Ads whose title ends with a space were muted only after about 1.5 seconds, so their first words were audible.
+- Ads shown with a bare dash as title are muted as soon as the title appears, without waiting for the Windows media display.
+
 ## [1.2.0] - 2026-10-29
 
 ### Added
