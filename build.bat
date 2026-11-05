@@ -4,13 +4,14 @@ rem AdMutify build: Visual Studio C++ toolchain + CMake, Release x64.
 rem Output in dist\: AdMutify.exe (portable build), AdMutify-Setup-<version>.exe, SHA256SUMS.txt.
 rem Debug symbols for crash dumps stay in build\symbols\<version>\ and are never shipped.
 rem Env: NOSTART=1 skips the final launch, NOPAUSE=1 marks an automated run (no resize, pause or wait).
-rem Running AdMutify instances are closed first.
+rem Running AdMutify instances are closed first. find.exe is called by path: a POSIX find earlier in PATH
+rem (Git Bash) would make running instances look absent.
 setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 set "RC=0"
 rem A double-clicked run gets a small window that stays open on errors and closes itself 10 s after success.
 set "INTERACTIVE="
-if not defined NOPAUSE echo %CMDCMDLINE% | find /i "/c" >nul && set "INTERACTIVE=1"
+if not defined NOPAUSE echo %CMDCMDLINE% | "%SystemRoot%\System32\find.exe" /i "/c" >nul && set "INTERACTIVE=1"
 if defined INTERACTIVE mode con cols=100 lines=25
 
 rem --- toolchain
@@ -40,9 +41,9 @@ rem Spotify's volume) because two instances would fight over the same audio sess
 taskkill /f /im admutify_tests.exe >nul 2>&1
 rem An open settings window takes the first close request, so ask again each round.
 for /l %%i in (1,1,20) do (
-    tasklist /fi "imagename eq AdMutify.exe" /nh 2>nul | find /i "AdMutify.exe" >nul && (taskkill /im AdMutify.exe >nul 2>&1 & ping -n 2 127.0.0.1 >nul)
+    tasklist /fi "imagename eq AdMutify.exe" /nh 2>nul | "%SystemRoot%\System32\find.exe" /i "AdMutify.exe" >nul && (taskkill /im AdMutify.exe >nul 2>&1 & ping -n 2 127.0.0.1 >nul)
 )
-tasklist /fi "imagename eq AdMutify.exe" /nh 2>nul | find /i "AdMutify.exe" >nul && (
+tasklist /fi "imagename eq AdMutify.exe" /nh 2>nul | "%SystemRoot%\System32\find.exe" /i "AdMutify.exe" >nul && (
     echo AdMutify is still running ^(elevated or hung^). Close it and build again.
     set "RC=1"
     goto :end
@@ -109,7 +110,7 @@ popd
 rem --- installer
 set "ISCC=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
 if not exist "%ISCC%" set "ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
-if not exist "%ISCC%" for %%k in ("HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1" "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1") do if not exist "%ISCC%" for /f "tokens=2,*" %%a in ('reg query %%k /v InstallLocation 2^>nul ^| find "InstallLocation"') do set "ISCC=%%b\ISCC.exe"
+if not exist "%ISCC%" for %%k in ("HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1" "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Inno Setup 6_is1") do if not exist "%ISCC%" for /f "tokens=2,*" %%a in ('reg query %%k /v InstallLocation 2^>nul ^| "%SystemRoot%\System32\find.exe" "InstallLocation"') do set "ISCC=%%b\ISCC.exe"
 if not exist "%ISCC%" for /f "delims=" %%p in ('where ISCC.exe 2^>nul') do set "ISCC=%%p"
 if not exist "installer\AdMutify.iss" (
     echo Warning: installer skipped, installer\AdMutify.iss is missing.
@@ -140,6 +141,6 @@ if not "%RC%"=="0" (
     echo Build FAILED.
     if defined INTERACTIVE pause
 ) else if defined INTERACTIVE (
-    timeout /t 10
+    "%SystemRoot%\System32\timeout.exe" /t 10
 )
 endlocal & exit /b %RC%
