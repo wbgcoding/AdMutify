@@ -1,12 +1,17 @@
 @echo off
+title AdMutify
 rem AdMutify build: Visual Studio C++ toolchain + CMake, Release x64.
 rem Output in dist\: AdMutify.exe (portable build), AdMutify-Setup-<version>.exe, SHA256SUMS.txt.
 rem Debug symbols for crash dumps stay in build\symbols\<version>\ and are never shipped.
-rem Env: NOSTART=1 skips the final launch, NOPAUSE=1 never pauses on errors.
+rem Env: NOSTART=1 skips the final launch, NOPAUSE=1 marks an automated run (no resize, pause or wait).
 rem Running AdMutify instances are closed first.
 setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 set "RC=0"
+rem A double-clicked run gets a small window that stays open on errors and closes itself 10 s after success.
+set "INTERACTIVE="
+if not defined NOPAUSE echo %CMDCMDLINE% | find /i "/c" >nul && set "INTERACTIVE=1"
+if defined INTERACTIVE mode con cols=100 lines=25
 
 rem --- toolchain
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -133,7 +138,8 @@ if not defined NOSTART explorer.exe "%CD%\build\x64\Release\AdMutify.exe"
 if not "%RC%"=="0" (
     echo.
     echo Build FAILED.
-    echo %CMDCMDLINE% | find /i "/c" >nul
-    if not errorlevel 1 if not defined NOPAUSE pause
+    if defined INTERACTIVE pause
+) else if defined INTERACTIVE (
+    timeout /t 10
 )
 endlocal & exit /b %RC%
