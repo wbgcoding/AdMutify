@@ -73,7 +73,7 @@ Requirements: Visual Studio 2022 or newer with the C++ desktop workload, CMake 3
 build.bat
 ```
 
-`build.bat` builds the release executable, runs the tests, and writes the portable `AdMutify.exe`, the installer and `SHA256SUMS.txt` to `dist\`. Set `NOSTART=1` to skip starting the fresh build and `NOPAUSE=1` for automated runs. Started by double-click, it opens a small window that stays open on errors and closes itself 10 seconds after a successful build.
+`build.bat` builds the release executable, runs the tests, and writes the portable `AdMutify.exe`, the installer and `SHA256SUMS.txt` to `dist\`. Set `NOSTART=1` to skip starting the fresh build and `NOPAUSE=1` for automated runs. A second run with nothing changed reports "up to date" and builds nothing; `build.bat --force` or `FORCE=1` rebuilds. Started by double-click, it opens a small window that stays open on errors and closes itself 10 seconds after a successful build.
 
 ## Disclaimer
 

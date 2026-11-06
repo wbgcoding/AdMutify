@@ -13,6 +13,20 @@ rem A double-clicked run gets a small window that stays open on errors and close
 set "INTERACTIVE="
 if not defined NOPAUSE echo %CMDCMDLINE% | "%SystemRoot%\System32\find.exe" /i "/c" >nul && set "INTERACTIVE=1"
 if defined INTERACTIVE mode con cols=100 lines=25
+rem === build freshness: check ===
+set "BS=%~dp0tools\build-stamp.ps1"
+set "BSKEY=exe"
+set "BSEXTRA="
+set "BSART=dist\AdMutify.exe"
+set "BSFRESH="
+set "BSFORCE="
+if "%FORCE%"=="1" set "BSFORCE=1"
+for %%A in (%*) do if /i "%%~A"=="--force" set "BSFORCE=1"
+if defined BSFORCE goto :bs_start
+if not exist "%BS%" goto :bs_start
+for /f "usebackq delims=" %%A in (`powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Check -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%"`) do set "BSFRESH=%%A"
+if defined BSFRESH goto :bs_uptodate
+:bs_start
 
 rem --- toolchain
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -129,6 +143,10 @@ powershell -NoProfile -Command "$l = Get-ChildItem dist -File | Where-Object Nam
 if errorlevel 1 ( set "RC=1" & goto :end )
 
 for %%f in ("dist\AdMutify.exe") do echo AdMutify.exe: %%~zf bytes
+rem === build freshness: save (every final file in dist) ===
+set "BSART=dist\AdMutify.exe"
+for %%f in ("dist\*.exe" "dist\SHA256SUMS.txt") do if /i not "%%~nxf"=="AdMutify.exe" set "BSART=!BSART!,dist\%%~nxf"
+if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "!BSART!" >nul 2>&1
 echo Build %VER% done.
 
 rem Launched through Explorer so the app does not inherit this script's output handles (a caller that
@@ -144,3 +162,8 @@ if not "%RC%"=="0" (
     "%SystemRoot%\System32\timeout.exe" /t 10
 )
 endlocal & exit /b %RC%
+
+:bs_uptodate
+for %%F in ("%BSFRESH%") do echo Build is up to date (last build %%~tF), nothing to do: %%~fF
+if defined INTERACTIVE "%SystemRoot%\System32\timeout.exe" /t 10
+exit /b 0
