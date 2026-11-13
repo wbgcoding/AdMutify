@@ -432,6 +432,17 @@ begin
     Result := CustomMessage('CloseFailed');
 end;
 
+procedure RepointAutostart;
+var
+  Current, Wanted: String;
+begin
+  if not RegQueryStringValue(HKCU, RunKey, 'AdMutify', Current) then
+    Exit;
+  Wanted := '"' + ExpandConstant('{app}\AdMutify.exe') + '" --autostart';
+  if CompareText(Current, Wanted) <> 0 then
+    RegWriteStringValue(HKCU, RunKey, 'AdMutify', Wanted);
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   Code: Integer;
@@ -445,6 +456,10 @@ begin
     RegWriteStringValue(HKCU, RunKey, 'AdMutify', '"' + ExpandConstant('{app}\AdMutify.exe') + '" --autostart');
     RegDeleteValue(HKCU, StartupApprovedKey, 'AdMutify');
   end;
+  // An existing autostart entry that starts another copy (an old folder, a copy started elsewhere) is moved to this
+  // install, so the app's own switch and Windows agree. Whether it is on stays the user's choice.
+  if (CurStep = ssPostInstall) and not IsPortableMode and not IsAdminInstallMode then
+    RepointAutostart;
   if (CurStep = ssPostInstall) and IsPortableMode then
     SaveStringToFile(ExpandConstant('{app}\portable.txt'), 'Settings are stored next to AdMutify.exe.' + #13#10, False);
 end;
