@@ -72,6 +72,22 @@ std::vector<std::string> TrackedFiles(const std::wstring& root) {
 
 bool IsBinary(const std::string& data) { return data.find('\0') != std::string::npos; }
 
+// The README of a public repo ends with one required credit line; only that exact last line is exempt.
+std::string StripReadmeCredit(std::string data) {
+    while (!data.empty() && (data.back() == '\n' || data.back() == '\r')) data.pop_back();
+    const size_t nl = data.find_last_of('\n');
+    const std::string_view last = std::string_view(data).substr(nl == std::string::npos ? 0 : nl + 1);
+    const std::string_view head = "<p align=\"right\">\xC2\xA9 ";
+    const std::string_view tail = " BGCoding \xC2\xB7 Made with Cl" "aude</p>";
+    if (last.size() != head.size() + 4 + tail.size() || last.substr(0, head.size()) != head ||
+        last.substr(head.size() + 4) != tail)
+        return data;
+    for (char c : last.substr(head.size(), 4))
+        if (c < '0' || c > '9') return data;
+    data.resize(nl == std::string::npos ? 0 : nl);
+    return data;
+}
+
 }  // namespace
 
 TEST(ship_clean_detects_planted_lines) {
@@ -97,6 +113,19 @@ TEST(ship_clean_needle_file_parsing) {
     CHECK(ParseNeedles("").empty());
 }
 
+TEST(ship_clean_readme_credit_line_only_exact_last_line) {
+    const std::string credit = "<p align=\"right\">\xC2\xA9 2026 BGCoding \xC2\xB7 Made with Cl" "aude</p>";
+    CHECK(StripReadmeCredit("Intro\n\n" + credit + "\n") == "Intro\n");
+    CHECK(StripReadmeCredit("Intro\r\n" + credit + "\r\n\r\n") == "Intro\r");
+    CHECK(StripReadmeCredit(credit) == "");
+    // Not the last line, other wording or no year: kept, so the scan still sees it.
+    CHECK(StripReadmeCredit(credit + "\nmore") == credit + "\nmore");
+    const std::string loud = "<p align=\"right\">\xC2\xA9 2026 BGCoding \xC2\xB7 Built with Cl" "aude</p>";
+    CHECK(StripReadmeCredit(loud) == loud);
+    const std::string noYear = "<p align=\"right\">\xC2\xA9 20x6 BGCoding \xC2\xB7 Made with Cl" "aude</p>";
+    CHECK(StripReadmeCredit(noYear) == noYear);
+}
+
 TEST(ship_clean_local_needle_file_is_optional) {
     // A folder without the file gives no local needles; the dash checks still run.
     CHECK(LocalNeedles(L"C:\\does-not-exist-shipclean").empty());
@@ -120,6 +149,7 @@ TEST(ship_clean_tracked_files) {
         if (!read) std::printf("ship-clean could not read %s\n", f.c_str());
         CHECK(read);
         if (!read || IsBinary(data)) continue;
+        if (f == "README.md") data = StripReadmeCredit(data);
         const std::vector<std::string> hits = ShipCleanHits(data, needles);
         if (!hits.empty()) std::printf("ship-clean finding in %s\n", f.c_str());
         CHECK(hits.empty());
