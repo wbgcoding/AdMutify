@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows Keep
 ## [Unreleased]
 
 ### Changed
-- Log files and crash reports are now kept for 30 days instead of 7, so older problems can still be looked into.
+- Log files and crash reports are now kept for 30 days instead of 7, so older problems can still be looked into. The log may grow to 1 MB in total.
 
 ### Fixed
 - Ads whose title ends with a space were muted only after about 1.5 seconds, so their first words were audible.

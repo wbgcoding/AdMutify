@@ -11,12 +11,12 @@ namespace {
 bool Exists(const std::wstring& p) { return GetFileAttributesW(p.c_str()) != INVALID_FILE_ATTRIBUTES; }
 
 void CleanLogs() {
-    for (const wchar_t* suffix : {L"", L".1", L".2", L".3"}) DeleteFileW((LogDir() + L"\\admutify.log" + suffix).c_str());
+    for (const wchar_t* suffix : {L"", L".1", L".2", L".3", L".4"}) DeleteFileW((LogDir() + L"\\admutify.log" + suffix).c_str());
 }
 
 }  // namespace
 
-TEST(log_rollover_keeps_three_files) {
+TEST(log_rollover_keeps_four_files) {
     CleanLogs();
     SetLogLimitForTests(1024);
     for (int i = 0; i < 200; ++i) Log("state NoSpotify -> Idle line %d with some padding text to fill the file", i);
@@ -26,9 +26,10 @@ TEST(log_rollover_keeps_three_files) {
     CHECK(Exists(base));
     CHECK(Exists(base + L".1"));
     CHECK(Exists(base + L".2"));
-    CHECK(!Exists(base + L".3"));
+    CHECK(Exists(base + L".3"));
+    CHECK(!Exists(base + L".4"));
 
-    for (const wchar_t* suffix : {L"", L".1", L".2"}) {
+    for (const wchar_t* suffix : {L"", L".1", L".2", L".3"}) {
         std::string data;
         CHECK(ReadFileUtf8(base + suffix, data));
         CHECK(data.size() <= 1024 + 200);

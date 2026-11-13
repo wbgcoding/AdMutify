@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-// Appends one line to <LogDir>\admutify.log (rolling, 3 files). Only state changes and errors belong here.
+// Appends one line to <LogDir>\admutify.log (rolling, 4 files of 256 KB, 1 MB at most). Only state changes and errors belong here.
 // Log files, log lines and crash dumps older than kKeepLogDays are removed when the first line of a run is written.
 constexpr int kKeepLogDays = 30;
 void Log(const char* fmt, ...);

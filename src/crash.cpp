@@ -24,7 +24,7 @@
 namespace {
 
 constexpr unsigned long kDefaultLogLimit = 256 * 1024;
-constexpr int kLogFiles = 3;
+constexpr int kLogFiles = 4;  // 4 x 256 KB = 1 MB at most
 constexpr int kMaxDumps = 3;
 constexpr ULONGLONG kFileTimeDay = 24ULL * 60 * 60 * 10000000;
 
