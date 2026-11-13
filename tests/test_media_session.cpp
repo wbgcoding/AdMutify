@@ -156,6 +156,35 @@ TEST(media_merge_song_stays_music) {
     CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, song, L"leon chang - sleep it off", 100) == TitleKind::Music);
 }
 
+// Regression (log 2026-11-07 08:41:27): inside an ad break Spotify showed the next song for about 50 ms, title and
+// media session both, with skip controls still off; the mute was lifted and set again right after.
+TEST(media_merge_song_flash_inside_ad_break_holds) {
+    MediaTrack flash = Song();
+    flash.title = L"Route 209";
+    flash.artist = L"Helynt";
+    flash.album = L"Super Lofi World 2";
+    flash.trackNumber = 5;
+    flash.nextEnabled = false;
+    flash.prevEnabled = false;
+    const wchar_t* title = L"Helynt - Route 209";
+    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, flash, title, 60) == TitleKind::Ad);
+    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, flash, title, kMediaSettleMs - 1) == TitleKind::Ad);
+    // A song that really starts with skip controls off is released after the settle time.
+    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, flash, title, kMediaSettleMs) == TitleKind::Music);
+    // Skip controls back on: the song has started, released at once.
+    MediaTrack started = flash;
+    started.nextEnabled = true;
+    started.prevEnabled = true;
+    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, started, title, 60) == TitleKind::Music);
+    // Last song of the queue: previous stays on, released at once.
+    MediaTrack last = flash;
+    last.prevEnabled = true;
+    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Ad, last, title, 60) == TitleKind::Music);
+    // Outside an ad nothing is held.
+    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Music, flash, title, 60) == TitleKind::Music);
+    CHECK(MergeMediaTrack(TitleKind::Music, AdState::Idle, flash, title, 60) == TitleKind::Music);
+}
+
 TEST(media_merge_hold_until_session_catches_up) {
     // An ad is muted; the title switches to a song-like one while the session still shows the old ad.
     const MediaTrack oldAd = Ad(L"JETZT HÖREN", L"Best Christmas Playlists");

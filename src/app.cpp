@@ -268,8 +268,9 @@ void ReevaluateOnce() {
     const MediaTrack track = g.mediaSession.Snapshot();
     TitleKind kind = MergeMediaTrack(titleKind, g.machine.Current(), track, windowTitle, now - g.titleChangedAt);
     // Either verdict may wait for the session to catch up with a new title; a one-shot timer ends the wait.
+    // Every hold ends with the settle time; a verdict the session settles for good needs no timer.
     const bool heldForSession = titleKind != kind && (titleKind == TitleKind::Music || titleKind == TitleKind::Ad) &&
-                                !TrackMatchesTitle(track, windowTitle);
+                                now - g.titleChangedAt < kMediaSettleMs;
     if (heldForSession) {
         const uint64_t since = now - g.titleChangedAt;
         const uint64_t left = since < kMediaSettleMs ? kMediaSettleMs - since : 0;

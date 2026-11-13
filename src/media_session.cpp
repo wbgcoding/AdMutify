@@ -77,6 +77,11 @@ TitleKind MergeMediaTrack(TitleKind kind, AdState current, const MediaTrack& t, 
         return TitleKind::Music;
     if (kind == TitleKind::Music && current == AdState::Ad && !matches && msSinceTitleChange < kMediaSettleMs)
         return TitleKind::Ad;
+    // Inside an ad break Spotify can flash the next song for a moment, title and session both, with skip controls
+    // still off; a song that has really started turns them on. Holding for the settle time bridges the flash.
+    if (kind == TitleKind::Music && current == AdState::Ad && matches && !t.nextEnabled && !t.prevEnabled &&
+        msSinceTitleChange < kMediaSettleMs)
+        return TitleKind::Ad;
     return kind;
 }
 
