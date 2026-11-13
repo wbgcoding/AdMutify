@@ -25,7 +25,7 @@ AdMutify is a tiny Windows tray tool that mutes the Spotify desktop app while an
 - Finds Spotify even when it starts minimized to the tray.
 - Ten languages: English, German (Deutsch), Spanish (Español), Portuguese (Português, Brasil), Italian (Italiano), Dutch (Nederlands), Polish (Polski), Turkish (Türkçe), Japanese (日本語) and Simplified Chinese (简体中文). By default AdMutify follows the Windows display language; the installer speaks the same languages.
 - Light and dark mode, Windows 11 style with rounded corners.
-- Old log files and crash reports are removed automatically after 7 days.
+- Old log files and crash reports are removed automatically after 30 days.
 - Lightweight: a single small executable, about 2.5 MB of memory, no background polling unless the video option is on.
 
 ## Download
@@ -63,7 +63,7 @@ Settings are stored in `%APPDATA%\AdMutify` (portable: next to the exe), logs in
 
 ## Privacy
 
-AdMutify makes no network connections at all and sends nothing anywhere. It only keeps a small log file and, after a crash, a crash report on your own PC; both are deleted automatically after 7 days. The log only records state changes such as "music" or "ad", never song titles. Titles are only written when you start AdMutify yourself with the `--trace` switch or the hidden `trace=1` line in `settings.ini` for troubleshooting. A crash report can contain file paths of your PC, such as your user folder, so look at it before you share it.
+AdMutify makes no network connections at all and sends nothing anywhere. It only keeps a small log file and, after a crash, a crash report on your own PC; both are deleted automatically after 30 days. The log only records state changes such as "music" or "ad", never song titles. Titles are only written when you start AdMutify yourself with the `--trace` switch or the hidden `trace=1` line in `settings.ini` for troubleshooting. A crash report can contain file paths of your PC, such as your user folder, so look at it before you share it.
 
 ## Build from source
 

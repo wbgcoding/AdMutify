@@ -26,7 +26,6 @@ namespace {
 constexpr unsigned long kDefaultLogLimit = 256 * 1024;
 constexpr int kLogFiles = 3;
 constexpr int kMaxDumps = 3;
-constexpr int kKeepLogDays = 7;
 constexpr ULONGLONG kFileTimeDay = 24ULL * 60 * 60 * 10000000;
 
 std::mutex g_logMutex;

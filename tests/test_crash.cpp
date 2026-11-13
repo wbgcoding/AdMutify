@@ -109,7 +109,7 @@ TEST(log_cutoff_ignores_lines_without_a_timestamp) {
     CHECK(DropLogLinesBefore(text, "2026-10-01 00:00:00").empty());
 }
 
-TEST(log_prune_removes_week_old_files_and_lines) {
+TEST(log_prune_removes_month_old_files_and_lines) {
     CleanLogs();
     const std::wstring dir = LogDir();
     const std::wstring base = dir + L"\\admutify.log";
@@ -119,17 +119,24 @@ TEST(log_prune_removes_week_old_files_and_lines) {
     CHECK(WriteFileAtomic(dir + L"\\crash-20200101-000000.dmp", "x"));
     CHECK(WriteFileAtomic(dir + L"\\crash-29990101-000000.dmp", "x"));
 
-    // Eight days back for the files meant to go.
+    // Kept for 30 days: one day past that goes, one day short of it stays.
+    CHECK(kKeepLogDays == 30);
     FILETIME now;
     GetSystemTimeAsFileTime(&now);
-    ULONGLONG v = (static_cast<ULONGLONG>(now.dwHighDateTime) << 32 | now.dwLowDateTime) - 8ULL * 24 * 60 * 60 * 10000000;
-    FILETIME old{static_cast<DWORD>(v), static_cast<DWORD>(v >> 32)};
-    for (const std::wstring& p : {base + L".1", dir + L"\\crash-20200101-000000.dmp"}) {
+    const ULONGLONG nowV = static_cast<ULONGLONG>(now.dwHighDateTime) << 32 | now.dwLowDateTime;
+    const ULONGLONG day = 24ULL * 60 * 60 * 10000000;
+    auto setAge = [&](const std::wstring& p, ULONGLONG days) {
+        const ULONGLONG v = nowV - days * day;
+        FILETIME t{static_cast<DWORD>(v), static_cast<DWORD>(v >> 32)};
         HANDLE h = CreateFileW(p.c_str(), FILE_WRITE_ATTRIBUTES, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
         CHECK(h != INVALID_HANDLE_VALUE);
-        CHECK(SetFileTime(h, nullptr, nullptr, &old));
+        CHECK(SetFileTime(h, nullptr, nullptr, &t));
         CloseHandle(h);
-    }
+    };
+    setAge(base + L".1", 31);
+    setAge(dir + L"\\crash-20200101-000000.dmp", 31);
+    setAge(base + L".2", 29);
+    setAge(dir + L"\\crash-29990101-000000.dmp", 29);
 
     CHECK(PruneOldLogs());
 

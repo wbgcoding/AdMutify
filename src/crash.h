@@ -6,14 +6,15 @@
 #include <string_view>
 
 // Appends one line to <LogDir>\admutify.log (rolling, 3 files). Only state changes and errors belong here.
-// Log files, log lines and crash dumps older than 7 days are removed when the first line of a run is written.
+// Log files, log lines and crash dumps older than kKeepLogDays are removed when the first line of a run is written.
+constexpr int kKeepLogDays = 30;
 void Log(const char* fmt, ...);
 // Extra callback counting output, enabled by the --trace option.
 void SetTraceEnabled(bool enabled);
 bool TraceEnabled();
 // Test seam: rollover size limit in bytes.
 void SetLogLimitForTests(unsigned long bytes);
-// Removes log files, log lines and crash dumps older than 7 days.
+// Removes log files, log lines and crash dumps older than kKeepLogDays.
 // Returns false when the log file needed a rewrite and that failed.
 bool PruneOldLogs();
 // Pure part: keeps the lines from the first one whose "YYYY-MM-DD HH:MM:SS" prefix is not before cutoff.
