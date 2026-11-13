@@ -1416,7 +1416,7 @@ LRESULT OnCtlColor(HDC dc, HWND ctl) {
     if (const SliderDef* slider = SliderFor(id); slider && id != slider->track && !IsWindowEnabled(Ctl(slider->track)))
         text = ThemeDisabledText();
     if (id == IDC_MUSIC_PATH && CurrentSettings().adMusicPath.empty()) text = ThemeDisabledText();
-    if (id == IDC_ADS_COUNT) text = IsHighContrast() ? ThemeText() : ThemeAccent();
+    if (id == IDC_ADS_COUNT) text = IsHighContrast() ? ThemeText() : ThemeAccentOnBackground();
     if (id == IDC_ADS_CAPTION) text = ThemeDisabledText();
     const bool card = OnCard(id);
     SetTextColor(dc, text);
@@ -1495,7 +1495,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             MakeFonts();
             Layout(Placement::KeepFit);
             return 0;
-        case WM_SYSCOLORCHANGE: RefreshTheme(); return 0;
+        case WM_SYSCOLORCHANGE:
+        case WM_DWMCOLORIZATIONCOLORCHANGED: RefreshTheme(); return 0;
         case WM_ACTIVATE:
             if (LOWORD(wParam) == WA_INACTIVE) DisarmReset();
             break;

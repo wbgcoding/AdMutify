@@ -77,24 +77,89 @@ TEST(theme_override_picks_light_or_dark) {
 }
 
 TEST(theme_light_and_dark_tables_are_fixed) {
+    SetAccentForTests(&kDefaultAccent);
     UseTheme(1);
     if (!IsHighContrast()) {
         CHECK(ThemeBackground() == RGB(0xF3, 0xF3, 0xF3));
         CHECK(ThemeText() == RGB(0x1A, 0x1A, 0x1A));
-        CHECK(ThemeAccent() == RGB(0x00, 0x5F, 0xB8));
+        CHECK(ThemeAccent() == RGB(0x00, 0x67, 0xC0));
         CHECK(ThemeAccentText() == RGB(0xFF, 0xFF, 0xFF));
+        CHECK(ThemeAccentOnBackground() == RGB(0x00, 0x67, 0xC0));
     }
     UseTheme(2);
     if (!IsHighContrast()) {
         CHECK(ThemeBackground() == RGB(0x20, 0x20, 0x20));
         CHECK(ThemeText() == RGB(0xFF, 0xFF, 0xFF));
-        CHECK(ThemeAccent() == RGB(0x4C, 0xC2, 0xFF));
-        CHECK(ThemeAccentText() == RGB(0x00, 0x00, 0x00));
+        // Windows blue on dark: white text on the accent itself, not black on the light shade.
+        CHECK(ThemeAccent() == RGB(0x00, 0x78, 0xD4));
+        CHECK(ThemeAccentText() == RGB(0xFF, 0xFF, 0xFF));
+        CHECK(ThemeAccentOnBackground() == RGB(0x4C, 0xC2, 0xFF));
     }
+    SetAccentForTests(nullptr);
+    FollowSystem();
+}
+
+TEST(theme_accent_palette_parsing) {
+    // The default Windows blue palette as the registry stores it.
+    const BYTE blue[32] = {0x99, 0xEB, 0xFF, 0, 0x4C, 0xC2, 0xFF, 0, 0x00, 0x91, 0xF8, 0, 0x00, 0x78, 0xD4, 0,
+                           0x00, 0x67, 0xC0, 0, 0x00, 0x3E, 0x92, 0, 0x00, 0x1A, 0x68, 0, 0xF7, 0x63, 0x0C, 0};
+    AccentColors got{};
+    CHECK(ParseAccentPalette(blue, sizeof(blue), &got));
+    CHECK(got.light2 == RGB(0x4C, 0xC2, 0xFF));
+    CHECK(got.base == RGB(0x00, 0x78, 0xD4));
+    CHECK(got.dark1 == RGB(0x00, 0x67, 0xC0));
+    // Too short or missing: refused, the output stays as it was.
+    AccentColors keep = kDefaultAccent;
+    CHECK(!ParseAccentPalette(blue, 31, &keep));
+    CHECK(!ParseAccentPalette(nullptr, 32, &keep));
+    CHECK(!ParseAccentPalette(blue, 32, nullptr));
+    CHECK(keep.base == kDefaultAccent.base);
+}
+
+TEST(theme_accent_helpers) {
+    CHECK(ContrastRatio(RGB(0, 0, 0), RGB(0xFF, 0xFF, 0xFF)) > 20.9);
+    CHECK(ContrastRatio(RGB(0x55, 0x55, 0x55), RGB(0x55, 0x55, 0x55)) == 1.0);
+    CHECK(BlendColor(RGB(0, 0, 0), RGB(200, 100, 50), 0) == RGB(0, 0, 0));
+    CHECK(BlendColor(RGB(0, 0, 0), RGB(200, 100, 50), 100) == RGB(200, 100, 50));
+    CHECK(BlendColor(RGB(0, 0, 0), RGB(200, 100, 50), 10) == RGB(20, 10, 5));
+    CHECK(TextOn(RGB(0x00, 0x78, 0xD4)) == RGB(0xFF, 0xFF, 0xFF));
+    CHECK(TextOn(RGB(0xFF, 0xB9, 0x00)) == RGB(0x00, 0x00, 0x00));
+    CHECK(TextOn(RGB(0xFF, 0xFF, 0xFF)) == RGB(0x00, 0x00, 0x00));
+    CHECK(TextOn(RGB(0x00, 0x00, 0x00)) == RGB(0xFF, 0xFF, 0xFF));
+}
+
+TEST(theme_any_accent_stays_readable) {
+    // Windows presets from light to dark: yellow, orange, red, pink, purple, green, teal, grey, blue.
+    const AccentColors palettes[] = {
+        kDefaultAccent,
+        {RGB(0xFF, 0xE0, 0x5C), RGB(0xFF, 0xB9, 0x00), RGB(0xD1, 0x93, 0x00)},
+        {RGB(0xFF, 0xB3, 0x7A), RGB(0xF7, 0x63, 0x0C), RGB(0xC8, 0x4C, 0x00)},
+        {RGB(0xFF, 0x8F, 0x91), RGB(0xE8, 0x11, 0x23), RGB(0xC4, 0x00, 0x14)},
+        {RGB(0xF7, 0x9F, 0xD8), RGB(0xE3, 0x00, 0x8C), RGB(0xBF, 0x00, 0x77)},
+        {RGB(0xC6, 0xA2, 0xF8), RGB(0x88, 0x17, 0x98), RGB(0x74, 0x00, 0x86)},
+        {RGB(0x6C, 0xE2, 0x6C), RGB(0x10, 0x7C, 0x10), RGB(0x05, 0x6A, 0x05)},
+        {RGB(0x5C, 0xE0, 0xD7), RGB(0x00, 0x99, 0xBC), RGB(0x00, 0x82, 0xA0)},
+        {RGB(0xBB, 0xBB, 0xBB), RGB(0x76, 0x76, 0x76), RGB(0x64, 0x64, 0x64)},
+    };
+    for (const AccentColors& p : palettes) {
+        SetAccentForTests(&p);
+        for (int mode : {1, 2}) {
+            UseTheme(mode);
+            if (IsHighContrast()) continue;
+            CHECK(Contrast(ThemeAccentText(), ThemeAccent()) >= 4.5);
+            // Hover and pressed last only a moment on a bold label, so the large text limit applies.
+            CHECK(Contrast(ThemeAccentText(), ThemeAccentHot()) >= 3.0);
+            CHECK(Contrast(ThemeAccentText(), ThemeAccentPressed()) >= 3.0);
+            CHECK(ThemeAccent() != ThemeAccentHot());
+            CHECK(ThemeAccentHot() != ThemeAccentPressed());
+        }
+    }
+    SetAccentForTests(nullptr);
     FollowSystem();
 }
 
 TEST(theme_text_stays_readable_in_both_modes) {
+    SetAccentForTests(&kDefaultAccent);
     for (int mode : {1, 2}) {
         UseTheme(mode);
         if (IsHighContrast()) continue;
@@ -108,7 +173,10 @@ TEST(theme_text_stays_readable_in_both_modes) {
         // The pressed state lasts a moment and the label is bold-sized, so the large text limit applies.
         CHECK(Contrast(ThemeAccentText(), ThemeAccentPressed()) >= 3.0);
         CHECK(Contrast(ThemeCriticalText(), ThemeCritical()) >= 4.5);
+        // The large ad counter in accent colour on the window background.
+        CHECK(Contrast(ThemeAccentOnBackground(), ThemeBackground()) >= 3.0);
     }
+    SetAccentForTests(nullptr);
     FollowSystem();
 }
 

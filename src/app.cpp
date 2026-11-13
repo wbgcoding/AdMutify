@@ -590,7 +590,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 (lParam && wcscmp(reinterpret_cast<const wchar_t*>(lParam), L"ImmersiveColorSet") == 0))
                 RefreshThemeCache();
             break;
-        case WM_SYSCOLORCHANGE: RefreshThemeCache(); break;
+        case WM_SYSCOLORCHANGE:
+        case WM_DWMCOLORIZATIONCOLORCHANGED: RefreshThemeCache(); break;
         case WM_QUERYENDSESSION: return TRUE;
         case WM_ENDSESSION:
             if (wParam) Shutdown(true);

@@ -3,6 +3,9 @@
 #include <dwmapi.h>
 #include <uxtheme.h>
 
+#include <algorithm>
+#include <cmath>
+
 namespace {
 
 int g_override = 0;
@@ -12,6 +15,19 @@ int g_override = 0;
 bool g_cacheValid = false;
 bool g_cachedDark = false;
 bool g_cachedHighContrast = false;
+AccentColors g_cachedAccent = kDefaultAccent;
+bool g_accentForced = false;
+AccentColors g_forcedAccent = kDefaultAccent;
+
+AccentColors ReadSystemAccent() {
+    BYTE data[64] = {};
+    DWORD size = sizeof(data);
+    AccentColors out = kDefaultAccent;
+    if (RegGetValueW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Accent", L"AccentPalette",
+                     RRF_RT_REG_BINARY, nullptr, data, &size) == ERROR_SUCCESS)
+        ParseAccentPalette(data, size, &out);
+    return out;
+}
 
 void FillCache() {
     if (g_cacheValid) return;
@@ -19,8 +35,27 @@ void FillCache() {
     hc.cbSize = sizeof(hc);
     g_cachedHighContrast = SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(hc), &hc, 0) && (hc.dwFlags & HCF_HIGHCONTRASTON) != 0;
     g_cachedDark = SystemUsesDarkApps();
+    g_cachedAccent = ReadSystemAccent();
     g_cacheValid = true;
 }
+
+const AccentColors& Accent() {
+    if (g_accentForced) return g_forcedAccent;
+    FillCache();
+    return g_cachedAccent;
+}
+
+double Channel(int v) {
+    const double c = v / 255.0;
+    return c <= 0.04045 ? c / 12.92 : std::pow((c + 0.055) / 1.055, 2.4);
+}
+
+double Luminance(COLORREF c) {
+    return 0.2126 * Channel(GetRValue(c)) + 0.7152 * Channel(GetGValue(c)) + 0.0722 * Channel(GetBValue(c));
+}
+
+// Button fill: the accent itself on dark, its first darker shade on light (as Windows does for light mode).
+COLORREF AccentFill() { return IsDarkTheme() ? Accent().base : Accent().dark1; }
 
 constexpr DWORD kUseImmersiveDarkMode = 20;
 
@@ -87,21 +122,57 @@ COLORREF ThemeControlBorder() {
     if (IsHighContrast()) return GetSysColor(COLOR_WINDOWTEXT);
     return IsDarkTheme() ? RGB(0x48, 0x48, 0x48) : RGB(0xD5, 0xD5, 0xD5);
 }
+bool ParseAccentPalette(const BYTE* data, size_t size, AccentColors* out) {
+    // Eight RGBA entries, lightest first: light3, light2, light1, accent, dark1, dark2, dark3, unused.
+    if (!data || !out || size < 32) return false;
+    auto at = [&](int i) { return RGB(data[i * 4], data[i * 4 + 1], data[i * 4 + 2]); };
+    out->light2 = at(1);
+    out->base = at(3);
+    out->dark1 = at(4);
+    return true;
+}
+
+double ContrastRatio(COLORREF a, COLORREF b) {
+    const double la = Luminance(a);
+    const double lb = Luminance(b);
+    return ((std::max)(la, lb) + 0.05) / ((std::min)(la, lb) + 0.05);
+}
+
+COLORREF BlendColor(COLORREF from, COLORREF to, int percentTo) {
+    auto mix = [&](int a, int b) { return (a * (100 - percentTo) + b * percentTo + 50) / 100; };
+    return RGB(mix(GetRValue(from), GetRValue(to)), mix(GetGValue(from), GetGValue(to)), mix(GetBValue(from), GetBValue(to)));
+}
+
+COLORREF TextOn(COLORREF fill) {
+    // White wherever it is readable (the usual look on a coloured button), black only on light accents.
+    return ContrastRatio(RGB(0xFF, 0xFF, 0xFF), fill) >= 4.5 ? RGB(0xFF, 0xFF, 0xFF) : RGB(0x00, 0x00, 0x00);
+}
+
+void SetAccentForTests(const AccentColors* colors) {
+    g_accentForced = colors != nullptr;
+    if (colors) g_forcedAccent = *colors;
+}
+
 COLORREF ThemeAccent() {
     if (IsHighContrast()) return GetSysColor(COLOR_HIGHLIGHT);
-    return IsDarkTheme() ? RGB(0x4C, 0xC2, 0xFF) : RGB(0x00, 0x5F, 0xB8);
+    return AccentFill();
 }
+// Hover and pressed shade toward the window background, like the 90 % and 80 % opacity of Windows buttons.
 COLORREF ThemeAccentHot() {
     if (IsHighContrast()) return GetSysColor(COLOR_HIGHLIGHT);
-    return IsDarkTheme() ? RGB(0x48, 0xB1, 0xE8) : RGB(0x19, 0x75, 0xC5);
+    return BlendColor(AccentFill(), ThemeBackground(), 10);
 }
 COLORREF ThemeAccentPressed() {
     if (IsHighContrast()) return GetSysColor(COLOR_HIGHLIGHT);
-    return IsDarkTheme() ? RGB(0x42, 0xA1, 0xD2) : RGB(0x31, 0x83, 0xCA);
+    return BlendColor(AccentFill(), ThemeBackground(), 20);
 }
 COLORREF ThemeAccentText() {
     if (IsHighContrast()) return GetSysColor(COLOR_HIGHLIGHTTEXT);
-    return IsDarkTheme() ? RGB(0x00, 0x00, 0x00) : RGB(0xFF, 0xFF, 0xFF);
+    return TextOn(AccentFill());
+}
+COLORREF ThemeAccentOnBackground() {
+    if (IsHighContrast()) return GetSysColor(COLOR_WINDOWTEXT);
+    return IsDarkTheme() ? Accent().light2 : Accent().dark1;
 }
 COLORREF ThemeCritical() {
     if (IsHighContrast()) return GetSysColor(COLOR_WINDOWTEXT);
