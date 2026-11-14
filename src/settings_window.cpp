@@ -11,6 +11,7 @@
 #include <windowsx.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 
 namespace Gdiplus {
@@ -1253,6 +1254,39 @@ void DrawCheckMark(HDC dc, const RECT& box, bool radio, bool checked, bool disab
 
 // Slider in the Windows 11 look: thin track, the part left of the thumb in the accent colour, round thumb with an
 // accent dot. The trackbar keeps its own input handling; only the painting is replaced (not in high contrast).
+struct SliderGeometry {
+    float d;              // drawn thumb diameter
+    float left, right;    // ends of the drawn track
+    float x, y;           // drawn thumb centre
+    POINT real;           // centre of the trackbar's own (narrower, top-aligned) thumb
+};
+
+SliderGeometry SliderGeometryOf(HWND h) {
+    RECT rc;
+    GetClientRect(h, &rc);
+    SliderGeometry g{};
+    g.d = static_cast<float>((std::min)(Scale(20), static_cast<int>(rc.bottom) - Scale(6)));
+    RECT channel{};
+    SendMessageW(h, TBM_GETCHANNELRECT, 0, reinterpret_cast<LPARAM>(&channel));
+    RECT thumb{};
+    SendMessageW(h, TBM_GETTHUMBRECT, 0, reinterpret_cast<LPARAM>(&thumb));
+    g.left = (std::max)(static_cast<float>(channel.left), g.d / 2 + Scale(1));
+    g.right = (std::min)(static_cast<float>(channel.right), rc.right - g.d / 2 - Scale(1));
+    g.real = {(thumb.left + thumb.right) / 2, (thumb.top + thumb.bottom) / 2};
+    // The drawn thumb sits where the real one is, only clamped so the circle stays inside the control.
+    g.x = (std::clamp)(static_cast<float>(g.real.x), g.left, g.right);
+    g.y = rc.bottom / 2.0f;
+    return g;
+}
+
+// A press on the drawn thumb is moved onto the real thumb, and the moves of that drag by the same offset, so the
+// whole circle grabs the thumb and the thumb then follows the mouse without a jump.
+POINT g_sliderDragShift{};
+
+LPARAM ShiftPoint(LPARAM lParam, POINT shift) {
+    return MAKELPARAM(GET_X_LPARAM(lParam) + shift.x, GET_Y_LPARAM(lParam) + shift.y);
+}
+
 void PaintSlider(HWND h, HDC target) {
     RECT rc;
     GetClientRect(h, &rc);
@@ -1265,18 +1299,12 @@ void PaintSlider(HWND h, HDC target) {
     const bool disabled = !IsWindowEnabled(h);
     const bool pressed = GetCapture() == h;
     const bool hot = w.hotId == GetDlgCtrlID(h);
-    const int lo = static_cast<int>(SendMessageW(h, TBM_GETRANGEMIN, 0, 0));
-    const int hi = static_cast<int>(SendMessageW(h, TBM_GETRANGEMAX, 0, 0));
-    const int pos = static_cast<int>(SendMessageW(h, TBM_GETPOS, 0, 0));
-    const float d = static_cast<float>((std::min)(Scale(20), cy - Scale(6)));
-    // Same travel as the trackbar's own thumb where it fits, so a press on the drawn thumb grabs the real one.
-    RECT channel{};
-    SendMessageW(h, TBM_GETCHANNELRECT, 0, reinterpret_cast<LPARAM>(&channel));
-    const float left = (std::max)(static_cast<float>(channel.left), d / 2 + Scale(1));
-    const float right = (std::min)(static_cast<float>(channel.right), cx - d / 2 - Scale(1));
-    const float mid = cy / 2.0f;
-    const float frac = hi > lo ? static_cast<float>(pos - lo) / (hi - lo) : 0.0f;
-    const float x = left + (right - left) * frac;
+    const SliderGeometry geo = SliderGeometryOf(h);
+    const float d = geo.d;
+    const float left = geo.left;
+    const float right = geo.right;
+    const float mid = geo.y;
+    const float x = geo.x;
     {
         Gdiplus::Graphics g(dc);
         g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
@@ -1314,7 +1342,7 @@ void PaintSlider(HWND h, HDC target) {
 
 LRESULT CALLBACK SliderProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
     if (IsHighContrast() || msg == TBM_GETPOS || msg == TBM_GETRANGEMIN || msg == TBM_GETRANGEMAX ||
-        msg == TBM_GETCHANNELRECT)
+        msg == TBM_GETCHANNELRECT || msg == TBM_GETTHUMBRECT)
         return DefSubclassProc(h, msg, wParam, lParam);
     switch (msg) {
         case WM_ERASEBKGND: return 1;
@@ -1339,6 +1367,18 @@ LRESULT CALLBACK SliderProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT
             break;
         case WM_NCDESTROY: RemoveWindowSubclass(h, SliderProc, 2); break;
         default: break;
+    }
+    if (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONDBLCLK) {
+        const SliderGeometry geo = SliderGeometryOf(h);
+        const float dx = GET_X_LPARAM(lParam) - geo.x;
+        const float dy = GET_Y_LPARAM(lParam) - geo.y;
+        g_sliderDragShift = {};
+        if (dx * dx + dy * dy <= geo.d * geo.d / 4)
+            g_sliderDragShift = {geo.real.x - static_cast<LONG>(std::lround(geo.x)),
+                                 geo.real.y - static_cast<LONG>(std::lround(geo.y))};
+        lParam = ShiftPoint(lParam, g_sliderDragShift);
+    } else if ((msg == WM_MOUSEMOVE || msg == WM_LBUTTONUP) && GetCapture() == h) {
+        lParam = ShiftPoint(lParam, g_sliderDragShift);
     }
     // The trackbar repaints only the parts it knows; the own look changes with position, focus and press, so the
     // whole control is repainted after anything that can change one of them.

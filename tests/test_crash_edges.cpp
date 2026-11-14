@@ -149,9 +149,12 @@ TEST(crash_crashed_run_tail_reads_across_a_rollover) {
     // The new run's start line is in the current file, the crashed run only in the rolled-over one.
     CHECK(PutLog(L".1", s1 + a + t));
     CHECK(PutLog(L"", s2));
-    CHECK(CrashedRunTail(10) == s1 + a + t);
-    CHECK(CrashedRunTail(2) == a + t);
-    CHECK(CrashedRunTail(1) == t);
+    // Trace lines never count toward the line budget and never reach the copied text.
+    CHECK(CrashedRunTail(10) == s1 + a);
+    CHECK(CrashedRunTail(2) == s1 + a);
+    CHECK(CrashedRunTail(1) == a);
+    CHECK(PutLog(L".1", s1 + a + t + t + t));
+    CHECK(CrashedRunTail(1) == a);
 
     // Without a rolled-over file the current one decides.
     DeleteFileW((LogDir() + L"\\admutify.log.1").c_str());

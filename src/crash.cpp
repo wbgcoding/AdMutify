@@ -55,7 +55,7 @@ std::wstring LogFilePath(int index) {
 }
 
 void RotateLogs() {
-    // Keeps admutify.log plus .1 and .2.
+    // Keeps admutify.log plus .1 to .3.
     DeleteFileW(LogFilePath(kLogFiles - 1).c_str());
     for (int i = kLogFiles - 2; i >= 0; --i)
         MoveFileExW(LogFilePath(i).c_str(), LogFilePath(i + 1).c_str(), MOVEFILE_REPLACE_EXISTING);
@@ -233,7 +233,7 @@ enum { kBtnCopy = 1001, kBtnOpen = 1002, kBtnClose = 1003 };
 HRESULT CALLBACK CrashDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM, LONG_PTR) {
     if (msg == TDN_BUTTON_CLICKED) {
         if (wParam == kBtnCopy) {
-            std::string tail = "AdMutify " ADMUTIFY_VERSION_STR "\r\n" + DropTraceLines(CrashedRunTail(50));
+            std::string tail = "AdMutify " ADMUTIFY_VERSION_STR "\r\n" + CrashedRunTail(50);
             CopyToClipboard(hwnd, Utf8ToWide(tail));
             return S_FALSE;
         }
@@ -369,10 +369,10 @@ std::string CrashedRunTail(int n) {
     // The crashed run's lines may sit in the rolled-over file when this run's first lines caused the rollover.
     std::string older;
     if (ReadFileUtf8(LogFilePath(1), older) && !older.empty()) {
-        std::string joined = older + cur;
-        return TailBeforeLastStart(joined, n);
+        // Trace lines are dropped first, so a trace run still leaves n plain lines.
+        return TailBeforeLastStart(DropTraceLines(older + cur), n);
     }
-    return TailBeforeLastStart(view, n);
+    return TailBeforeLastStart(DropTraceLines(view), n);
 }
 
 std::string LastLogLines(int n) {

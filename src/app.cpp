@@ -636,6 +636,7 @@ void ApplyCommit(const Settings& requested) {
     Settings s = requested;
     HWND owner = SettingsWindowHandle() ? SettingsWindowHandle() : g.hwnd;
     unsigned long err = 0;
+    bool reported = false;
     if (!g.inMemory && SettingsReadFailed()) {
         // The file was unreadable at start: try again now. When it reads, its values are the base and only what
         // the user just changed is applied on top; otherwise the change stays in memory and the user is told.
@@ -651,6 +652,7 @@ void ApplyCommit(const Settings& requested) {
             }
         } else {
             ShowSaveError(owner, err, SettingsPath());
+            reported = true;
         }
     }
     g.settings = s;
@@ -658,7 +660,8 @@ void ApplyCommit(const Settings& requested) {
     if (g.inMemory) return;
 
     // The box is modal to the settings window when it is open, so it cannot start another change meanwhile.
-    if (!SaveSettings(s, &err)) ShowSaveError(owner, err, SettingsPath());
+    // One change shows at most one error box: a failed re-read above already told the user.
+    if (!SaveSettings(s, &err) && !reported) ShowSaveError(owner, err, SettingsPath());
 
     if (s.enabled != old.enabled) Log("enabled=%d", s.enabled ? 1 : 0);
     if (old.hideTray && !s.hideTray && g.trayReady && !g.tray.Visible()) {

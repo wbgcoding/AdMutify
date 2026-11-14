@@ -214,7 +214,7 @@ struct MediaSession::Impl {
         const HANDLE wakeLocal = wake;
         try {
             manager = wmc::GlobalSystemMediaTransportControlsSessionManager::RequestAsync().get();
-            sessionsToken = manager.SessionsChanged([wakeLocal](auto&&, auto&&) { SetEvent(wakeLocal); });
+            if (manager) sessionsToken = manager.SessionsChanged([wakeLocal](auto&&, auto&&) { SetEvent(wakeLocal); });
         } catch (const winrt::hresult_error& e) {
             LogFailure(e.code());
             manager = nullptr;
