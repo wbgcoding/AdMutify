@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format follows Keep
 ## [Unreleased]
 
 ### Changed
+- New icon: a grey speaker with a green X. While an ad is muted the tray icon turns green, while AdMutify is off it turns grey.
 - Buttons and the on/off switch follow the Windows accent colour, with white text on dark mode instead of black on light blue.
 - Log files and crash reports are now kept for 30 days instead of 7, so older problems can still be looked into. The log may grow to 1 MB in total.
 
