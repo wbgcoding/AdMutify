@@ -141,6 +141,7 @@ constexpr TipDef kTips[] = {
 };
 
 LRESULT CALLBACK FlatButtonProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR);
+LRESULT CALLBACK SliderProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR);
 LRESULT CALLBACK ComboProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR);
 
 HWND Make(const wchar_t* cls, int id, DWORD style) {
@@ -287,6 +288,7 @@ void CreateControls() {
         SendMessageW(trk, TBM_SETRANGE, TRUE, MAKELONG(0, slider.max));
         SendMessageW(trk, TBM_SETLINESIZE, 0, 5);
         SendMessageW(trk, TBM_SETPAGESIZE, 0, 5);
+        SetWindowSubclass(trk, SliderProc, 2, 0);
     }
 
     w.tip = CreateWindowExW(WS_EX_TOPMOST, TOOLTIPS_CLASSW, nullptr, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX, CW_USEDEFAULT,
@@ -1209,6 +1211,158 @@ LRESULT CALLBACK ComboProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_
     return DefSubclassProc(h, msg, wParam, lParam);
 }
 
+// Check box and radio button in the Windows 11 look: accent fill with a mark in the accent text colour while checked,
+// outlined box while unchecked.
+void DrawCheckMark(HDC dc, const RECT& box, bool radio, bool checked, bool disabled, bool hot, bool pressed) {
+    Gdiplus::Graphics g(dc);
+    g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+    const float s = static_cast<float>((std::min)(box.right - box.left, box.bottom - box.top));
+    const float bw = static_cast<float>((std::max)(1, Scale(1)));
+    const Gdiplus::RectF r(box.left + bw / 2, box.top + bw / 2, s - bw, s - bw);
+    Gdiplus::GraphicsPath shape;
+    if (radio) shape.AddEllipse(r);
+    else RoundedPath(shape, r, s * 0.2f);
+    if (checked) {
+        const COLORREF fill = disabled ? ThemeDisabledText()
+                                       : (pressed ? ThemeAccentPressed() : (hot ? ThemeAccentHot() : ThemeAccent()));
+        const COLORREF mark = disabled ? ThemeCard() : ThemeAccentText();
+        Gdiplus::SolidBrush brush(ToColor(fill));
+        g.FillPath(&brush, &shape);
+        if (radio) {
+            const float d = s * (pressed ? 0.36f : (hot ? 0.52f : 0.44f));
+            Gdiplus::SolidBrush dot(ToColor(mark));
+            g.FillEllipse(&dot, box.left + (s - d) / 2, box.top + (s - d) / 2, d, d);
+        } else {
+            Gdiplus::Pen pen(ToColor(mark), s * 0.11f);
+            pen.SetStartCap(Gdiplus::LineCapRound);
+            pen.SetEndCap(Gdiplus::LineCapRound);
+            pen.SetLineJoin(Gdiplus::LineJoinRound);
+            const Gdiplus::PointF pts[3] = {{box.left + s * 0.27f, box.top + s * 0.52f},
+                                            {box.left + s * 0.43f, box.top + s * 0.68f},
+                                            {box.left + s * 0.74f, box.top + s * 0.35f}};
+            g.DrawLines(&pen, pts, 3);
+        }
+    } else {
+        const COLORREF fill = pressed ? ThemeControlPressed() : (hot ? ThemeControlHot() : ThemeControl());
+        Gdiplus::SolidBrush brush(ToColor(fill));
+        g.FillPath(&brush, &shape);
+        Gdiplus::Pen pen(ToColor(ThemeDisabledText()), bw);
+        g.DrawPath(&pen, &shape);
+    }
+}
+
+// Slider in the Windows 11 look: thin track, the part left of the thumb in the accent colour, round thumb with an
+// accent dot. The trackbar keeps its own input handling; only the painting is replaced (not in high contrast).
+void PaintSlider(HWND h, HDC target) {
+    RECT rc;
+    GetClientRect(h, &rc);
+    const int cx = rc.right;
+    const int cy = rc.bottom;
+    HDC dc = CreateCompatibleDC(target);
+    HBITMAP bmp = CreateCompatibleBitmap(target, cx, cy);
+    HGDIOBJ oldBmp = SelectObject(dc, bmp);
+    FillRect(dc, &rc, w.card);
+    const bool disabled = !IsWindowEnabled(h);
+    const bool pressed = GetCapture() == h;
+    const bool hot = w.hotId == GetDlgCtrlID(h);
+    const int lo = static_cast<int>(SendMessageW(h, TBM_GETRANGEMIN, 0, 0));
+    const int hi = static_cast<int>(SendMessageW(h, TBM_GETRANGEMAX, 0, 0));
+    const int pos = static_cast<int>(SendMessageW(h, TBM_GETPOS, 0, 0));
+    const float d = static_cast<float>((std::min)(Scale(20), cy - Scale(6)));
+    // Same travel as the trackbar's own thumb where it fits, so a press on the drawn thumb grabs the real one.
+    RECT channel{};
+    SendMessageW(h, TBM_GETCHANNELRECT, 0, reinterpret_cast<LPARAM>(&channel));
+    const float left = (std::max)(static_cast<float>(channel.left), d / 2 + Scale(1));
+    const float right = (std::min)(static_cast<float>(channel.right), cx - d / 2 - Scale(1));
+    const float mid = cy / 2.0f;
+    const float frac = hi > lo ? static_cast<float>(pos - lo) / (hi - lo) : 0.0f;
+    const float x = left + (right - left) * frac;
+    {
+        Gdiplus::Graphics g(dc);
+        g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+        const float t = static_cast<float>((std::max)(2, Scale(4)));
+        const COLORREF accent = disabled ? ThemeDisabledText() : ThemeAccent();
+        Gdiplus::GraphicsPath rest;
+        RoundedPath(rest, Gdiplus::RectF(left, mid - t / 2, right - left, t), t / 2);
+        Gdiplus::SolidBrush restBrush(ToColor(BlendColor(ThemeDisabledText(), ThemeCard(), 35)));
+        g.FillPath(&restBrush, &rest);
+        if (x > left) {
+            Gdiplus::GraphicsPath done;
+            RoundedPath(done, Gdiplus::RectF(left, mid - t / 2, x - left, t), t / 2);
+            Gdiplus::SolidBrush doneBrush(ToColor(accent));
+            g.FillPath(&doneBrush, &done);
+        }
+        const float bw = static_cast<float>((std::max)(1, Scale(1)));
+        Gdiplus::SolidBrush outer(ToColor(ThemeControl()));
+        g.FillEllipse(&outer, x - d / 2, mid - d / 2, d, d);
+        Gdiplus::Pen ring(ToColor(ThemeControlBorder()), bw);
+        g.DrawEllipse(&ring, x - d / 2 + bw / 2, mid - d / 2 + bw / 2, d - bw, d - bw);
+        const float inner = d * (pressed ? 0.4f : (hot ? 0.6f : 0.5f));
+        Gdiplus::SolidBrush dot(ToColor(accent));
+        g.FillEllipse(&dot, x - inner / 2, mid - inner / 2, inner, inner);
+        if (GetFocus() == h && !(SendMessageW(h, WM_QUERYUISTATE, 0, 0) & UISF_HIDEFOCUS)) {
+            const float f = d + Scale(4);
+            Gdiplus::Pen focus(ToColor(ThemeText()), static_cast<float>((std::max)(1, Scale(2))) * 0.75f);
+            g.DrawEllipse(&focus, x - f / 2, mid - f / 2, f, f);
+        }
+    }
+    BitBlt(target, 0, 0, cx, cy, dc, 0, 0, SRCCOPY);
+    SelectObject(dc, oldBmp);
+    DeleteObject(bmp);
+    DeleteDC(dc);
+}
+
+LRESULT CALLBACK SliderProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
+    if (IsHighContrast() || msg == TBM_GETPOS || msg == TBM_GETRANGEMIN || msg == TBM_GETRANGEMAX ||
+        msg == TBM_GETCHANNELRECT)
+        return DefSubclassProc(h, msg, wParam, lParam);
+    switch (msg) {
+        case WM_ERASEBKGND: return 1;
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC dc = BeginPaint(h, &ps);
+            PaintSlider(h, dc);
+            EndPaint(h, &ps);
+            return 0;
+        }
+        case WM_MOUSEMOVE:
+            if (w.hotId != GetDlgCtrlID(h)) {
+                w.hotId = GetDlgCtrlID(h);
+                TRACKMOUSEEVENT t{sizeof(t), TME_LEAVE, h, 0};
+                TrackMouseEvent(&t);
+                InvalidateRect(h, nullptr, FALSE);
+            }
+            break;
+        case WM_MOUSELEAVE:
+            if (w.hotId == GetDlgCtrlID(h)) w.hotId = 0;
+            InvalidateRect(h, nullptr, FALSE);
+            break;
+        case WM_NCDESTROY: RemoveWindowSubclass(h, SliderProc, 2); break;
+        default: break;
+    }
+    // The trackbar repaints only the parts it knows; the own look changes with position, focus and press, so the
+    // whole control is repainted after anything that can change one of them.
+    const LRESULT before = SendMessageW(h, TBM_GETPOS, 0, 0);
+    const LRESULT r = DefSubclassProc(h, msg, wParam, lParam);
+    switch (msg) {
+        case WM_LBUTTONDOWN:
+        case WM_LBUTTONUP:
+        case WM_CAPTURECHANGED:
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+        case WM_ENABLE:
+        case WM_UPDATEUISTATE:
+        case WM_SIZE:
+            InvalidateRect(h, nullptr, FALSE);
+            break;
+        default:
+            if (msg != WM_NCDESTROY && msg != WM_DESTROY && IsWindow(h) && SendMessageW(h, TBM_GETPOS, 0, 0) != before)
+                InvalidateRect(h, nullptr, FALSE);
+            break;
+    }
+    return r;
+}
+
 LRESULT OnCustomDraw(NMCUSTOMDRAW* nm) {
     if (IsHighContrast() || nm->dwDrawStage != CDDS_PREPAINT) return CDRF_DODEFAULT;
     HWND h = nm->hdr.hwndFrom;
@@ -1231,22 +1385,18 @@ LRESULT OnCustomDraw(NMCUSTOMDRAW* nm) {
         FillRect(dc, &rc, w.card);
         const bool radio = type == BS_AUTORADIOBUTTON;
         const bool checked = SendMessageW(h, BM_GETCHECK, 0, 0) == BST_CHECKED;
-        int state = 1;
-        if (disabled) state = 4;
-        else if (nm->uItemState & CDIS_SELECTED) state = 3;
-        else if (nm->uItemState & CDIS_HOT) state = 2;
-        if (checked) state += 4;
-        HTHEME theme = IsDarkTheme() ? OpenThemeData(h, L"DarkMode_Explorer::Button") : nullptr;
-        if (!theme) theme = OpenThemeData(h, L"Button");
-        const int part = radio ? BP_RADIOBUTTON : BP_CHECKBOX;
-        SIZE box{16, 16};
-        if (theme) GetThemePartSize(theme, dc, part, state, nullptr, TS_DRAW, &box);
-        RECT br{rc.left, rc.top + (rc.bottom - rc.top - box.cy) / 2, rc.left + box.cx, 0};
-        br.bottom = br.top + box.cy;
-        if (theme) {
-            DrawThemeBackground(theme, dc, part, state, &br, nullptr);
+        const bool pressed = (nm->uItemState & CDIS_SELECTED) != 0;
+        const bool hot = (nm->uItemState & CDIS_HOT) != 0;
+        // The theme only gives the box size (it follows the DPI); the box itself is drawn in the accent colour.
+        SIZE box{Scale(16), Scale(16)};
+        if (HTHEME theme = OpenThemeData(h, L"Button")) {
+            GetThemePartSize(theme, dc, radio ? BP_RADIOBUTTON : BP_CHECKBOX, radio ? RBS_UNCHECKEDNORMAL : CBS_UNCHECKEDNORMAL,
+                             nullptr, TS_DRAW, &box);
             CloseThemeData(theme);
         }
+        RECT br{rc.left, rc.top + (rc.bottom - rc.top - box.cy) / 2, rc.left + box.cx, 0};
+        br.bottom = br.top + box.cy;
+        DrawCheckMark(dc, br, radio, checked, disabled, hot, pressed);
         TEXTMETRICW tm{};
         GetTextMetricsW(dc, &tm);
         RECT tr{br.right + tm.tmHeight / 2, rc.top, rc.right, rc.bottom};
