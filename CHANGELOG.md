@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows Keep a Changelog; versions follow semantic versioning.
 
-## [Unreleased]
+## [1.2.1] - 2026-11-14
 
 ### Changed
 - New icon: a grey speaker with a green X. While an ad is muted the tray icon turns green, while AdMutify is off it turns grey.
@@ -14,6 +14,9 @@ All notable changes to this project are documented here. The format follows Keep
 - Ads shown with a bare dash as title are muted as soon as the title appears, without waiting for the Windows media display.
 - A Spotify that was closed while the PC slept is noticed after waking up, so "Pause Spotify" no longer fails on every video.
 - When Spotify shows the next song for a split second in the middle of an ad break, the ad stays muted instead of a short burst of sound.
+- When the settings file cannot be read or written, one change shows one error message instead of two.
+- "Copy details" in the crash dialog keeps the last 50 log lines even after a troubleshooting trace, instead of losing them to trace lines.
+- The whole round slider knob can be grabbed and dragged, not only its middle.
 
 ## [1.2.0] - 2026-10-29
 
