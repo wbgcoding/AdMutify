@@ -34,3 +34,5 @@ logs/
 *.dmp
 crashed.flag
 .shipclean-needles
+
+.idea/
