@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows Keep
 
 ### Changed
 - New icon: a white speaker on a violet tile. While an ad is muted the tray icon turns coral with a slashed speaker, while AdMutify is off it turns grey.
+- The reset button asks "Reset settings?" while it waits for the second click.
 
 ### Fixed
 - An ad titled only "Spotify" or "Spotify Free" that starts after a long pause is muted reliably, instead of sometimes being missed when its first moment was still silent.

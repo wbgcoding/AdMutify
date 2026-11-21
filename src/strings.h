@@ -52,7 +52,7 @@ enum class StrId {
     LanguageLabel,
     LangSystem,
     ResetButton,
-    ResetConfirmClick,
+    ResetConfirm,
     Close,
     ErrSettingsNewer,
     ErrSettingsSave,

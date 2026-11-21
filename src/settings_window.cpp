@@ -418,7 +418,7 @@ void ApplyTexts() {
     SetText(IDC_MEDIA_PERCENT_LABEL, Str(StrId::MediaPercentLabel));
     SetText(IDC_LANGUAGE_LABEL, Str(StrId::LanguageLabel));
     for (const ComboDef& def : kCombos) FillCombo(def);
-    SetText(IDC_RESET, Str(w.resetArmed ? StrId::ResetConfirmClick : StrId::ResetButton));
+    SetText(IDC_RESET, Str(w.resetArmed ? StrId::ResetConfirm : StrId::ResetButton));
     SetText(IDC_CLOSE, Str(StrId::Close));
     wchar_t version[128];
     swprintf_s(version, L"AdMutify %hs \u00B7 " ADMUTIFY_COPYRIGHT_W, ADMUTIFY_VERSION_STR);
@@ -497,7 +497,7 @@ void Layout(Placement placement, int density = 0) {
     int resetTextW = 0;
     {
         HGDIOBJ oldFont2 = SelectObject(dc, w.font);
-        for (StrId id : {StrId::ResetButton, StrId::ResetConfirmClick}) {
+        for (StrId id : {StrId::ResetButton, StrId::ResetConfirm}) {
             const wchar_t* text = Str(id);
             SIZE size{};
             GetTextExtentPoint32W(dc, text, static_cast<int>(wcslen(text)), &size);
@@ -812,7 +812,7 @@ void DisarmReset() {
 void OnReset() {
     if (!w.resetArmed) {
         w.resetArmed = true;
-        SetText(IDC_RESET, Str(StrId::ResetConfirmClick));
+        SetText(IDC_RESET, Str(StrId::ResetConfirm));
         InvalidateRect(Ctl(IDC_RESET), nullptr, FALSE);
         SetTimer(w.hwnd, kResetTimer, kResetArmMs, nullptr);
         return;

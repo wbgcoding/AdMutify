@@ -57,7 +57,7 @@ AdMutify does not modify Spotify in any way: no patching, no code injection, no 
 | Language | System (follows Windows), or one of English, Deutsch, Español, Português (Brasil), Italiano, Nederlands, Polski, Türkçe, 日本語 and 简体中文. The installer speaks the same languages. |
 | Start with Windows | Adds AdMutify to your Windows startup apps. |
 | No tray icon when starting with Windows | AdMutify runs invisibly after the Windows start. Open it again to show the icon. Starting it yourself always shows the icon. |
-| Reset settings | Restores all defaults and turns off start with Windows. The first click turns the button red and asks "Click again to reset"; a second click within 4 seconds resets. Waiting, Esc or leaving the button cancels. |
+| Reset settings | Restores all defaults and turns off start with Windows. The first click turns the button red and asks "Reset settings?"; a second click within 4 seconds resets. Waiting, Esc or leaving the button cancels. |
 
 Settings are stored in `%APPDATA%\AdMutify` (portable: next to the exe), logs in `%LOCALAPPDATA%\AdMutify\logs` (portable: in `logs` next to the exe). Uninstalling asks whether these should be deleted too.
 

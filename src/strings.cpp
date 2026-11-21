@@ -55,7 +55,7 @@ constexpr const wchar_t* kEn[] = {
     L"Language",                                                                        // LanguageLabel
     L"System",                                                                          // LangSystem
     L"Reset settings",                                                                  // ResetButton
-    L"Click again to reset",                                                            // ResetConfirmClick
+    L"Reset settings?",                                                            // ResetConfirm
     L"Close",                                                                           // Close
     L"Your settings file comes from a newer AdMutify version. Defaults are used and the file is left unchanged.",  // ErrSettingsNewer
     L"Could not save the settings. Check that the folder is writable.",                 // ErrSettingsSave
@@ -116,7 +116,7 @@ constexpr const wchar_t* kDe[] = {
     L"Sprache",                                                                         // LanguageLabel
     L"System",                                                                          // LangSystem
     L"Einstellungen zurücksetzen",                                                 // ResetButton
-    L"Zum Zurücksetzen erneut klicken",                                            // ResetConfirmClick
+    L"Einstellungen zurücksetzen?",                                            // ResetConfirm
     L"Schließen",                                                                  // Close
     L"Die Einstellungsdatei stammt aus einer neueren AdMutify-Version. Es gelten die Standardwerte, die Datei bleibt unverändert.",  // ErrSettingsNewer
     L"Die Einstellungen konnten nicht gespeichert werden. Prüfe, ob der Ordner beschreibbar ist.",  // ErrSettingsSave
@@ -183,7 +183,7 @@ constexpr const wchar_t* kEs[] = {  // Spanish
     L"Idioma",  // LanguageLabel
     L"Sistema",  // LangSystem
     L"Restablecer configuración",  // ResetButton
-    L"Haz clic de nuevo para restablecer",  // ResetConfirmClick
+    L"¿Restablecer configuración?",  // ResetConfirm
     L"Cerrar",  // Close
     L"El archivo de configuración procede de una versión más reciente de AdMutify. Se usan los valores predeterminados y el archivo no se modifica.",  // ErrSettingsNewer
     L"No se pudo guardar la configuración. Comprueba que se pueda escribir en la carpeta.",  // ErrSettingsSave
@@ -245,7 +245,7 @@ constexpr const wchar_t* kPt[] = {  // Brazilian Portuguese
     L"Idioma",  // LanguageLabel
     L"Sistema",  // LangSystem
     L"Redefinir configurações",  // ResetButton
-    L"Clique de novo para redefinir",  // ResetConfirmClick
+    L"Redefinir configurações?",  // ResetConfirm
     L"Fechar",  // Close
     L"O arquivo de configurações veio de uma versão mais recente do AdMutify. Os valores padrão são usados e o arquivo não é alterado.",  // ErrSettingsNewer
     L"Não foi possível salvar as configurações. Verifique se é possível gravar na pasta.",  // ErrSettingsSave
@@ -307,7 +307,7 @@ constexpr const wchar_t* kIt[] = {  // Italian
     L"Lingua",  // LanguageLabel
     L"Sistema",  // LangSystem
     L"Reimposta impostazioni",  // ResetButton
-    L"Fai clic di nuovo per ripristinare",  // ResetConfirmClick
+    L"Reimpostare le impostazioni?",  // ResetConfirm
     L"Chiudi",  // Close
     L"Il file delle impostazioni proviene da una versione più recente di AdMutify. Vengono usati i valori predefiniti e il file non viene modificato.",  // ErrSettingsNewer
     L"Non è stato possibile salvare le impostazioni. Verifica che sia possibile scrivere nella cartella.",  // ErrSettingsSave
@@ -369,7 +369,7 @@ constexpr const wchar_t* kNl[] = {  // Dutch
     L"Taal",  // LanguageLabel
     L"Systeem",  // LangSystem
     L"Instellingen herstellen",  // ResetButton
-    L"Klik nogmaals om terug te zetten",  // ResetConfirmClick
+    L"Instellingen herstellen?",  // ResetConfirm
     L"Sluiten",  // Close
     L"Het instellingenbestand is afkomstig van een nieuwere versie van AdMutify. De standaardwaarden worden gebruikt en het bestand blijft ongewijzigd.",  // ErrSettingsNewer
     L"De instellingen kunnen niet worden opgeslagen. Controleer of naar de map kan worden geschreven.",  // ErrSettingsSave
@@ -431,7 +431,7 @@ constexpr const wchar_t* kPl[] = {  // Polish
     L"Język",  // LanguageLabel
     L"Systemowy",  // LangSystem
     L"Resetuj ustawienia",  // ResetButton
-    L"Kliknij ponownie, aby zresetować",  // ResetConfirmClick
+    L"Zresetować ustawienia?",  // ResetConfirm
     L"Zamknij",  // Close
     L"Plik ustawień pochodzi z nowszej wersji AdMutify. Używane są wartości domyślne, a plik pozostaje niezmieniony.",  // ErrSettingsNewer
     L"Nie można zapisać ustawień. Sprawdź, czy można zapisywać w tym folderze.",  // ErrSettingsSave
@@ -493,7 +493,7 @@ constexpr const wchar_t* kTr[] = {  // Turkish
     L"Dil",  // LanguageLabel
     L"Sistem",  // LangSystem
     L"Ayarları sıfırla",  // ResetButton
-    L"Sıfırlamak için tekrar tıkla",  // ResetConfirmClick
+    L"Ayarlar sıfırlansın mı?",  // ResetConfirm
     L"Kapat",  // Close
     L"Ayar dosyanız daha yeni bir AdMutify sürümünden geliyor. Varsayılan değerler kullanılır ve dosya değiştirilmez.",  // ErrSettingsNewer
     L"Ayarlar kaydedilemedi. Klasöre yazılabildiğini kontrol edin.",  // ErrSettingsSave
@@ -555,7 +555,7 @@ constexpr const wchar_t* kJa[] = {  // Japanese
     L"言語",  // LanguageLabel
     L"システム",  // LangSystem
     L"設定をリセット",  // ResetButton
-    L"もう一度クリックしてリセット",  // ResetConfirmClick
+    L"設定をリセットしますか？",  // ResetConfirm
     L"閉じる",  // Close
     L"設定ファイルは新しいバージョンの AdMutify で作成されています。既定値を使用し、ファイルは変更しません。",  // ErrSettingsNewer
     L"設定を保存できませんでした。フォルダーに書き込めることを確認してください。",  // ErrSettingsSave
@@ -617,7 +617,7 @@ constexpr const wchar_t* kZh[] = {  // Simplified Chinese
     L"语言",  // LanguageLabel
     L"系统",  // LangSystem
     L"重置设置",  // ResetButton
-    L"再次单击以重置",  // ResetConfirmClick
+    L"重置设置？",  // ResetConfirm
     L"关闭",  // Close
     L"你的设置文件来自较新版本的 AdMutify。将使用默认值，并且不会更改该文件。",  // ErrSettingsNewer
     L"无法保存设置。请检查该文件夹是否可写。",  // ErrSettingsSave
