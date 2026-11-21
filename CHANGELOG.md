@@ -5,6 +5,9 @@ All notable changes to this project are documented here. The format follows Keep
 ## [1.2.2] - unreleased
 
 ### Fixed
+- An ad titled only "Spotify" or "Spotify Free" that starts after a long pause is muted reliably, instead of sometimes being missed when its first moment was still silent.
+- When Spotify was closed abruptly and then started straight into the system tray, ads are detected again without a restart of AdMutify.
+- When the settings file was locked at start, a change made during that time is no longer undone by the next change once the file can be read again.
 - After AdMutify was closed before it could show a crash report, the report no longer holds Spotify muted at the next start: the volume is restored first, and the report says whether that worked.
 - A portable copy installed silently while AdMutify was running starts with its own settings next to the exe instead of the installed copy's settings.
 

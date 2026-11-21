@@ -77,6 +77,7 @@ struct App {
     // The running ad break was counted; turning AdMutify off and on during it must not count it again.
     bool adCounted = false;
     int probes = 0;
+    bool lastAudioActive = false;
     // Records of sessions whose restore failed are retried on a slow timer until they resolve or give up.
     bool restoreRetryRunning = false;
     int restoreRetries = 0;
@@ -260,6 +261,7 @@ void ReevaluateOnce() {
     const std::wstring& windowTitle = g.watch.Title();
     if (windowTitle != g.lastSeenTitle) {
         g.lastSeenTitle = windowTitle;
+        g.probes = 0;
         g.titleChangedAt = now;
     }
     const TitleKind titleKind = ClassifyTitle(windowTitle);
@@ -296,6 +298,9 @@ void ReevaluateOnce() {
     // A paused player keeps its session active without sound, so a plain title only means an ad while Spotify is
     // audible. Once in Ad the meter is not asked (our own mute silences it) unless we hold a pause.
     bool audioActive = kind == TitleKind::IdleOrAd && g.audio.IsSpotifyAudioActive();
+    // A session that just became active may still be silent for the first check; give the probes a fresh budget.
+    if (audioActive && !g.lastAudioActive) g.probes = 0;
+    g.lastAudioActive = audioActive;
     bool audible = true;
     // A session we changed reads silent (the meter sits behind the session mute and volume), so with anything
     // applied the meter is not used: an ad behind a video reaction still counts as sound.
@@ -504,6 +509,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_APP_AUDIO_STATE: Reevaluate(); return 0;
         case WM_APP_MEDIA_SESSION:
             if (g.closing) return 0;
+            // Play, pause or a new track: a plain-titled ad may start now, so the audibility probes get a fresh
+            // budget (a long pause on "Spotify Free" used them all up, and the first check can come before sound).
+            g.probes = 0;
             if (TraceEnabled()) {
                 const MediaTrack t = g.mediaSession.Snapshot();
                 if (!(t == g.lastTraceTrack)) {
@@ -642,7 +650,9 @@ void ApplyCommit(const Settings& requested) {
         // the user just changed is applied on top; otherwise the change stays in memory and the user is told.
         Settings fromFile;
         if (RetrySettingsRead(fromFile, &err)) {
-            s = MergeSettingsChange(fromFile, old, requested);
+            // The base is the defaults the app started on, not the current values: changes made while the file
+            // was still locked live only in memory and must survive this merge too.
+            s = MergeSettingsChange(fromFile, Settings{}, requested);
             if (SettingsNewerVersion()) {
                 // The file turned out to be from a newer version: it is left alone, so tell the user once.
                 Log("settings_read_newer");

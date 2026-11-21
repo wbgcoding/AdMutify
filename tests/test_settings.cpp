@@ -66,6 +66,25 @@ TEST(settings_trace_key) {
     CHECK(!MergeSettingsChange(fromFile, shown, Settings{}).trace);
 }
 
+TEST(settings_merge_keeps_changes_made_while_locked) {
+    // Start on defaults (file locked), change the level while still locked (memory only), then turn the app off
+    // once the file reads again. Merged against the start defaults, both changes survive; merged against the
+    // in-memory values, the level change would fall back to the file's 50.
+    Settings fromFile;
+    fromFile.lowerPercent = 50;
+    fromFile.darkMenus = false;
+    Settings requested;
+    requested.lowerPercent = 30;
+    requested.enabled = false;
+    Settings out = MergeSettingsChange(fromFile, Settings{}, requested);
+    CHECK(out.lowerPercent == 30);
+    CHECK(!out.enabled);
+    CHECK(!out.darkMenus);
+    Settings inMemory;
+    inMemory.lowerPercent = 30;
+    CHECK(MergeSettingsChange(fromFile, inMemory, requested).lowerPercent == 50);
+}
+
 TEST(settings_language_codes) {
     struct Case {
         Language language;
