@@ -1923,6 +1923,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             // One visible step: no frame shows the new size with the old fonts. The suggested size already is the
             // final one (WM_GETDPISCALEDSIZE), so Layout keeps it.
             SendMessageW(hwnd, WM_SETREDRAW, FALSE, 0);
+            // A tooltip that is showing keeps the size of the old scaling; it reopens on the next hover.
+            if (w.tip) SendMessageW(w.tip, TTM_POP, 0, 0);
             SetWindowPos(hwnd, nullptr, r->left, r->top, r->right - r->left, r->bottom - r->top, SWP_NOZORDER | SWP_NOACTIVATE);
             ApplyWindowIcons();
             MakeFonts();
