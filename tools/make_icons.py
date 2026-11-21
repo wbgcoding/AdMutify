@@ -60,7 +60,7 @@ def dot(d, x, y, w):
 def glyph_mask(S, small, mark, tray):
     """mark: 'wave' or 'x'. All tray states share one speaker spot, so it never jumps between them."""
     k = S / GRID
-    dx = -50 if tray else -20
+    dx = -50 if tray else -5
     mask = Image.new('L', (S, S), 0)
     d = ImageDraw.Draw(mask)
     d.rectangle([(225 + dx) * k, 400 * k, (400 + dx) * k, 624 * k], fill=255)
@@ -71,7 +71,7 @@ def glyph_mask(S, small, mark, tray):
     if mark == 'wave':
         w = (80 if small else 64) * k
         # The tray wave sits further out: the larger tray glyph would otherwise crowd it against the speaker.
-        r = (265 if tray else 180 if small else 190) * k
+        r = (265 if tray else 205 if small else 210) * k
         a0 = 40 if tray else 48
         cx, cy = (600 + dx) * k, 512 * k
         d.arc([cx - r, cy - r, cx + r, cy + r], -a0, a0, fill=255, width=round(w))

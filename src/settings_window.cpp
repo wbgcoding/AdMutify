@@ -33,6 +33,8 @@ using std::min;
 namespace {
 
 constexpr wchar_t kClassName[] = L"AdMutify.Settings";
+// IDI_APP in app.rc.
+constexpr int kAppIconId = 1;
 constexpr UINT_PTR kResetTimer = 1;
 constexpr UINT kResetArmMs = 4000;
 // Folders the music picker looks through for a music file before it accepts the choice unchecked.
@@ -64,8 +66,20 @@ struct Win {
     ULONGLONG ignoreClickUntil = 0;
     int ignoreClickId = 0;
     RECT cards[4]{};
+    // Rolling counter: the number shown, the one it rolls away from and when the roll started (0 = still).
+    std::wstring countText;
+    std::wstring countFrom;
+    ULONGLONG countRollStart = 0;
+#ifdef ADMUTIFY_REVIEW
+    // Counter demo: a count of its own that the +1 button raises, the real counter stays untouched.
+    bool demo = false;
+    uint64_t demoCount = 0;
+#endif
     bool loading = false;
     bool classRegistered = false;
+    // Title bar and Alt+Tab icons, loaded for the window's DPI.
+    HICON iconSmall = nullptr;
+    HICON iconBig = nullptr;
 };
 
 Win w;
@@ -151,13 +165,20 @@ constexpr TipDef kTips[] = {
 LRESULT CALLBACK FlatButtonProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR);
 LRESULT CALLBACK SliderProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR);
 LRESULT CALLBACK ComboProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR);
+LRESULT CALLBACK CounterProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR);
 
 HWND Make(const wchar_t* cls, int id, DWORD style) {
     return CreateWindowExW(0, cls, L"", WS_CHILD | WS_VISIBLE | style, 0, 0, 10, 10, w.hwnd,
                            reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(nullptr), nullptr);
 }
 
+// Set while Layout only measures the window for another DPI (WM_GETDPISCALEDSIZE): nothing is moved or shown.
+bool g_measuring = false;
+// Frame of a choice box around its field (box height minus field height) at the DPI being measured.
+int g_measureComboFrame = 0;
+
 void Place(int id, int x, int y, int cx, int cy) {
+    if (g_measuring) return;
     SetWindowPos(Ctl(id), nullptr, x, y, cx, cy, SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
@@ -201,6 +222,28 @@ void StrokeRounded(HDC dc, const RECT& rc, float radius, COLORREF color, float w
 
 void SetComboHeights();
 
+// Loads the app icon in the sizes for the window's DPI. The icon file has its own drawing for every title bar
+// size (16, 20, 24 px ...); the class icon alone would be the 32 px one shrunk, which blurs the glyph.
+void ApplyWindowIcons() {
+    HINSTANCE inst = GetModuleHandleW(nullptr);
+    HICON smallIcon = nullptr;
+    HICON bigIcon = nullptr;
+    LoadIconWithScaleDown(inst, MAKEINTRESOURCEW(kAppIconId), GetSystemMetricsForDpi(SM_CXSMICON, w.dpi),
+                          GetSystemMetricsForDpi(SM_CYSMICON, w.dpi), &smallIcon);
+    LoadIconWithScaleDown(inst, MAKEINTRESOURCEW(kAppIconId), GetSystemMetricsForDpi(SM_CXICON, w.dpi),
+                          GetSystemMetricsForDpi(SM_CYICON, w.dpi), &bigIcon);
+    if (smallIcon) SendMessageW(w.hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(smallIcon));
+    if (bigIcon) SendMessageW(w.hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(bigIcon));
+    if (smallIcon) {
+        if (w.iconSmall) DestroyIcon(w.iconSmall);
+        w.iconSmall = smallIcon;
+    }
+    if (bigIcon) {
+        if (w.iconBig) DestroyIcon(w.iconBig);
+        w.iconBig = bigIcon;
+    }
+}
+
 void MakeFonts() {
     if (w.font) DeleteObject(w.font);
     if (w.headFont) DeleteObject(w.headFont);
@@ -223,6 +266,7 @@ void MakeFonts() {
     SendMessageW(Ctl(IDC_ADS_CAPTION), WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
     SendMessageW(Ctl(IDC_STATUS), WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
     SendMessageW(Ctl(IDC_ENABLED), WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
+    if (HWND plus = Ctl(IDC_DEMO_PLUS)) SendMessageW(plus, WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
     if (w.tip) {
         SendMessageW(w.tip, WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
         SendMessageW(w.tip, TTM_SETMAXTIPWIDTH, 0, Scale(320));
@@ -259,7 +303,13 @@ void CreateControls() {
     // Header: the on/off button, right of it the status, the counter and its caption.
     SetWindowSubclass(Make(L"BUTTON", IDC_ENABLED, BS_OWNERDRAW | WS_TABSTOP), FlatButtonProc, 1, 0);
     Make(L"STATIC", IDC_STATUS, SS_CENTER | SS_CENTERIMAGE | SS_ENDELLIPSIS | SS_NOPREFIX);
-    Make(L"STATIC", IDC_ADS_COUNT, SS_CENTER | SS_NOPREFIX);
+    SetWindowSubclass(Make(L"STATIC", IDC_ADS_COUNT, SS_CENTER | SS_NOPREFIX), CounterProc, 1, 0);
+#ifdef ADMUTIFY_REVIEW
+    if (w.demo) {
+        SetWindowSubclass(Make(L"BUTTON", IDC_DEMO_PLUS, BS_OWNERDRAW | WS_TABSTOP), FlatButtonProc, 1, 0);
+        SetText(IDC_DEMO_PLUS, L"+1");
+    }
+#endif
     Make(L"STATIC", IDC_ADS_CAPTION, SS_CENTER | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"STATIC", IDC_GROUP_ADS, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"BUTTON", IDC_MODE_MUTE, BS_AUTORADIOBUTTON | BS_MULTILINE | WS_GROUP | WS_TABSTOP);
@@ -355,26 +405,134 @@ void UpdateMusicPath() {
     InvalidateRect(Ctl(IDC_MUSIC_PATH), nullptr, TRUE);
 }
 
-void UpdateCounterText() {
-    // The number alone, with the thousands separator of the user's locale.
-    wchar_t digits[32];
-    swprintf_s(digits, L"%llu", static_cast<unsigned long long>(StatsAdsMuted()));
-    wchar_t buf[96];
-    NUMBERFMTW fmt{};
-    fmt.NumDigits = 0;
-    fmt.LeadingZero = 1;
-    fmt.Grouping = 3;
-    wchar_t decimal[8] = L".";
-    wchar_t thousand[8] = L",";
-    GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SDECIMAL, decimal, static_cast<int>(std::size(decimal)));
-    GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_STHOUSAND, thousand, static_cast<int>(std::size(thousand)));
-    fmt.lpDecimalSep = decimal;
-    fmt.lpThousandSep = thousand;
-    fmt.NegativeOrder = 1;
-    if (GetNumberFormatEx(LOCALE_NAME_USER_DEFAULT, 0, digits, &fmt, buf, static_cast<int>(std::size(buf))) == 0)
-        wcscpy_s(buf, digits);
-    SetText(IDC_ADS_COUNT, buf);
-    InvalidateRect(Ctl(IDC_ADS_COUNT), nullptr, TRUE);
+uint64_t ShownCount() {
+#ifdef ADMUTIFY_REVIEW
+    if (w.demo) return w.demoCount;
+#endif
+    return StatsAdsMuted();
+}
+
+constexpr UINT_PTR kRollTimer = 1;
+constexpr UINT kRollFrameMs = 15;
+// Each changed digit rolls for kRollMs; when several change, the next one to the left starts kRollStaggerMs later.
+constexpr ULONGLONG kRollMs = 420;
+constexpr ULONGLONG kRollStaggerMs = 70;
+
+// Windows' "Animation effects" switch; off means every change shows at once.
+bool AnimationsOn() {
+    BOOL on = TRUE;
+    return !SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &on, 0) || on;
+}
+
+// The number with the thousands separator of the window's language. roll: a new count rolls in like an odometer
+// (the old digit moves up and out, the new one comes up from below); otherwise it shows at once.
+void UpdateCounterText(bool roll = false) {
+    HWND ctl = Ctl(IDC_ADS_COUNT);
+    const std::wstring text = FormatCount(ShownCount());
+    if (text == w.countText && w.countRollStart == 0) return;
+    if (roll && !w.countText.empty() && text != w.countText && IsWindowVisible(w.hwnd) && AnimationsOn()) {
+        w.countFrom = w.countText;
+        w.countRollStart = GetTickCount64();
+        SetTimer(ctl, kRollTimer, kRollFrameMs, nullptr);
+    } else {
+        w.countFrom.clear();
+        w.countRollStart = 0;
+        KillTimer(ctl, kRollTimer);
+    }
+    w.countText = text;
+    // The window text stays the plain number for UI Automation and screen readers.
+    SetText(IDC_ADS_COUNT, text.c_str());
+    InvalidateRect(ctl, nullptr, FALSE);
+}
+
+// Draws the counter centred like the static would, rolling the digits that differ from countFrom. Both numbers are
+// aligned at their right end, so unchanged digits stay in place; the digits of Segoe UI share one width.
+void PaintCounter(HWND h, HDC target) {
+    RECT rc;
+    GetClientRect(h, &rc);
+    const int cx = rc.right;
+    const int cy = rc.bottom;
+    HDC dc = CreateCompatibleDC(target);
+    HBITMAP bmp = CreateCompatibleBitmap(target, std::max(cx, 1), std::max(cy, 1));
+    HGDIOBJ oldBmp = SelectObject(dc, bmp);
+    FillRect(dc, &rc, w.bg);
+    HGDIOBJ oldFont = SelectObject(dc, w.bigFont);
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, IsHighContrast() ? ThemeText() : ThemeAccentOnBackground());
+    auto widths = [&](const std::wstring& s) {
+        std::vector<int> x(s.size() + 1, 0);
+        for (size_t i = 0; i < s.size(); ++i) {
+            SIZE size{};
+            GetTextExtentPoint32W(dc, &s[i], 1, &size);
+            x[i + 1] = x[i] + size.cx;
+        }
+        return x;
+    };
+    const std::wstring& to = w.countText;
+    const std::vector<int> toX = widths(to);
+    const int right = (cx + toX.back()) / 2;
+    if (w.countRollStart == 0) {
+        TextOutW(dc, right - toX.back(), 0, to.c_str(), static_cast<int>(to.size()));
+    } else {
+        const std::wstring& from = w.countFrom;
+        const std::vector<int> fromX = widths(from);
+        const ULONGLONG elapsed = GetTickCount64() - w.countRollStart;
+        const size_t positions = std::max(to.size(), from.size());
+        int order = 0;
+        bool running = false;
+        for (size_t k = 0; k < positions; ++k) {
+            // k counts from the right end.
+            const bool hasTo = k < to.size();
+            const bool hasFrom = k < from.size();
+            const size_t ti = to.size() - 1 - k;
+            const size_t fi = from.size() - 1 - k;
+            const int toLeft = hasTo ? right - toX.back() + toX[ti] : 0;
+            const int fromLeft = hasFrom ? right - fromX.back() + fromX[fi] : 0;
+            if (hasTo && hasFrom && to[ti] == from[fi]) {
+                TextOutW(dc, toLeft, 0, &to[ti], 1);
+                continue;
+            }
+            const ULONGLONG delay = kRollStaggerMs * order++;
+            double p = elapsed <= delay ? 0.0 : static_cast<double>(elapsed - delay) / kRollMs;
+            if (p < 1.0) running = true;
+            p = std::min(p, 1.0);
+            const double eased = 1.0 - (1.0 - p) * (1.0 - p) * (1.0 - p);
+            const int shift = static_cast<int>(eased * cy + 0.5);
+            if (hasFrom) TextOutW(dc, fromLeft, -shift, &from[fi], 1);
+            if (hasTo) TextOutW(dc, toLeft, cy - shift, &to[ti], 1);
+        }
+        if (!running) {
+            w.countRollStart = 0;
+            w.countFrom.clear();
+            KillTimer(h, kRollTimer);
+        }
+    }
+    SelectObject(dc, oldFont);
+    BitBlt(target, 0, 0, cx, cy, dc, 0, 0, SRCCOPY);
+    SelectObject(dc, oldBmp);
+    DeleteObject(bmp);
+    DeleteDC(dc);
+}
+
+LRESULT CALLBACK CounterProc(HWND h, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
+    switch (msg) {
+        case WM_ERASEBKGND: return 1;
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC dc = BeginPaint(h, &ps);
+            PaintCounter(h, dc);
+            EndPaint(h, &ps);
+            return 0;
+        }
+        case WM_TIMER:
+            if (wParam == kRollTimer) {
+                InvalidateRect(h, nullptr, FALSE);
+                return 0;
+            }
+            break;
+        case WM_NCDESTROY: RemoveWindowSubclass(h, CounterProc, 1); break;
+    }
+    return DefSubclassProc(h, msg, wParam, lParam);
 }
 
 // Sets a text and repaints only when it changed: the status is pushed on every state check.
@@ -428,7 +586,7 @@ void ApplyTexts() {
     SetText(IDC_RESET, Str(w.resetArmed ? StrId::ResetConfirm : StrId::ResetButton));
     SetText(IDC_CLOSE, Str(StrId::Close));
     wchar_t version[128];
-    swprintf_s(version, L"AdMutify %hs \u00B7 " ADMUTIFY_COPYRIGHT_W, ADMUTIFY_VERSION_STR);
+    swprintf_s(version, L"AdMutify %hs  " ADMUTIFY_COPYRIGHT_W, ADMUTIFY_VERSION_STR);
     SetText(IDC_VERSION, version);
     UpdatePercentLabels();
 }
@@ -486,12 +644,18 @@ enum class Placement { Center, KeepFit, Keep };
 // density 0 is the normal layout; 1 and 2 tighten rows and gaps step by step while the window is taller than the
 // monitor's work area (high scaling, large text, small screens).
 constexpr int kMaxDensity = 2;
-void Layout(Placement placement, int density = 0) {
+// Shows or hides a row control (not while measuring).
+void ShowRow(int id, bool show) {
+    if (!g_measuring) ShowWindow(Ctl(id), show ? SW_SHOWNOACTIVATE : SW_HIDE);
+}
+
+// Returns the window size it laid out (while measuring: the size it would take, nothing changes).
+SIZE Layout(Placement placement, int density = 0) {
     const bool center = placement == Placement::Center;
     // WM_SETREDRAW TRUE on a hidden window makes it visible (while still being created, before the theme is set).
-    const bool pauseRedraw = IsWindowVisible(w.hwnd) != FALSE;
+    const bool pauseRedraw = !g_measuring && IsWindowVisible(w.hwnd) != FALSE;
     if (pauseRedraw) SendMessageW(w.hwnd, WM_SETREDRAW, FALSE, 0);
-    if (g_tallCombos != (density < kMaxDensity)) {
+    if (!g_measuring && g_tallCombos != (density < kMaxDensity)) {
         g_tallCombos = density < kMaxDensity;
         SetComboHeights();
     }
@@ -542,7 +706,7 @@ void Layout(Placement placement, int density = 0) {
 
     // The window is as wide as the longest label that cannot wrap needs (checkbox labels with their glyph indent, the
     // "lower" radio label with the slider's minimum and value, each label with its choice box), but never narrower
-    // than 60 and never wider than 84 average characters. Checkbox labels beyond the cap wrap onto further lines.
+    // than 48 and never wider than 84 average characters. Checkbox labels beyond the cap wrap onto further lines.
     const int mediaItemsW = WidestItem(dc, w.font, kCombos[0]);
     const int languageItemsW = WidestItem(dc, w.font, kCombos[1]);
     const int musicItemsW = WidestItem(dc, w.font, kCombos[2]);
@@ -591,9 +755,11 @@ void Layout(Placement placement, int density = 0) {
                          indent + musicVolumeLabelW + u + sliderMin + valW,
                          indent + musicLabelW + u + musicItemsW + comboExtra,
                          mediaLabelW + u + mediaItemsW + comboExtra,
-                         labelTextW + u + languageItemsW + comboExtra});
+                         labelTextW + u + languageItemsW + comboExtra,
+                         // Footer: reset and close button side by side (the frame adds the card padding back).
+                         std::max(12 * ave, resetTextW + 2 * u) + std::max(12 * ave, closeTextW + 2 * u) + u - 2 * pad});
     const int frame = 2 * pad + 2 * margin;
-    const int clientW = std::clamp(need + frame, 60 * ave, 84 * ave);
+    const int clientW = std::clamp(need + frame, 48 * ave, 84 * ave);
     const int cardW = clientW - 2 * margin;
     const int x0 = margin + pad;
     const int innerW = cardW - 2 * pad;
@@ -624,6 +790,10 @@ void Layout(Placement placement, int density = 0) {
         Place(IDC_ADS_COUNT, tx, y, tw, bigTm.tmAscent);
         y += bigTm.tmAscent + u / 6;
         Place(IDC_ADS_CAPTION, tx, y, tw, u);
+        if (HWND plus = Ctl(IDC_DEMO_PLUS); plus && !g_measuring) {
+            const int plusW = rowH * 3 / 2;
+            SetWindowPos(plus, nullptr, margin + cardW - plusW, top + (headerH - rowH) / 2, plusW, rowH, SWP_NOZORDER | SWP_NOACTIVATE);
+        }
         y = top + headerH + u / 2;
     }
 
@@ -640,8 +810,18 @@ void Layout(Placement placement, int density = 0) {
         Place(labelId, x0 + off, y, lowerW - off, rowH);
         Place(trackId, x0 + lowerW, y, innerW - lowerW - valW, rowH);
         Place(valueId, x0 + innerW - valW, y, valW, rowH);
-        for (int id : {labelId, trackId, valueId}) ShowWindow(Ctl(id), show ? SW_SHOWNOACTIVATE : SW_HIDE);
+        for (int id : {labelId, trackId, valueId}) ShowRow(id, show);
         if (show) y += rowH;
+    };
+    // Height of a choice box: its window, or while measuring the field SetComboHeights would set plus its frame.
+    auto comboHeight = [&](int comboId) {
+        if (g_measuring) {
+            const bool tall = density < kMaxDensity && (comboId == IDC_MEDIA || comboId == IDC_LANGUAGE);
+            return u + (tall ? Scale(10) : 2) + g_measureComboFrame;
+        }
+        RECT comboRc{};
+        GetWindowRect(Ctl(comboId), &comboRc);
+        return static_cast<int>(comboRc.bottom - comboRc.top);
     };
     // Label on the left, choice box on the right of the row at y; the box is centred on the row.
     auto placeCombo = [&](int off, int labelId, int comboId, int labelW, int itemsW, int rowHeight) {
@@ -649,9 +829,7 @@ void Layout(Placement placement, int density = 0) {
         const int comboW = std::max({avail * 2 / 5, std::min(avail - labelW - u, 22 * ave), std::min(itemsW + comboExtra, avail - labelW - u)});
         Place(labelId, x0 + off, y, avail - comboW - u / 2, rowHeight);
         Place(comboId, x0 + innerW - comboW, y, comboW, rowH * 5);
-        RECT comboRc{};
-        GetWindowRect(Ctl(comboId), &comboRc);
-        Place(comboId, x0 + innerW - comboW, y + (rowHeight - (comboRc.bottom - comboRc.top)) / 2, comboW, rowH * 5);
+        Place(comboId, x0 + innerW - comboW, y + (rowHeight - comboHeight(comboId)) / 2, comboW, rowH * 5);
     };
     Place(IDC_MODE_MUTE, x0, y, innerW, muteH);
     y += muteH;
@@ -661,7 +839,7 @@ void Layout(Placement placement, int density = 0) {
         Place(IDC_MODE_LOWER, x0, y, show ? lowerW : innerW, rowH);
         Place(IDC_PERCENT, x0 + lowerW, y, innerW - lowerW - valW, rowH);
         Place(IDC_PERCENT_VALUE, x0 + innerW - valW, y, valW, rowH);
-        for (int id : {IDC_PERCENT, IDC_PERCENT_VALUE}) ShowWindow(Ctl(id), show ? SW_SHOWNOACTIVATE : SW_HIDE);
+        for (int id : {IDC_PERCENT, IDC_PERCENT_VALUE}) ShowRow(id, show);
         y += rowH;
     }
     Place(IDC_MODE_MUSIC, x0, y, innerW, musicH);
@@ -670,12 +848,12 @@ void Layout(Placement placement, int density = 0) {
         // Source, path and volume exist only while the music radio is selected.
         const bool show = MusicRowsShown();
         placeCombo(indent, IDC_MUSIC_LABEL, IDC_MUSIC, musicLabelW, musicItemsW, rowH);
-        for (int id : {IDC_MUSIC_LABEL, IDC_MUSIC}) ShowWindow(Ctl(id), show ? SW_SHOWNOACTIVATE : SW_HIDE);
+        for (int id : {IDC_MUSIC_LABEL, IDC_MUSIC}) ShowRow(id, show);
         if (show) y += rowH;
         const int buttonW = std::min(pickW, (innerW - indent) / 2);
         Place(IDC_MUSIC_PATH, x0 + indent, y, innerW - indent - buttonW - u / 2, rowH);
         Place(IDC_MUSIC_PICK, x0 + innerW - buttonW, y, buttonW, rowH);
-        for (int id : {IDC_MUSIC_PATH, IDC_MUSIC_PICK}) ShowWindow(Ctl(id), show ? SW_SHOWNOACTIVATE : SW_HIDE);
+        for (int id : {IDC_MUSIC_PATH, IDC_MUSIC_PICK}) ShowRow(id, show);
         if (show) y += rowH;
         sliderRow(IDC_MUSIC_VOLUME_LABEL, IDC_MUSIC_VOLUME, IDC_MUSIC_VOLUME_VALUE, show, indent);
     }
@@ -690,9 +868,7 @@ void Layout(Placement placement, int density = 0) {
         y += vpad;
         // The taller box keeps a small even gap to the card edge, also in the compact layout.
         placeCombo(0, labelId, comboId, labelW, itemsW, rowH);
-        RECT comboRc{};
-        GetWindowRect(Ctl(comboId), &comboRc);
-        const int boxRowH = std::max(rowH, static_cast<int>(comboRc.bottom - comboRc.top) + u / 3);
+        const int boxRowH = std::max(rowH, comboHeight(comboId) + u / 3);
         placeCombo(0, labelId, comboId, labelW, itemsW, boxRowH);
         y += boxRowH;
         if (level) sliderRow(IDC_MEDIA_PERCENT_LABEL, IDC_MEDIA_PERCENT, IDC_MEDIA_PERCENT_VALUE, MediaLevelShown(), 0);
@@ -734,17 +910,19 @@ void Layout(Placement placement, int density = 0) {
     RECT cur;
     GetWindowRect(w.hwnd, &cur);
     POINT anchor{cur.left, cur.top};
-    if (center) GetCursorPos(&anchor);
+    // While measuring for a move onto another monitor, the cursor is on that monitor.
+    if (center || g_measuring) GetCursorPos(&anchor);
     MONITORINFO mi{};
     mi.cbSize = sizeof(mi);
-    GetMonitorInfoW(center ? MonitorFromPoint(anchor, MONITOR_DEFAULTTONEAREST) : MonitorFromWindow(w.hwnd, MONITOR_DEFAULTTONEAREST),
+    GetMonitorInfoW(center || g_measuring ? MonitorFromPoint(anchor, MONITOR_DEFAULTTONEAREST)
+                                          : MonitorFromWindow(w.hwnd, MONITOR_DEFAULTTONEAREST),
                     &mi);
     const int workH = static_cast<int>(mi.rcWork.bottom - mi.rcWork.top);
     if (density < kMaxDensity && winH > workH) {
         if (pauseRedraw) SendMessageW(w.hwnd, WM_SETREDRAW, TRUE, 0);
-        Layout(placement, density + 1);
-        return;
+        return Layout(placement, density + 1);
     }
+    if (g_measuring) return SIZE{winW, winH};
     int x, yy;
     if (center) {
         x = mi.rcWork.left + (mi.rcWork.right - mi.rcWork.left - winW) / 2;
@@ -768,6 +946,46 @@ void Layout(Placement placement, int density = 0) {
     SetWindowPos(w.hwnd, nullptr, x, yy, winW, winH, SWP_NOZORDER | SWP_NOACTIVATE);
     if (pauseRedraw) SendMessageW(w.hwnd, WM_SETREDRAW, TRUE, 0);
     RedrawWindow(w.hwnd, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+    return SIZE{winW, winH};
+}
+
+// The window size at another DPI, laid out exactly as Layout will do it after the change. Windows uses it to
+// place the window on the new monitor, so the switch needs a single resize and never flips back.
+SIZE MeasureForDpi(UINT dpi) {
+    const UINT oldDpi = w.dpi;
+    const HFONT oldFont = w.font, oldHead = w.headFont, oldBig = w.bigFont;
+    RECT oldCards[std::size(w.cards)];
+    std::copy(std::begin(w.cards), std::end(w.cards), oldCards);
+    // Frame of the boxes now, scaled to the new DPI.
+    RECT box{};
+    GetWindowRect(Ctl(IDC_LANGUAGE), &box);
+    const int field = static_cast<int>(SendMessageW(Ctl(IDC_LANGUAGE), CB_GETITEMHEIGHT, static_cast<WPARAM>(-1), 0));
+    g_measureComboFrame = MulDiv(std::max(0, static_cast<int>(box.bottom - box.top) - field), static_cast<int>(dpi),
+                                 static_cast<int>(oldDpi));
+    w.dpi = dpi;
+    NONCLIENTMETRICSW ncm{};
+    ncm.cbSize = sizeof(ncm);
+    SystemParametersInfoForDpi(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0, dpi);
+    LOGFONTW head = ncm.lfMessageFont;
+    head.lfWeight = FW_SEMIBOLD;
+    LOGFONTW big = head;
+    big.lfHeight *= 2;
+    big.lfWidth = 0;
+    w.font = CreateFontIndirectW(&ncm.lfMessageFont);
+    w.headFont = CreateFontIndirectW(&head);
+    w.bigFont = CreateFontIndirectW(&big);
+    g_measuring = true;
+    const SIZE size = Layout(Placement::Keep);
+    g_measuring = false;
+    DeleteObject(w.font);
+    DeleteObject(w.headFont);
+    DeleteObject(w.bigFont);
+    w.font = oldFont;
+    w.headFont = oldHead;
+    w.bigFont = oldBig;
+    w.dpi = oldDpi;
+    std::copy(std::begin(oldCards), std::end(oldCards), w.cards);
+    return size;
 }
 
 void LoadFromSettings() {
@@ -916,6 +1134,14 @@ void OnCommand(int id, int code) {
                 }
             }
             break;
+#ifdef ADMUTIFY_REVIEW
+        case IDC_DEMO_PLUS:
+            if (code == BN_CLICKED) {
+                ++w.demoCount;
+                UpdateCounterText(true);
+            }
+            break;
+#endif
         case IDC_ENABLED:
             if (code == BN_CLICKED) {
                 s.enabled = !s.enabled;
@@ -1639,11 +1865,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_CREATE: {
             w.hwnd = hwnd;
             w.dpi = GetDpiForWindow(hwnd);
+            w.countText.clear();
+            w.countFrom.clear();
+            w.countRollStart = 0;
             Gdiplus::GdiplusStartupInput input;
             Gdiplus::GdiplusStartup(&w.gdiplus, &input, nullptr);
             w.bg = CreateSolidBrush(ThemeBackground());
             w.card = CreateSolidBrush(ThemeCard());
             CreateControls();
+            ApplyWindowIcons();
             MakeFonts();
             ApplyTexts();
             LoadFromSettings();
@@ -1670,7 +1900,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 DrawToggle(di);
                 return TRUE;
             }
-            if (di->CtlID == IDC_RESET || di->CtlID == IDC_CLOSE || di->CtlID == IDC_MUSIC_PICK) {
+            if (di->CtlID == IDC_RESET || di->CtlID == IDC_CLOSE || di->CtlID == IDC_MUSIC_PICK || di->CtlID == IDC_DEMO_PLUS) {
                 DrawButton(di, di->CtlID == IDC_CLOSE);
                 return TRUE;
             }
@@ -1682,13 +1912,24 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_COMMAND: OnCommand(LOWORD(wParam), HIWORD(wParam)); return 0;
         case WM_HSCROLL: OnScroll(reinterpret_cast<HWND>(lParam), LOWORD(wParam)); return 0;
         case DM_GETDEFID: return MAKELRESULT(IDC_CLOSE, DC_HASDEFID);
+        case WM_GETDPISCALEDSIZE: {
+            auto* size = reinterpret_cast<SIZE*>(lParam);
+            *size = MeasureForDpi(static_cast<UINT>(wParam));
+            return TRUE;
+        }
         case WM_DPICHANGED: {
             w.dpi = HIWORD(wParam);
             const RECT* r = reinterpret_cast<const RECT*>(lParam);
+            // One visible step: no frame shows the new size with the old fonts. The suggested size already is the
+            // final one (WM_GETDPISCALEDSIZE), so Layout keeps it.
+            SendMessageW(hwnd, WM_SETREDRAW, FALSE, 0);
             SetWindowPos(hwnd, nullptr, r->left, r->top, r->right - r->left, r->bottom - r->top, SWP_NOZORDER | SWP_NOACTIVATE);
+            ApplyWindowIcons();
             MakeFonts();
+            // Redraw must be on again before Layout: it pauses and resumes it only for a visible window.
+            SendMessageW(hwnd, WM_SETREDRAW, TRUE, 0);
             Layout(Placement::Keep);
-            RedrawWindow(hwnd, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+            RedrawWindow(hwnd, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
             return 0;
         }
         case WM_SETTINGCHANGE:
@@ -1722,7 +1963,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             w.hotId = 0;
             return 0;
         case WM_NCDESTROY:
-            // Fonts and brushes go last, after the child windows that still use them are gone.
+            // Fonts, brushes and icons go last, after the child windows that still use them are gone.
+            if (w.iconSmall) DestroyIcon(w.iconSmall);
+            if (w.iconBig) DestroyIcon(w.iconBig);
+            w.iconSmall = nullptr;
+            w.iconBig = nullptr;
             if (w.font) DeleteObject(w.font);
             if (w.headFont) DeleteObject(w.headFont);
             if (w.bigFont) DeleteObject(w.bigFont);
@@ -1743,7 +1988,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 HWND SettingsWindowHandle() { return w.hwnd; }
 
 void SettingsWindowUpdateCounter() {
-    if (w.hwnd) UpdateCounterText();
+    if (w.hwnd) UpdateCounterText(true);
 }
 
 bool SettingsWindowCancelPicker(HWND closeAfter) {
@@ -1790,7 +2035,7 @@ void OpenSettingsWindow() {
         wc.lpfnWndProc = &WndProc;
         wc.hInstance = GetModuleHandleW(nullptr);
         wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-        wc.hIcon = LoadIconW(wc.hInstance, MAKEINTRESOURCEW(1));
+        wc.hIcon = LoadIconW(wc.hInstance, MAKEINTRESOURCEW(kAppIconId));
         wc.lpszClassName = kClassName;
         RegisterClassExW(&wc);
         w.classRegistered = true;
@@ -1819,6 +2064,13 @@ bool SettingsWindowPreTranslate(MSG* msg) {
     }
     return IsDialogMessageW(w.hwnd, msg);
 }
+
+#ifdef ADMUTIFY_REVIEW
+void SettingsWindowStartCounterDemo(uint64_t start) {
+    w.demo = true;
+    w.demoCount = start;
+}
+#endif
 
 void SettingsWindowArmReset() {
     if (w.hwnd && !w.resetArmed) OnReset();

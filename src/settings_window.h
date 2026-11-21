@@ -33,12 +33,18 @@ enum SettingsControlId {
     IDC_ADS_CAPTION = 128,
     IDC_ENABLED = 129,
     IDC_STATUS = 130,
+    // Review build only: raises the demo counter.
+    IDC_DEMO_PLUS = 131,
 };
 
 // Opens the settings window, or brings the open one to the front.
 void OpenSettingsWindow();
 // Lets the settings window handle keyboard navigation; returns true when the message was consumed.
 bool SettingsWindowPreTranslate(MSG* msg);
+#ifdef ADMUTIFY_REVIEW
+// Counter demo: the next window shows its own count from `start` and a +1 button that rolls it up.
+void SettingsWindowStartCounterDemo(unsigned long long start);
+#endif
 // Puts the reset button of the open window into its confirm state (review shots).
 void SettingsWindowArmReset();
 // The open window or null.
