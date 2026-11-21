@@ -447,6 +447,10 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var
   Code: Integer;
 begin
+  // Written before any launch below: the app reads it once at start, so a portable copy started without it would
+  // run on the installed copy's settings and autostart entry.
+  if (CurStep = ssPostInstall) and IsPortableMode then
+    SaveStringToFile(ExpandConstant('{app}\portable.txt'), 'Settings are stored next to AdMutify.exe.' + #13#10, False);
   // A silent upgrade has no finish page to launch from, so bring back an instance that was running.
   if (CurStep = ssPostInstall) and WizardSilent and WasRunning then
     ExecAsOriginalUser(ExpandConstant('{app}\AdMutify.exe'), '', '', SW_SHOWNORMAL, ewNoWait, Code);
@@ -460,8 +464,6 @@ begin
   // install, so the app's own switch and Windows agree. Whether it is on stays the user's choice.
   if (CurStep = ssPostInstall) and not IsPortableMode and not IsAdminInstallMode then
     RepointAutostart;
-  if (CurStep = ssPostInstall) and IsPortableMode then
-    SaveStringToFile(ExpandConstant('{app}\portable.txt'), 'Settings are stored next to AdMutify.exe.' + #13#10, False);
 end;
 
 function InitializeUninstall: Boolean;
