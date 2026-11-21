@@ -24,7 +24,7 @@ public:
     bool Start(ChangeCallback onChange);
     void Stop();
     // A Spotify that started hidden never shows a window event; call this on a hint (a new audio session).
-    // Does a full scan only while no main window is known.
+    // Does a full scan only while no live main window is known.
     void RescanIfUnknown();
     // Drops a main window that went away without a destroy event (its process ended).
     void RescanIfStale();

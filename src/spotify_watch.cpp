@@ -144,7 +144,9 @@ std::wstring SpotifyWatch::DescribeTargetWindows() {
 }
 
 void SpotifyWatch::RescanIfUnknown() {
-    if (hookRange_ && !main_) Rescan(true);
+    // A Spotify that ended without a destroy event leaves a dead handle behind; a restart into the tray shows no
+    // window, so this is the only chance to hook the new process.
+    if (hookRange_ && (!main_ || !IsWindow(main_))) Rescan(true);
 }
 
 void SpotifyWatch::RescanIfStale() {
