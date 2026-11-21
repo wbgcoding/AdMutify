@@ -57,9 +57,10 @@ def dot(d, x, y, w):
     d.ellipse([x - w / 2, y - w / 2, x + w / 2, y + w / 2], fill=255)
 
 
-def glyph_mask(S, small, mark, dx):
-    """mark: 'wave' or 'x'. dx shifts the speaker; all tray states share one dx so it never jumps."""
+def glyph_mask(S, small, mark, tray):
+    """mark: 'wave' or 'x'. All tray states share one speaker spot, so it never jumps between them."""
     k = S / GRID
+    dx = -50 if tray else -20
     mask = Image.new('L', (S, S), 0)
     d = ImageDraw.Draw(mask)
     d.rectangle([(225 + dx) * k, 400 * k, (400 + dx) * k, 624 * k], fill=255)
@@ -69,9 +70,12 @@ def glyph_mask(S, small, mark, dx):
     d = ImageDraw.Draw(mask)
     if mark == 'wave':
         w = (80 if small else 64) * k
-        cx, cy, r = (600 + dx) * k, 512 * k, (180 if small else 190) * k
-        d.arc([cx - r, cy - r, cx + r, cy + r], -48, 48, fill=255, width=round(w))
-        for a in (-48, 48):
+        # The tray wave sits further out: the larger tray glyph would otherwise crowd it against the speaker.
+        r = (265 if tray else 180 if small else 190) * k
+        a0 = 40 if tray else 48
+        cx, cy = (600 + dx) * k, 512 * k
+        d.arc([cx - r, cy - r, cx + r, cy + r], -a0, a0, fill=255, width=round(w))
+        for a in (-a0, a0):
             dot(d, cx + (r - w / 2) * math.cos(math.radians(a)), cy + (r - w / 2) * math.sin(math.radians(a)), w)
     else:
         # The X keeps a clear gap to the speaker, so the two never touch at 16 px.
@@ -96,9 +100,9 @@ def draw(px, state, tray=False):
         # Drawn larger and cropped to the middle, which scales the glyph about the centre.
         G = round(S * 1.12)
         off = (G - S) // 2
-        glyph = glyph_mask(G, small, mark, dx=-50).crop((off, off, off + S, off + S))
+        glyph = glyph_mask(G, small, mark, tray=True).crop((off, off, off + S, off + S))
     else:
-        glyph = glyph_mask(S, small, mark, dx=-20)
+        glyph = glyph_mask(S, small, mark, tray=False)
     if not small and state != 'off':
         blur = glyph.filter(ImageFilter.GaussianBlur(14 * k)).point(lambda v: round(v * 0.35))
         shadow = Image.new('RGBA', (S, S), (20, 10, 60, 0))
