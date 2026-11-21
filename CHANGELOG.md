@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows Keep
 
 ## [1.2.2] - unreleased
 
+### Changed
+- New icon: a white speaker on a violet tile. While an ad is muted the tray icon turns coral with a slashed speaker, while AdMutify is off it turns grey.
+
 ### Fixed
 - An ad titled only "Spotify" or "Spotify Free" that starts after a long pause is muted reliably, instead of sometimes being missed when its first moment was still silent.
 - When Spotify was closed abruptly and then started straight into the system tray, ads are detected again without a restart of AdMutify.
