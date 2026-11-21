@@ -11,58 +11,58 @@
 TEST(stats_edges_count_limits_and_roundtrip) {
     uint64_t v = 7;
     const uint64_t big = UINT64_MAX;
-    CHECK(ParseStats(FormatStats(big), v));
+    CHECK(ParseStats(FormatStats(big), v) == StatsParse::Ok);
     CHECK(v == big);
-    CHECK(ParseStats(FormatStats(0), v));
+    CHECK(ParseStats(FormatStats(0), v) == StatsParse::Ok);
     CHECK(v == 0);
-    CHECK(!ParseStats("ads_muted=18446744073709551616\r\n", v));
+    CHECK(ParseStats("ads_muted=18446744073709551616\r\n", v) == StatsParse::Unreadable);
     CHECK(v == 0);
-    CHECK(ParseStats("ads_muted=0007\r\n", v));
+    CHECK(ParseStats("ads_muted=0007\r\n", v) == StatsParse::Ok);
     CHECK(v == 7);
 }
 
 TEST(stats_edges_odd_values_are_not_usable) {
     uint64_t v = 7;
-    CHECK(!ParseStats("ads_muted=+5\r\n", v));
-    CHECK(!ParseStats("ads_muted=5 6\r\n", v));
-    CHECK(!ParseStats("ads_muted=5.0\r\n", v));
-    CHECK(!ParseStats("ads_muted=0x10\r\n", v));
-    CHECK(!ParseStats("ads_muted=\xD9\xA5\r\n", v));
+    CHECK(ParseStats("ads_muted=+5\r\n", v) == StatsParse::Unreadable);
+    CHECK(ParseStats("ads_muted=5 6\r\n", v) == StatsParse::Unreadable);
+    CHECK(ParseStats("ads_muted=5.0\r\n", v) == StatsParse::Unreadable);
+    CHECK(ParseStats("ads_muted=0x10\r\n", v) == StatsParse::Unreadable);
+    CHECK(ParseStats("ads_muted=\xD9\xA5\r\n", v) == StatsParse::Unreadable);
     CHECK(v == 0);
     // A bad value anywhere makes the whole file unusable, even after a good one.
-    CHECK(!ParseStats("ads_muted=5\r\nads_muted=x\r\n", v));
+    CHECK(ParseStats("ads_muted=5\r\nads_muted=x\r\n", v) == StatsParse::Unreadable);
     CHECK(v == 0);
 }
 
 TEST(stats_edges_duplicates_and_layout) {
     uint64_t v = 0;
     // The last good value wins; blank lines, tabs and a missing final break are fine.
-    CHECK(ParseStats("ads_muted=5\r\n\r\nads_muted=9", v));
+    CHECK(ParseStats("ads_muted=5\r\n\r\nads_muted=9", v) == StatsParse::Ok);
     CHECK(v == 9);
-    CHECK(ParseStats("\tads_muted\t=\t12\t\n", v));
+    CHECK(ParseStats("\tads_muted\t=\t12\t\n", v) == StatsParse::Ok);
     CHECK(v == 12);
-    CHECK(ParseStats("ads_muted=3\n", v));
+    CHECK(ParseStats("ads_muted=3\n", v) == StatsParse::Ok);
     CHECK(v == 3);
     // A line without a separator or a commented-out line does nothing.
-    CHECK(ParseStats("ads_muted 5\r\n# ads_muted=8\r\n", v));
+    CHECK(ParseStats("ads_muted 5\r\n# ads_muted=8\r\n", v) == StatsParse::Ok);
     CHECK(v == 0);
-    CHECK(ParseStats(std::string("ads_muted=4\0junk", 16), v) == false);
+    CHECK(ParseStats(std::string("ads_muted=4\0junk", 16), v) == StatsParse::Unreadable);
 }
 
 TEST(stats_edges_version_values) {
     uint64_t v = 0;
-    // Version 0 and unreadable versions do not block the file; only a higher version does.
-    CHECK(ParseStats("version=0\r\nads_muted=2\r\n", v));
+    // Version 0 and unreadable versions read as a plain file; only a higher version blocks it.
+    CHECK(ParseStats("version=0\r\nads_muted=2\r\n", v) == StatsParse::Ok);
     CHECK(v == 2);
-    CHECK(ParseStats("version=abc\r\nads_muted=2\r\n", v));
+    CHECK(ParseStats("version=abc\r\nads_muted=2\r\n", v) == StatsParse::Ok);
     CHECK(v == 2);
-    CHECK(ParseStats("version=1x\r\nads_muted=2\r\n", v));
-    CHECK(ParseStats("version=\r\nads_muted=2\r\n", v));
-    CHECK(!ParseStats("version=2\r\n", v));
-    CHECK(!ParseStats("version=4294967295\r\n", v));
+    CHECK(ParseStats("version=1x\r\nads_muted=2\r\n", v) == StatsParse::Ok);
+    CHECK(ParseStats("version=\r\nads_muted=2\r\n", v) == StatsParse::Ok);
+    CHECK(ParseStats("version=3\r\n", v) == StatsParse::Newer);
+    CHECK(ParseStats("version=4294967295\r\n", v) == StatsParse::Newer);
     CHECK(v == 0);
     // A version too large for the number type reads as unreadable and is ignored.
-    CHECK(ParseStats("version=99999999999\r\nads_muted=2\r\n", v));
+    CHECK(ParseStats("version=99999999999\r\nads_muted=2\r\n", v) == StatsParse::Ok);
 }
 
 TEST(stats_edges_count_rule_table) {
