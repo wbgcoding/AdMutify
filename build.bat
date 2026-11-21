@@ -3,7 +3,7 @@ title AdMutify
 rem AdMutify build: Visual Studio C++ toolchain + CMake, Release x64.
 rem Output in dist\: AdMutify.exe (portable build), AdMutify-Setup-<version>.exe, SHA256SUMS.txt.
 rem Debug symbols for crash dumps stay in build\symbols\<version>\ and are never shipped.
-rem Env: NOSTART=1 skips the final launch, NOPAUSE=1 marks an automated run (no resize, pause or wait).
+rem Env: NOPAUSE=1 marks an automated run (no resize, pause or wait). The build never starts the app.
 rem Running AdMutify instances are closed first. find.exe is called by path: a POSIX find earlier in PATH
 rem (Git Bash) would make running instances look absent.
 setlocal EnableExtensions EnableDelayedExpansion
@@ -157,10 +157,6 @@ set "BSART=dist\AdMutify.exe"
 for %%f in ("dist\*.exe" "dist\SHA256SUMS.txt") do if /i not "%%~nxf"=="AdMutify.exe" set "BSART=!BSART!,dist\%%~nxf"
 if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "!BSART!" >nul 2>&1
 echo Build %VER% done.
-
-rem Launched through Explorer so the app does not inherit this script's output handles (a caller that
-rem captures the build output would otherwise wait until AdMutify exits).
-if not defined NOSTART explorer.exe "%CD%\build\x64\Release\AdMutify.exe"
 
 :end
 if not "%EXITRC%"=="0" (
