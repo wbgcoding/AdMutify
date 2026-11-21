@@ -336,7 +336,6 @@ void ReevaluateOnce() {
             wantPercent = g.settings.mediaPercent;
         }
     }
-    const bool adWasApplied = g.applied && g.appliedReason == Reason::Ad;
     if (want == Reason::None) {
         if (g.applied) DoRestore();
     } else if (!g.applied) {
@@ -364,8 +363,9 @@ void ReevaluateOnce() {
         Log("reason %s -> %s", ReasonName(g.appliedReason), ReasonName(want));
         g.appliedReason = want;
     }
-    // One count per ad, at the moment its reaction first applies (also when it takes over from a video reaction).
-    if (g.applied && CountsAsNewAdMute(adWasApplied, want == Reason::Ad, g.adCounted)) {
+    // One count per ad break, once its reaction holds a Spotify session (also when it takes over from a video
+    // reaction, or when only a retry reached the session).
+    if (g.applied && CountsAsNewAdMute(want == Reason::Ad, g.audio.HasAppliedSessions(), g.adCounted)) {
         g.adCounted = true;
         StatsCountAdMute();
         SettingsWindowUpdateCounter();

@@ -150,8 +150,8 @@ StatsParse ParseStats(std::string_view text, uint64_t& adsMuted) {
     return StatsParse::Ok;
 }
 
-bool CountsAsNewAdMute(bool adAlreadyApplied, bool adWanted, bool adAlreadyCounted) {
-    return adWanted && !adAlreadyApplied && !adAlreadyCounted;
+bool CountsAsNewAdMute(bool adWanted, bool sessionsHeld, bool adAlreadyCounted) {
+    return adWanted && sessionsHeld && !adAlreadyCounted;
 }
 
 std::wstring StatsPath() { return DataDir() + L"\\stats.ini"; }

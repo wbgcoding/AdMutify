@@ -18,9 +18,10 @@ std::string FormatStats(uint64_t adsMuted);
 StatsParse ParseStats(std::string_view text, uint64_t& adsMuted);
 // SipHash-2-4 with a 128-bit key (public-domain reference algorithm); exposed for the test vector.
 uint64_t SipHash24(const uint8_t key[16], const uint8_t* data, size_t len);
-// True when an ad reaction was just applied for a new ad: counted once per break, never for a re-apply or a retry.
-// adAlreadyCounted: this ad was counted before (turning AdMutify off and on during it applies again).
-bool CountsAsNewAdMute(bool adAlreadyApplied, bool adWanted, bool adAlreadyCounted = false);
+// True when the running ad gets counted now: its reaction holds at least one Spotify session (an apply that
+// touched nothing counts once a retry reaches a session) and the ad was not counted yet. adAlreadyCounted stays
+// set for the whole break, so re-applies, retries and turning AdMutify off and on during it never count again.
+bool CountsAsNewAdMute(bool adWanted, bool sessionsHeld, bool adAlreadyCounted);
 
 std::wstring StatsPath();
 // Reads the file; a missing file starts at 0, an unreadable or newer one starts at 0 and is never overwritten,

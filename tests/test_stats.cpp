@@ -116,23 +116,18 @@ TEST(stats_newer_version_not_usable) {
 
 TEST(stats_count_once_per_break) {
     // Walks a series of evaluations like the app does: `want` is the reaction wanted at that moment.
-    enum Want { None, Ad, Video };
+    enum Want { None, Ad, Video, NoSession };
     auto run = [](std::initializer_list<Want> series) {
         int counted = 0;
-        bool applied = false;
-        Want appliedWant = None;
+        bool adCounted = false;
         for (Want want : series) {
-            const bool adWasApplied = applied && appliedWant == Ad;
-            if (want == None) {
-                applied = false;
-                appliedWant = None;
-                continue;
+            // NoSession: an ad whose apply touched no Spotify session yet.
+            const bool ad = want == Ad || want == NoSession;
+            if (CountsAsNewAdMute(ad, want != NoSession, adCounted)) {
+                adCounted = true;
+                ++counted;
             }
-            if (!applied || appliedWant != want) {
-                applied = true;
-                appliedWant = want;
-            }
-            if (CountsAsNewAdMute(adWasApplied, want == Ad)) ++counted;
+            if (!ad) adCounted = false;
         }
         return counted;
     };
@@ -145,6 +140,10 @@ TEST(stats_count_once_per_break) {
     CHECK(run({Video, Video, None, Video}) == 0);
     // An ad that takes over from a video reaction counts once.
     CHECK(run({Video, Ad, Ad}) == 1);
+    // An ad whose mute reached no session is not counted until a retry reaches one, then once.
+    CHECK(run({NoSession, NoSession}) == 0);
+    CHECK(run({NoSession, Ad, Ad}) == 1);
+    CHECK(run({NoSession, None, Ad}) == 1);
     CHECK(run({}) == 0);
 }
 
@@ -218,7 +217,6 @@ TEST(stats_tampered_file_restarts_and_is_replaced) {
 
 TEST(stats_toggle_during_ad_counts_once) {
     // First apply of the break counts; off and on again during the same break does not.
-    CHECK(CountsAsNewAdMute(false, true, false));
-    CHECK(!CountsAsNewAdMute(false, true, true));
-    CHECK(!CountsAsNewAdMute(true, true, false));
+    CHECK(CountsAsNewAdMute(true, true, false));
+    CHECK(!CountsAsNewAdMute(true, true, true));
 }

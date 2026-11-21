@@ -68,9 +68,7 @@ TEST(stats_edges_version_values) {
 TEST(stats_edges_count_rule_table) {
     for (int a = 0; a < 2; ++a)
         for (int w = 0; w < 2; ++w)
-            for (int c = 0; c < 2; ++c) CHECK(CountsAsNewAdMute(a != 0, w != 0, c != 0) == (w && !a && !c));
-    CHECK(CountsAsNewAdMute(false, true));
-    CHECK(!CountsAsNewAdMute(true, true));
+            for (int c = 0; c < 2; ++c) CHECK(CountsAsNewAdMute(w != 0, a != 0, c != 0) == (w && a && !c));
 }
 
 TEST(spotify_edges_process_name_forms) {
