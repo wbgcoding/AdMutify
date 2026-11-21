@@ -363,3 +363,15 @@ TEST(tray_menu_draw_fills_the_item_background) {
     DestroyTrayMenu(menu);
     FollowSystem();
 }
+
+TEST(tray_menu_status_line_carries_the_count) {
+    SetLanguage(Language::English);
+    HMENU menu = BuildTrayMenu(true, L"Ad: muted", L"Ads: 12K");
+    const std::wstring text = ItemString(menu, IDM_TRAY_STATUS);
+    // One item: the count follows the status behind the column mark, still greyed.
+    CHECK(text.find(L"Ad: muted") == 0);
+    CHECK(text.size() > 9 && text.substr(text.size() - 8) == L"Ads: 12K");
+    CHECK(GetMenuItemCount(menu) == 7);
+    CHECK((ItemState(menu, IDM_TRAY_STATUS) & MFS_GRAYED) != 0);
+    DestroyTrayMenu(menu);
+}

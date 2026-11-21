@@ -32,12 +32,12 @@ constexpr const wchar_t* kEn[] = {
     L"Lower volume",                                                                    // ModeLower
     L"Play your own music",  // ModeMusic
     L"%d %%",                                                                           // PercentValue
-    L"During videos in other apps",                                                     // MediaLabel
+    L"During videos",                                                     // MediaLabel
     L"Do nothing",                                                                      // MediaOff
     L"Lower Spotify",                                                                   // MediaLower
     L"Mute Spotify",                                                                    // MediaMute
     L"Pause Spotify",                                                                   // MediaPause
-    L"Reacts only to sound from browsers and video players that lasts a few seconds. Short sounds, games and calls are ignored.",  // MediaHint
+    L"Applies to videos in other apps. Reacts only to sound from browsers and video players that lasts a few seconds. Short sounds, games and calls are ignored.",  // MediaHint
     L"Lower to",                                                                        // MediaPercentLabel
     L"Source",  // MusicSource
     L"One file",  // MusicFile
@@ -66,6 +66,7 @@ constexpr const wchar_t* kEn[] = {
     L"Spotify's volume could not be restored. Check it in the Windows volume mixer. If this keeps happening, send the details to the developer.",  // CrashBodyNotRestored
     L"Copy details",                                                                    // CrashCopy
     L"Open log folder",                                                                 // CrashOpenLogs
+    L"Ads: %s",  // TrayAdsCount
 };
 
 constexpr const wchar_t* kDe[] = {
@@ -93,12 +94,12 @@ constexpr const wchar_t* kDe[] = {
     L"Leiser stellen",                                                                  // ModeLower
     L"Eigene Musik spielen",  // ModeMusic
     L"%d %%",                                                                           // PercentValue
-    L"Bei Videos in anderen Apps",                                                      // MediaLabel
+    L"Bei Videos",                                                      // MediaLabel
     L"Nichts tun",                                                                      // MediaOff
     L"Spotify leiser",                                                                  // MediaLower
     L"Spotify stumm",                                                                   // MediaMute
     L"Spotify pausieren",                                                               // MediaPause
-    L"Reagiert nur auf Ton von Browsern und Videoplayern, der einige Sekunden anhält. Kurze Töne, Spiele und Anrufe zählen nicht.",  // MediaHint
+    L"Gilt für Videos in anderen Apps. Reagiert nur auf Ton von Browsern und Videoplayern, der einige Sekunden anhält. Kurze Töne, Spiele und Anrufe zählen nicht.",  // MediaHint
     L"Leiser auf",                                                                      // MediaPercentLabel
     L"Quelle",  // MusicSource
     L"Eine Datei",  // MusicFile
@@ -127,6 +128,7 @@ constexpr const wchar_t* kDe[] = {
     L"Die Spotify-Lautstärke konnte nicht wiederhergestellt werden. Prüfe sie im Lautstärkemixer von Windows. Passiert das öfter, schick die Details an den Entwickler.",  // CrashBodyNotRestored
     L"Details kopieren",                                                                // CrashCopy
     L"Log-Ordner öffnen",                                                          // CrashOpenLogs
+    L"Werbungen: %s",  // TrayAdsCount
 };
 
 constexpr size_t kCount = static_cast<size_t>(StrId::Count);
@@ -160,12 +162,12 @@ constexpr const wchar_t* kEs[] = {  // Spanish
     L"Reducir volumen",  // ModeLower
     L"Reproducir tu propia música",  // ModeMusic
     L"%d %%",  // PercentValue
-    L"Durante vídeos en otras aplicaciones",  // MediaLabel
+    L"Durante vídeos",  // MediaLabel
     L"No hacer nada",  // MediaOff
     L"Bajar volumen de Spotify",  // MediaLower
     L"Silenciar Spotify",  // MediaMute
     L"Pausar Spotify",  // MediaPause
-    L"Solo reacciona al sonido de navegadores y reproductores de vídeo que dura unos segundos. Se ignoran los sonidos breves, los juegos y las llamadas.",  // MediaHint
+    L"Se aplica a vídeos en otras aplicaciones. Solo reacciona al sonido de navegadores y reproductores de vídeo que dura unos segundos. Se ignoran los sonidos breves, los juegos y las llamadas.",  // MediaHint
     L"Reducir a",  // MediaPercentLabel
     L"Fuente",  // MusicSource
     L"Un archivo",  // MusicFile
@@ -194,6 +196,7 @@ constexpr const wchar_t* kEs[] = {  // Spanish
     L"No se pudo restaurar el volumen de Spotify. Revísalo en el mezclador de volumen de Windows. Si esto sigue ocurriendo, envía los detalles al desarrollador.",  // CrashBodyNotRestored
     L"Copiar detalles",  // CrashCopy
     L"Abrir carpeta de registros",  // CrashOpenLogs
+    L"Anuncios: %s",  // TrayAdsCount
 };
 static_assert(std::size(kEs) == kCount, "Spanish table size mismatch");
 
@@ -222,12 +225,12 @@ constexpr const wchar_t* kPt[] = {  // Brazilian Portuguese
     L"Reduzir volume",  // ModeLower
     L"Tocar sua própria música",  // ModeMusic
     L"%d%%",  // PercentValue
-    L"Durante vídeos em outros aplicativos",  // MediaLabel
+    L"Durante vídeos",  // MediaLabel
     L"Não fazer nada",  // MediaOff
     L"Reduzir volume do Spotify",  // MediaLower
     L"Silenciar Spotify",  // MediaMute
     L"Pausar Spotify",  // MediaPause
-    L"Reage apenas ao som de navegadores e players de vídeo que dura alguns segundos. Sons curtos, jogos e chamadas são ignorados.",  // MediaHint
+    L"Vale para vídeos em outros aplicativos. Reage apenas ao som de navegadores e players de vídeo que dura alguns segundos. Sons curtos, jogos e chamadas são ignorados.",  // MediaHint
     L"Reduzir para",  // MediaPercentLabel
     L"Fonte",  // MusicSource
     L"Um arquivo",  // MusicFile
@@ -256,6 +259,7 @@ constexpr const wchar_t* kPt[] = {  // Brazilian Portuguese
     L"Não foi possível restaurar o volume do Spotify. Verifique-o no mixer de volume do Windows. Se isso continuar acontecendo, envie os detalhes ao desenvolvedor.",  // CrashBodyNotRestored
     L"Copiar detalhes",  // CrashCopy
     L"Abrir pasta de logs",  // CrashOpenLogs
+    L"Anúncios: %s",  // TrayAdsCount
 };
 static_assert(std::size(kPt) == kCount, "Brazilian Portuguese table size mismatch");
 
@@ -284,12 +288,12 @@ constexpr const wchar_t* kIt[] = {  // Italian
     L"Riduci volume",  // ModeLower
     L"Riproduci la tua musica",  // ModeMusic
     L"%d%%",  // PercentValue
-    L"Durante i video in altre app",  // MediaLabel
+    L"Durante i video",  // MediaLabel
     L"Nessuna azione",  // MediaOff
     L"Riduci volume di Spotify",  // MediaLower
     L"Disattiva audio di Spotify",  // MediaMute
     L"Metti Spotify in pausa",  // MediaPause
-    L"Reagisce solo all'audio di browser e lettori video che dura alcuni secondi. I suoni brevi, i giochi e le chiamate vengono ignorati.",  // MediaHint
+    L"Vale per i video in altre app. Reagisce solo all'audio di browser e lettori video che dura alcuni secondi. I suoni brevi, i giochi e le chiamate vengono ignorati.",  // MediaHint
     L"Riduci a",  // MediaPercentLabel
     L"Origine",  // MusicSource
     L"Un file",  // MusicFile
@@ -318,6 +322,7 @@ constexpr const wchar_t* kIt[] = {  // Italian
     L"Non è stato possibile ripristinare il volume di Spotify. Controllalo nel mixer volume di Windows. Se il problema persiste, invia i dettagli allo sviluppatore.",  // CrashBodyNotRestored
     L"Copia dettagli",  // CrashCopy
     L"Apri cartella dei log",  // CrashOpenLogs
+    L"Annunci: %s",  // TrayAdsCount
 };
 static_assert(std::size(kIt) == kCount, "Italian table size mismatch");
 
@@ -346,12 +351,12 @@ constexpr const wchar_t* kNl[] = {  // Dutch
     L"Volume verlagen",  // ModeLower
     L"Eigen muziek afspelen",  // ModeMusic
     L"%d%%",  // PercentValue
-    L"Tijdens video's in andere apps",  // MediaLabel
+    L"Tijdens video's",  // MediaLabel
     L"Niets doen",  // MediaOff
     L"Spotify zachter zetten",  // MediaLower
     L"Spotify dempen",  // MediaMute
     L"Spotify pauzeren",  // MediaPause
-    L"Reageert alleen op geluid van browsers en videospelers dat enkele seconden aanhoudt. Korte geluiden, games en oproepen worden genegeerd.",  // MediaHint
+    L"Geldt voor video's in andere apps. Reageert alleen op geluid van browsers en videospelers dat enkele seconden aanhoudt. Korte geluiden, games en oproepen worden genegeerd.",  // MediaHint
     L"Verlagen tot",  // MediaPercentLabel
     L"Bron",  // MusicSource
     L"Eén bestand",  // MusicFile
@@ -380,6 +385,7 @@ constexpr const wchar_t* kNl[] = {  // Dutch
     L"Het volume van Spotify kon niet worden hersteld. Controleer het in de volumemixer van Windows. Als dit blijft gebeuren, stuur je de details naar de ontwikkelaar.",  // CrashBodyNotRestored
     L"Details kopiëren",  // CrashCopy
     L"Map met logboeken openen",  // CrashOpenLogs
+    L"Advertenties: %s",  // TrayAdsCount
 };
 static_assert(std::size(kNl) == kCount, "Dutch table size mismatch");
 
@@ -408,12 +414,12 @@ constexpr const wchar_t* kPl[] = {  // Polish
     L"Zmniejsz głośność",  // ModeLower
     L"Odtwarzaj własną muzykę",  // ModeMusic
     L"%d %%",  // PercentValue
-    L"Podczas wideo w innych aplikacjach",  // MediaLabel
+    L"Podczas wideo",  // MediaLabel
     L"Nic nie rób",  // MediaOff
     L"Ścisz Spotify",  // MediaLower
     L"Wycisz Spotify",  // MediaMute
     L"Wstrzymaj Spotify",  // MediaPause
-    L"Reaguje tylko na dźwięk z przeglądarek i odtwarzaczy wideo, który trwa kilka sekund. Krótkie dźwięki, gry i połączenia są ignorowane.",  // MediaHint
+    L"Dotyczy wideo w innych aplikacjach. Reaguje tylko na dźwięk z przeglądarek i odtwarzaczy wideo, który trwa kilka sekund. Krótkie dźwięki, gry i połączenia są ignorowane.",  // MediaHint
     L"Zmniejsz do",  // MediaPercentLabel
     L"Źródło",  // MusicSource
     L"Jeden plik",  // MusicFile
@@ -442,6 +448,7 @@ constexpr const wchar_t* kPl[] = {  // Polish
     L"Nie udało się przywrócić głośności Spotify. Sprawdź ją w mikserze głośności systemu Windows. Jeśli problem się powtarza, wyślij szczegóły deweloperowi.",  // CrashBodyNotRestored
     L"Kopiuj szczegóły",  // CrashCopy
     L"Otwórz folder dzienników",  // CrashOpenLogs
+    L"Reklamy: %s",  // TrayAdsCount
 };
 static_assert(std::size(kPl) == kCount, "Polish table size mismatch");
 
@@ -470,12 +477,12 @@ constexpr const wchar_t* kTr[] = {  // Turkish
     L"Ses düzeyini düşür",  // ModeLower
     L"Kendi müziğini çal",  // ModeMusic
     L"%%%d",  // PercentValue
-    L"Diğer uygulamalardaki videolar sırasında",  // MediaLabel
+    L"Video sırasında",  // MediaLabel
     L"Hiçbir şey yapma",  // MediaOff
     L"Spotify'ın sesini azalt",  // MediaLower
     L"Spotify'ın sesini kapat",  // MediaMute
     L"Spotify'ı duraklat",  // MediaPause
-    L"Yalnızca tarayıcılardan ve video oynatıcılardan gelen ve birkaç saniye süren sese tepki verir. Kısa sesler, oyunlar ve aramalar yok sayılır.",  // MediaHint
+    L"Diğer uygulamalardaki videolar için geçerlidir. Yalnızca tarayıcılardan ve video oynatıcılardan gelen ve birkaç saniye süren sese tepki verir. Kısa sesler, oyunlar ve aramalar yok sayılır.",  // MediaHint
     L"Şuna düşür",  // MediaPercentLabel
     L"Kaynak",  // MusicSource
     L"Tek dosya",  // MusicFile
@@ -504,6 +511,7 @@ constexpr const wchar_t* kTr[] = {  // Turkish
     L"Spotify'ın ses düzeyi geri yüklenemedi. Windows ses karıştırıcısında kontrol edin. Bu durum devam ederse ayrıntıları geliştiriciye gönderin.",  // CrashBodyNotRestored
     L"Ayrıntıları kopyala",  // CrashCopy
     L"Günlük klasörünü aç",  // CrashOpenLogs
+    L"Reklamlar: %s",  // TrayAdsCount
 };
 static_assert(std::size(kTr) == kCount, "Turkish table size mismatch");
 
@@ -532,12 +540,12 @@ constexpr const wchar_t* kJa[] = {  // Japanese
     L"音量を下げる",  // ModeLower
     L"自分の音楽を再生",  // ModeMusic
     L"%d%%",  // PercentValue
-    L"他のアプリでの動画再生中",  // MediaLabel
+    L"動画の再生中",  // MediaLabel
     L"何もしない",  // MediaOff
     L"Spotify の音量を下げる",  // MediaLower
     L"Spotify をミュート",  // MediaMute
     L"Spotify を一時停止",  // MediaPause
-    L"ブラウザーや動画プレーヤーから数秒間続く音声だけに反応します。短い音、ゲーム、通話は無視されます。",  // MediaHint
+    L"他のアプリの動画が対象です。ブラウザーや動画プレーヤーから数秒間続く音声だけに反応します。短い音、ゲーム、通話は無視されます。",  // MediaHint
     L"下げる音量",  // MediaPercentLabel
     L"ソース",  // MusicSource
     L"1 つのファイル",  // MusicFile
@@ -566,6 +574,7 @@ constexpr const wchar_t* kJa[] = {  // Japanese
     L"Spotify の音量を元に戻せませんでした。Windows の音量ミキサーで確認してください。この問題が繰り返し発生する場合は、詳細を開発者に送信してください。",  // CrashBodyNotRestored
     L"詳細をコピー",  // CrashCopy
     L"ログ フォルダーを開く",  // CrashOpenLogs
+    L"広告: %s",  // TrayAdsCount
 };
 static_assert(std::size(kJa) == kCount, "Japanese table size mismatch");
 
@@ -594,12 +603,12 @@ constexpr const wchar_t* kZh[] = {  // Simplified Chinese
     L"降低音量",  // ModeLower
     L"播放自己的音乐",  // ModeMusic
     L"%d%%",  // PercentValue
-    L"在其他应用中播放视频时",  // MediaLabel
+    L"播放视频时",  // MediaLabel
     L"不执行任何操作",  // MediaOff
     L"降低 Spotify 音量",  // MediaLower
     L"将 Spotify 静音",  // MediaMute
     L"暂停 Spotify",  // MediaPause
-    L"仅响应浏览器和视频播放器中持续数秒的声音。短促声音、游戏和通话将被忽略。",  // MediaHint
+    L"适用于其他应用中的视频。仅响应浏览器和视频播放器中持续数秒的声音。短促声音、游戏和通话将被忽略。",  // MediaHint
     L"降至",  // MediaPercentLabel
     L"来源",  // MusicSource
     L"单个文件",  // MusicFile
@@ -628,6 +637,7 @@ constexpr const wchar_t* kZh[] = {  // Simplified Chinese
     L"无法恢复 Spotify 音量。请在 Windows 音量合成器中检查。如果此问题持续发生，请将详细信息发送给开发者。",  // CrashBodyNotRestored
     L"复制详细信息",  // CrashCopy
     L"打开日志文件夹",  // CrashOpenLogs
+    L"广告：%s",  // TrayAdsCount
 };
 static_assert(std::size(kZh) == kCount, "Simplified Chinese table size mismatch");
 // END GENERATED TABLES
@@ -702,6 +712,48 @@ std::wstring FormatPercent(StrId id, int percent) {
     swprintf_s(buf, Str(id), percent);
     return buf;
 }
+
+NumberSeparators SeparatorsFor(Language language) {
+    switch (ResolveLanguage(language)) {
+        case Language::German:
+        case Language::Spanish:
+        case Language::Portuguese:
+        case Language::Italian:
+        case Language::Dutch:
+        case Language::Turkish: return {L".", L","};
+        // Polish groups with a space; the non-breaking one keeps a number on one line.
+        case Language::Polish: return {L"\u00A0", L","};
+        default: return {L",", L"."};
+    }
+}
+
+std::wstring GroupDigits(uint64_t n, const wchar_t* thousands) {
+    const std::wstring digits = std::to_wstring(n);
+    std::wstring out;
+    for (size_t i = 0; i < digits.size(); ++i) {
+        if (i > 0 && (digits.size() - i) % 3 == 0) out += thousands;
+        out += digits[i];
+    }
+    return out;
+}
+
+std::wstring CompactCount(uint64_t n, NumberSeparators separators) {
+    if (n < 10000) return GroupDigits(n, separators.thousands);
+    if (n < 1000000) return std::to_wstring(n / 1000) + L"K";
+    // Rounded down, so the short form never shows more ads than were muted.
+    auto scaled = [&](uint64_t unit, const wchar_t* suffix) {
+        const uint64_t whole = n / unit;
+        if (whole >= 10) return GroupDigits(whole, separators.thousands) + suffix;
+        const uint64_t tenth = n % unit / (unit / 10);
+        return std::to_wstring(whole) + (tenth ? separators.decimal + std::to_wstring(tenth) : std::wstring()) + suffix;
+    };
+    if (n < 1000000000) return scaled(1000000, L"M");
+    return scaled(1000000000, L"B");
+}
+
+std::wstring FormatCount(uint64_t n) { return GroupDigits(n, SeparatorsFor(g_language).thousands); }
+
+std::wstring FormatCountShort(uint64_t n) { return CompactCount(n, SeparatorsFor(g_language)); }
 
 std::wstring TooltipText(const wchar_t* status) {
     std::wstring t = L"AdMutify\n";

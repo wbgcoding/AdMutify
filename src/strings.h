@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include <string>
 
 #include "settings.h"
@@ -63,6 +65,8 @@ enum class StrId {
     CrashBodyNotRestored,
     CrashCopy,
     CrashOpenLogs,
+    // Tray menu, right of the status line, with the compact count (FormatCountShort).
+    TrayAdsCount,
     Count
 };
 
@@ -79,5 +83,19 @@ Language ResolveLanguage(Language language);
 
 // A table text with one %d (status lines, percent values) filled in.
 std::wstring FormatPercent(StrId id, int percent);
+// Thousands and decimal separator of a language ("1.234" and "1,2" in German, "1,234" and "1.2" in English).
+struct NumberSeparators {
+    const wchar_t* thousands;
+    const wchar_t* decimal;
+};
+NumberSeparators SeparatorsFor(Language language);
+// n with its digits grouped by three: GroupDigits(1234567, L".") is "1.234.567".
+std::wstring GroupDigits(uint64_t n, const wchar_t* thousands);
+// Short form for one menu line, never more than the real count: full below 10,000, then whole thousands ("12K"),
+// millions with one decimal below 10 million ("1,2M", "3M"), whole millions, then billions the same way ("B").
+std::wstring CompactCount(uint64_t n, NumberSeparators separators);
+// The two above in the active language.
+std::wstring FormatCount(uint64_t n);
+std::wstring FormatCountShort(uint64_t n);
 // "AdMutify" + newline + status, at most 127 characters.
 std::wstring TooltipText(const wchar_t* status);

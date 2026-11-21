@@ -111,6 +111,13 @@ void CALLBACK MenuPopupEvent(HWINEVENTHOOK, DWORD, HWND hwnd, LONG idObject, LON
     DwmSetWindowAttribute(hwnd, kCornerPreference, &round, sizeof(round));
 }
 
+// Separates the left text of an item from a right-aligned part. A private-use character, so no status text
+// (window titles never reach the menu) can split by accident.
+constexpr wchar_t kRightColumn[] = L"\uE000";
+
+// Gap between the left text and the right-aligned part.
+int MenuColumnGap() { return MenuScale(24); }
+
 std::wstring ItemText(HMENU menu, UINT id) {
     wchar_t buf[256] = L"";
     GetMenuStringW(menu, id, buf, static_cast<int>(std::size(buf)), MF_BYCOMMAND);
@@ -131,8 +138,18 @@ bool TrayMenuMeasure(MEASUREITEMSTRUCT* mi) {
     TEXTMETRICW tm{};
     GetTextMetricsW(dc, &tm);
     std::wstring text = ItemText(reinterpret_cast<HMENU>(mi->itemData), mi->itemID);
+    std::wstring right;
+    if (const size_t cut = text.find(kRightColumn); cut != std::wstring::npos) {
+        right = text.substr(cut + 1);
+        text.resize(cut);
+    }
     SIZE sz{};
     GetTextExtentPoint32W(dc, text.c_str(), static_cast<int>(text.size()), &sz);
+    if (!right.empty()) {
+        SIZE rs{};
+        GetTextExtentPoint32W(dc, right.c_str(), static_cast<int>(right.size()), &rs);
+        sz.cx += MenuColumnGap() + rs.cx;
+    }
     SelectObject(dc, old);
     DeleteDC(dc);
     // The system adds the check mark width to owner-drawn menu items; take it back out.
@@ -188,8 +205,12 @@ bool TrayMenuDraw(const DRAWITEMSTRUCT* di) {
     HGDIOBJ oldFont = SelectObject(dc, g_look.font);
     SetBkMode(dc, TRANSPARENT);
     SetTextColor(dc, fg);
-    RECT tr{rc.left + MenuTextLeft(), rc.top, rc.right - MenuScale(8), rc.bottom};
-    DrawTextW(dc, text.c_str(), -1, &tr, DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_NOPREFIX);
+    RECT tr{rc.left + MenuTextLeft(), rc.top, rc.right - MenuTextRight(), rc.bottom};
+    if (const size_t cut = text.find(kRightColumn); cut != std::wstring::npos) {
+        DrawTextW(dc, text.c_str() + cut + 1, -1, &tr, DT_SINGLELINE | DT_VCENTER | DT_RIGHT | DT_NOPREFIX);
+        text.resize(cut);
+    }
+    DrawTextW(dc, text.c_str(), -1, &tr, DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_NOPREFIX | DT_END_ELLIPSIS);
     SelectObject(dc, oldFont);
     return true;
 }
@@ -216,10 +237,10 @@ void FinishMenu(HMENU menu) {
     SetMenuInfo(menu, &info);
 }
 
-HMENU BuildTrayMenu(bool enabled, const std::wstring& status) {
+HMENU BuildTrayMenu(bool enabled, const std::wstring& status, const std::wstring& right) {
     PrepareMenuLook(0, 0);
     HMENU menu = CreatePopupMenu();
-    AddItem(menu, IDM_TRAY_STATUS, status.c_str(), MFS_GRAYED);
+    AddItem(menu, IDM_TRAY_STATUS, right.empty() ? status.c_str() : (status + kRightColumn + right).c_str(), MFS_GRAYED);
     AddSeparator(menu);
     AddItem(menu, IDM_TRAY_ENABLED, Str(StrId::MenuEnabled), enabled ? MFS_CHECKED : MFS_UNCHECKED);
     AddItem(menu, IDM_TRAY_SETTINGS, Str(StrId::MenuSettings), 0);
@@ -343,8 +364,8 @@ void Tray::Update(TrayIconKind kind, const std::wstring& tooltip) {
     Shell_NotifyIconW(NIM_MODIFY, &nid);
 }
 
-UINT Tray::ShowMenu(POINT pt, bool enabled, const std::wstring& status) {
-    HMENU menu = BuildTrayMenu(enabled, status);
+UINT Tray::ShowMenu(POINT pt, bool enabled, const std::wstring& status, const std::wstring& right) {
+    HMENU menu = BuildTrayMenu(enabled, status, right);
     SetForegroundWindow(hwnd_);
     UINT cmd = TrackTrayMenu(menu, TPM_RIGHTBUTTON | TPM_RETURNCMD | TPM_NONOTIFY | TPM_BOTTOMALIGN, pt.x, pt.y, hwnd_);
     DestroyTrayMenu(menu);

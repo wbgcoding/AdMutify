@@ -455,7 +455,9 @@ void Shutdown(bool endSession = false) {
 }
 
 void ShowTrayMenu(POINT pt) {
-    UINT cmd = g.tray.ShowMenu(pt, g.settings.enabled, g.status);
+    wchar_t count[64];
+    swprintf_s(count, Str(StrId::TrayAdsCount), FormatCountShort(StatsAdsMuted()).c_str());
+    UINT cmd = g.tray.ShowMenu(pt, g.settings.enabled, g.status, count);
     switch (cmd) {
         case IDM_TRAY_ENABLED: {
             Settings s = g.settings;

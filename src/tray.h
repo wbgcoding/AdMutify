@@ -18,8 +18,9 @@ enum TrayCommand : UINT {
 // Returns false when the functions are not available.
 bool ApplyMenuAppMode(int mode);
 
-// Builds the popup menu (status line, enabled toggle, settings, exit); free it with DestroyTrayMenu.
-HMENU BuildTrayMenu(bool enabled, const std::wstring& status);
+// Builds the popup menu (status line, enabled toggle, settings, exit); free it with DestroyTrayMenu. A non-empty
+// `right` is drawn right-aligned on the status line (the ad count).
+HMENU BuildTrayMenu(bool enabled, const std::wstring& status, const std::wstring& right = {});
 // Same look as the tray menu: one checkable item per entry, command ids 1..count. minWidth in pixels,
 // dpi 0 = the monitor under the cursor.
 HMENU BuildChoiceMenu(const wchar_t* const* items, int count, int checked, int minWidth, UINT dpi);
@@ -41,7 +42,7 @@ public:
     void ReloadIcons();
     void Update(TrayIconKind kind, const std::wstring& tooltip);
     // Shows the menu at the given screen position and returns the chosen command (0 for none).
-    UINT ShowMenu(POINT pt, bool enabled, const std::wstring& status);
+    UINT ShowMenu(POINT pt, bool enabled, const std::wstring& status, const std::wstring& right = {});
 
 private:
     void FillData(struct _NOTIFYICONDATAW& nid) const;

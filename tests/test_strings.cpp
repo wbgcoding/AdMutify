@@ -192,3 +192,39 @@ TEST(strings_native_names) {
     CHECK(std::wstring(LanguageNativeName(Language::System)).empty());
     for (Language lang : kAllLanguages) CHECK(!std::wstring(LanguageNativeName(lang)).empty());
 }
+
+TEST(strings_count_grouping) {
+    CHECK(GroupDigits(0, L".") == L"0");
+    CHECK(GroupDigits(999, L".") == L"999");
+    CHECK(GroupDigits(1000, L".") == L"1.000");
+    CHECK(GroupDigits(1000000, L".") == L"1.000.000");
+    CHECK(GroupDigits(1234567, L",") == L"1,234,567");
+    CHECK(GroupDigits(18446744073709551615ull, L".") == L"18.446.744.073.709.551.615");
+    // German groups with a dot, English with a comma, Polish with a non-breaking space.
+    CHECK(std::wstring(SeparatorsFor(Language::German).thousands) == L".");
+    CHECK(std::wstring(SeparatorsFor(Language::English).thousands) == L",");
+    CHECK(std::wstring(SeparatorsFor(Language::Polish).thousands) == L" ");
+    SetLanguage(Language::German);
+    CHECK(FormatCount(1234) == L"1.234");
+    SetLanguage(Language::English);
+    CHECK(FormatCount(1234) == L"1,234");
+}
+
+TEST(strings_count_compact_never_overstates) {
+    const NumberSeparators de{L".", L","};
+    CHECK(CompactCount(0, de) == L"0");
+    CHECK(CompactCount(9999, de) == L"9.999");
+    CHECK(CompactCount(10000, de) == L"10K");
+    CHECK(CompactCount(12999, de) == L"12K");
+    CHECK(CompactCount(999999, de) == L"999K");
+    CHECK(CompactCount(1000000, de) == L"1M");
+    CHECK(CompactCount(1099999, de) == L"1M");
+    CHECK(CompactCount(1250000, de) == L"1,2M");
+    CHECK(CompactCount(9999999, de) == L"9,9M");
+    CHECK(CompactCount(10000000, de) == L"10M");
+    CHECK(CompactCount(999999999, de) == L"999M");
+    CHECK(CompactCount(1500000000, de) == L"1,5B");
+    CHECK(CompactCount(1500000000, NumberSeparators{L",", L"."}) == L"1.5B");
+    // Every short form fits one menu line: at most five characters up to 999 billion.
+    for (uint64_t n = 1; n < 1000000000000ull; n = n * 3 + 7) CHECK(CompactCount(n, de).size() <= 5);
+}
