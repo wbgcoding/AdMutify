@@ -384,19 +384,49 @@ bool RetrySettingsRead(Settings& fromFile, unsigned long* error) {
 
 bool SettingsNewerVersion() { return g_newerVersionSeen; }
 
-Settings MergeSettingsChange(const Settings& fromFile, const Settings& shown, const Settings& current) {
-    Settings out = fromFile;
-    if (current.enabled != shown.enabled) out.enabled = current.enabled;
-    if (current.mode != shown.mode) out.mode = current.mode;
-    if (current.lowerPercent != shown.lowerPercent) out.lowerPercent = current.lowerPercent;
-    if (current.hideTray != shown.hideTray) out.hideTray = current.hideTray;
-    if (current.language != shown.language) out.language = current.language;
-    if (current.darkMenus != shown.darkMenus) out.darkMenus = current.darkMenus;
-    if (current.media != shown.media) out.media = current.media;
-    if (current.mediaPercent != shown.mediaPercent) out.mediaPercent = current.mediaPercent;
-    if (current.adMusic != shown.adMusic) out.adMusic = current.adMusic;
-    if (current.adMusicPath != shown.adMusicPath) out.adMusicPath = current.adMusicPath;
-    if (current.adMusicVolume != shown.adMusicVolume) out.adMusicVolume = current.adMusicVolume;
-    if (current.trace != shown.trace) out.trace = current.trace;
+namespace {
+
+// Visits every Settings field with its bit; the one list both SettingsDiff and ApplySettingsFields walk.
+template <typename F>
+void ForEachSettingsField(Settings& a, const Settings& b, F f) {
+    unsigned bit = 1;
+    auto next = [&](auto& x, const auto& y) {
+        f(x, y, bit);
+        bit <<= 1;
+    };
+    next(a.enabled, b.enabled);
+    next(a.mode, b.mode);
+    next(a.lowerPercent, b.lowerPercent);
+    next(a.hideTray, b.hideTray);
+    next(a.language, b.language);
+    next(a.darkMenus, b.darkMenus);
+    next(a.media, b.media);
+    next(a.mediaPercent, b.mediaPercent);
+    next(a.adMusic, b.adMusic);
+    next(a.adMusicPath, b.adMusicPath);
+    next(a.adMusicVolume, b.adMusicVolume);
+    next(a.trace, b.trace);
+}
+
+}  // namespace
+
+SettingsFields SettingsDiff(const Settings& a, const Settings& b) {
+    SettingsFields out = 0;
+    Settings copy = a;
+    ForEachSettingsField(copy, b, [&](auto& x, const auto& y, unsigned bit) {
+        if (x != y) out |= bit;
+    });
     return out;
+}
+
+Settings ApplySettingsFields(const Settings& base, const Settings& changes, SettingsFields fields) {
+    Settings out = base;
+    ForEachSettingsField(out, changes, [&](auto& x, const auto& y, unsigned bit) {
+        if (fields & bit) x = y;
+    });
+    return out;
+}
+
+Settings MergeSettingsChange(const Settings& fromFile, const Settings& shown, const Settings& current) {
+    return ApplySettingsFields(fromFile, current, SettingsDiff(shown, current));
 }

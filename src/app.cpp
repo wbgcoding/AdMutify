@@ -91,6 +91,8 @@ struct App {
     // Windows is signing out: nothing may start playing any more.
     bool closingEndSession = false;
     bool inMemory = false;
+    // Fields the user changed while the settings file could not be read; they win over the file once it reads.
+    SettingsFields lockedChanges = 0;
     // The tray exists; a second start before that only leaves a request for the tray icon.
     bool trayReady = false;
     bool showRequested = false;
@@ -639,20 +641,23 @@ void AppUseInMemorySettings(const Settings& settings) {
 
 namespace {
 
-void ApplyCommit(const Settings& requested) {
+void ApplyCommit(const Settings& requested, bool replaceAll) {
     Settings old = g.settings;
     Settings s = requested;
     HWND owner = SettingsWindowHandle() ? SettingsWindowHandle() : g.hwnd;
     unsigned long err = 0;
     bool reported = false;
+    bool merged = false;
     if (!g.inMemory && SettingsReadFailed()) {
-        // The file was unreadable at start: try again now. When it reads, its values are the base and only what
-        // the user just changed is applied on top; otherwise the change stays in memory and the user is told.
+        // The file was unreadable at start: try again now. When it reads, its values are the base and every
+        // field the user changed since the start (this change and earlier ones kept in memory) is applied on
+        // top; otherwise the change stays in memory and the user is told.
+        g.lockedChanges |= replaceAll ? kAllSettingsFields : SettingsDiff(old, requested);
         Settings fromFile;
         if (RetrySettingsRead(fromFile, &err)) {
-            // The base is the defaults the app started on, not the current values: changes made while the file
-            // was still locked live only in memory and must survive this merge too.
-            s = MergeSettingsChange(fromFile, Settings{}, requested);
+            s = ApplySettingsFields(fromFile, requested, g.lockedChanges);
+            g.lockedChanges = 0;
+            merged = true;
             if (SettingsNewerVersion()) {
                 // The file turned out to be from a newer version: it is left alone, so tell the user once.
                 Log("settings_read_newer");
@@ -682,26 +687,32 @@ void ApplyCommit(const Settings& requested) {
     g.music.Configure(s.adMusic, s.adMusicPath, s.adMusicVolume);
     // Reevaluate re-applies a changed mode or level and drops a reaction that is no longer wanted.
     Reevaluate();
+    // Values taken over from the file now show in the open window, which still holds the requested ones.
+    if (merged && SettingsDiff(s, requested) != 0) SettingsWindowReload();
 }
 
 }  // namespace
 
-void CommitSettings(const Settings& s) {
+void CommitSettings(const Settings& s, bool replaceAll) {
     // The tray menu can still change settings while the save error box is open: such a change waits
     // until the running one is done, so a stale value never overwrites a newer one.
     static bool busy = false;
     static bool hasQueued = false;
     static Settings queued;
+    static bool queuedReplaceAll = false;
     if (busy) {
         queued = s;
+        queuedReplaceAll = queuedReplaceAll || replaceAll;
         hasQueued = true;
         return;
     }
     busy = true;
-    ApplyCommit(s);
+    ApplyCommit(s, replaceAll);
     while (hasQueued) {
         hasQueued = false;
-        ApplyCommit(queued);
+        const bool all = queuedReplaceAll;
+        queuedReplaceAll = false;
+        ApplyCommit(queued, all);
     }
     busy = false;
 }

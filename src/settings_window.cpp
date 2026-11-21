@@ -819,7 +819,7 @@ void OnReset() {
     }
     DisarmReset();
     if (!SetAutostart(false)) MessageBoxW(w.hwnd, Str(StrId::ErrAutostart), Str(StrId::SettingsTitle), MB_OK | MB_ICONWARNING);
-    CommitSettings(Settings{});
+    CommitSettings(Settings{}, true);
     ApplyTexts();
     LoadFromSettings();
     Layout(Placement::KeepFit);
@@ -1724,6 +1724,13 @@ HWND SettingsWindowHandle() { return w.hwnd; }
 
 void SettingsWindowUpdateCounter() {
     if (w.hwnd) UpdateCounterText();
+}
+
+void SettingsWindowReload() {
+    if (!w.hwnd) return;
+    ApplyTexts();
+    LoadFromSettings();
+    Layout(Placement::KeepFit);
 }
 
 void SettingsWindowUpdateStatus() {

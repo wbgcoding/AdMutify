@@ -80,6 +80,13 @@ bool SettingsReadFailed();
 bool RetrySettingsRead(Settings& fromFile, unsigned long* error);
 // True when the settings file was found to be from a newer version (it is then never overwritten).
 bool SettingsNewerVersion();
+// One bit per Settings field, for tracking which fields the user changed.
+using SettingsFields = unsigned;
+constexpr SettingsFields kAllSettingsFields = (1u << 12) - 1;
+// The fields whose values differ between a and b.
+SettingsFields SettingsDiff(const Settings& a, const Settings& b);
+// base with the given fields taken from changes.
+Settings ApplySettingsFields(const Settings& base, const Settings& changes, SettingsFields fields);
 // Three-way merge for the first change after a failed read: a field the user changed (current differs from
 // shown) takes the new value, every other field keeps the value from the file.
 Settings MergeSettingsChange(const Settings& fromFile, const Settings& shown, const Settings& current);

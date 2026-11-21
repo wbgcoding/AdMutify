@@ -85,6 +85,53 @@ TEST(settings_merge_keeps_changes_made_while_locked) {
     CHECK(MergeSettingsChange(fromFile, inMemory, requested).lowerPercent == 50);
 }
 
+TEST(settings_fields_cover_every_field) {
+    Settings a;
+    Settings b;
+    b.enabled = false;
+    b.mode = Mode::Music;
+    b.lowerPercent = 70;
+    b.hideTray = true;
+    b.language = Language::German;
+    b.darkMenus = false;
+    b.media = MediaMode::Pause;
+    b.mediaPercent = 40;
+    b.adMusic = AdMusic::File;
+    b.adMusicPath = L"C:\\Music\\a.mp3";
+    b.adMusicVolume = 10;
+    b.trace = true;
+    CHECK(SettingsDiff(a, b) == 0xFFFu);
+    CHECK(SettingsDiff(a, b) == kAllSettingsFields);
+    CHECK(SettingsDiff(a, a) == 0);
+    Settings copied = ApplySettingsFields(a, b, kAllSettingsFields);
+    CHECK(SettingsDiff(copied, b) == 0);
+    CHECK(SettingsDiff(ApplySettingsFields(a, b, 0), a) == 0);
+}
+
+TEST(settings_locked_change_back_to_default_wins_over_file) {
+    // Start on defaults (file locked with lowerPercent=50 inside), move the level to 30 and back to the default 20
+    // while still locked, then the file reads again. Every field touched while locked wins, even at its default.
+    Settings fromFile;
+    fromFile.lowerPercent = 50;
+    fromFile.adMusicVolume = 80;
+    Settings start;
+    Settings step1 = start;
+    step1.lowerPercent = 30;
+    SettingsFields touched = SettingsDiff(start, step1);
+    Settings step2 = step1;
+    step2.lowerPercent = Settings{}.lowerPercent;
+    touched |= SettingsDiff(step1, step2);
+    Settings out = ApplySettingsFields(fromFile, step2, touched);
+    CHECK(out.lowerPercent == 20);
+    CHECK(out.adMusicVolume == 80);
+    // The old merge against the start defaults lost it: the file's 50 came back.
+    CHECK(MergeSettingsChange(fromFile, Settings{}, step2).lowerPercent == 50);
+    // Reset replaces every field, so the file's values are gone even where nothing differed from the defaults.
+    Settings reset = ApplySettingsFields(fromFile, Settings{}, kAllSettingsFields);
+    CHECK(reset.lowerPercent == 20);
+    CHECK(reset.adMusicVolume == 50);
+}
+
 TEST(settings_language_codes) {
     struct Case {
         Language language;

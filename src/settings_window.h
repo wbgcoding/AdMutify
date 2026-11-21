@@ -45,5 +45,7 @@ void SettingsWindowArmReset();
 HWND SettingsWindowHandle();
 // Shows the current ad counter in the open window (no-op when closed).
 void SettingsWindowUpdateCounter();
+// Shows the current settings in every control of the open window (no-op when closed).
+void SettingsWindowReload();
 // Shows the current status and the on/off state in the open window (no-op when closed).
 void SettingsWindowUpdateStatus();
