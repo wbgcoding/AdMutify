@@ -24,9 +24,10 @@ APP_SIZES = (16, 20, 24, 32, 40, 48, 64, 96, 128, 256)
 TRAY_SIZES = (16, 20, 24, 32, 40, 48, 64)
 
 
-def tile_mask(size):
+def tile_mask(size, tray):
+    # Tray icons fill the whole square: the shell already spaces them, a margin only shrinks the icon.
     mask = Image.new('L', (size, size), 0)
-    margin = round(size * 0.06)
+    margin = round(size * (0.0 if tray else 0.06))
     ImageDraw.Draw(mask).rounded_rectangle([margin, margin, size - 1 - margin, size - 1 - margin],
                                            radius=round(size * 0.22), fill=255)
     return mask
@@ -52,53 +53,52 @@ def round_corners(alpha, radius):
     return alpha.filter(ImageFilter.GaussianBlur(radius)).point(lambda v: 255 if v >= 128 else 0)
 
 
-def glyph_mask(S, small, with_wave):
+def dot(d, x, y, w):
+    d.ellipse([x - w / 2, y - w / 2, x + w / 2, y + w / 2], fill=255)
+
+
+def glyph_mask(S, small, mark, dx):
+    """mark: 'wave' or 'x'. dx shifts the speaker; all tray states share one dx so it never jumps."""
     k = S / GRID
     mask = Image.new('L', (S, S), 0)
     d = ImageDraw.Draw(mask)
-    dx = -20
     d.rectangle([(225 + dx) * k, 400 * k, (400 + dx) * k, 624 * k], fill=255)
     d.polygon([((380 + dx) * k, 400 * k), ((600 + dx) * k, 255 * k), ((600 + dx) * k, 769 * k),
                ((380 + dx) * k, 624 * k)], fill=255)
     mask = round_corners(mask, (14 if small else 22) * k)
-    if with_wave:
+    d = ImageDraw.Draw(mask)
+    if mark == 'wave':
         w = (80 if small else 64) * k
         cx, cy, r = (600 + dx) * k, 512 * k, (180 if small else 190) * k
-        d = ImageDraw.Draw(mask)
         d.arc([cx - r, cy - r, cx + r, cy + r], -48, 48, fill=255, width=round(w))
         for a in (-48, 48):
-            ex = cx + (r - w / 2) * math.cos(math.radians(a))
-            ey = cy + (r - w / 2) * math.sin(math.radians(a))
-            d.ellipse([ex - w / 2, ey - w / 2, ex + w / 2, ey + w / 2], fill=255)
+            dot(d, cx + (r - w / 2) * math.cos(math.radians(a)), cy + (r - w / 2) * math.sin(math.radians(a)), w)
+    else:
+        # The X keeps a clear gap to the speaker, so the two never touch at 16 px.
+        w = (84 if small else 66) * k
+        cx, cy, h = 775 * k, 512 * k, (92 if small else 96) * k
+        for x0, y0, x1, y1 in ((cx - h, cy - h, cx + h, cy + h), (cx - h, cy + h, cx + h, cy - h)):
+            d.line([x0, y0, x1, y1], fill=255, width=round(w))
+            dot(d, x0, y0, w)
+            dot(d, x1, y1, w)
     return mask
 
 
-def slash(S, small, gap_only):
-    k = S / GRID
-    x0, y0, x1, y1 = 790 * k, 230 * k, 230 * k, 790 * k
-    width = (110 if small else 72) * k
-    if gap_only:
-        width += 2 * (44 if small else 34) * k
-    mask = Image.new('L', (S, S), 0)
-    d = ImageDraw.Draw(mask)
-    d.line([x0, y0, x1, y1], fill=255, width=round(width))
-    for x, y in ((x0, y0), (x1, y1)):
-        d.ellipse([x - width / 2, y - width / 2, x + width / 2, y + width / 2], fill=255)
-    return mask
-
-
-def draw(px, state):
-    """state: 'active', 'muted' or 'off'."""
+def draw(px, state, tray=False):
+    """state: 'active', 'muted' or 'off'. tray: no edge margin and a larger glyph."""
     S = px * SUPER
     k = S / GRID
     small = px <= 24
     colours = {'active': VIOLET, 'muted': CORAL, 'off': GREY}[state]
     img = gradient(S, colours)
-    # The muted speaker has no wave: wave pieces beside the slash read as a second stroke at tray size.
-    glyph = glyph_mask(S, small, with_wave=state != 'muted')
-    if state == 'muted':
-        glyph = ImageChops.subtract(glyph, slash(S, small, gap_only=True))
-        glyph = ImageChops.lighter(glyph, slash(S, small, gap_only=False))
+    mark = 'x' if state == 'muted' else 'wave'
+    if tray:
+        # Drawn larger and cropped to the middle, which scales the glyph about the centre.
+        G = round(S * 1.12)
+        off = (G - S) // 2
+        glyph = glyph_mask(G, small, mark, dx=-50).crop((off, off, off + S, off + S))
+    else:
+        glyph = glyph_mask(S, small, mark, dx=-20)
     if not small and state != 'off':
         blur = glyph.filter(ImageFilter.GaussianBlur(14 * k)).point(lambda v: round(v * 0.35))
         shadow = Image.new('RGBA', (S, S), (20, 10, 60, 0))
@@ -108,12 +108,12 @@ def draw(px, state):
     white.putalpha(glyph)
     img.alpha_composite(white)
     out = Image.new('RGBA', (S, S), (0, 0, 0, 0))
-    out.paste(img, (0, 0), tile_mask(S))
+    out.paste(img, (0, 0), tile_mask(S, tray))
     return out.resize((px, px), Image.LANCZOS)
 
 
-def write_ico(path, state, sizes):
-    frames = [draw(s, state) for s in sizes]
+def write_ico(path, state, sizes, tray):
+    frames = [draw(s, state, tray) for s in sizes]
     largest = frames[-1]
     largest.save(path, format='ICO', sizes=[(s, s) for s in sizes], append_images=frames[:-1])
 
@@ -121,17 +121,25 @@ def write_ico(path, state, sizes):
 def preview(path):
     states = ('active', 'muted', 'off')
     sizes = (16, 20, 24, 32, 48)
-    sheet = Image.new('RGBA', (3 * 280, 200 + 2 * 90), (243, 243, 243, 255))
+    sheet = Image.new('RGBA', (4 * 280, 200 + 3 * 90), (243, 243, 243, 255))
+    sheet.alpha_composite(draw(160, 'active'), (60, 20))
     for i, st in enumerate(states):
-        sheet.alpha_composite(draw(160, st), (i * 280 + 60, 20))
+        sheet.alpha_composite(draw(160, st, True), ((i + 1) * 280 + 60, 20))
     for row, bg in enumerate(((32, 32, 32), (238, 238, 238))):
         y = 200 + row * 90
         sheet.alpha_composite(Image.new('RGBA', (sheet.width, 90), bg + (255,)), (0, y))
         x = 20
         for s in sizes:
             for j, st in enumerate(states):
-                sheet.alpha_composite(draw(s, st), (x + j * (s + 8), y + 45 - s // 2))
+                sheet.alpha_composite(draw(s, st, True), (x + j * (s + 8), y + 45 - s // 2))
             x += 3 * (s + 8) + 24
+    # 16 and 24 px tray frames enlarged 3x, so single pixels can be judged.
+    x = 20
+    for s in (16, 24):
+        for st in states:
+            sheet.alpha_composite(draw(s, st, True).resize((s * 3, s * 3), Image.NEAREST), (x, 200 + 2 * 90 + 45 - s * 3 // 2))
+            x += s * 3 + 12
+        x += 30
     sheet.save(path)
 
 
@@ -140,9 +148,10 @@ def main():
     parser.add_argument('--preview', help='also write a preview sheet of all states to this PNG file')
     args = parser.parse_args()
     assets = os.path.join(ROOT, 'assets')
-    write_ico(os.path.join(assets, 'app.ico'), 'active', APP_SIZES)
-    write_ico(os.path.join(assets, 'tray_muted.ico'), 'muted', TRAY_SIZES)
-    write_ico(os.path.join(assets, 'tray_off.ico'), 'off', TRAY_SIZES)
+    write_ico(os.path.join(assets, 'app.ico'), 'active', APP_SIZES, tray=False)
+    write_ico(os.path.join(assets, 'tray_active.ico'), 'active', TRAY_SIZES, tray=True)
+    write_ico(os.path.join(assets, 'tray_muted.ico'), 'muted', TRAY_SIZES, tray=True)
+    write_ico(os.path.join(assets, 'tray_off.ico'), 'off', TRAY_SIZES, tray=True)
     if args.preview:
         preview(args.preview)
     print('icons written to', assets)

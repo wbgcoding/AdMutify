@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows Keep
 ## [1.2.2] - unreleased
 
 ### Changed
-- New icon: a white speaker on a violet tile. While an ad is muted the tray icon turns coral with a slashed speaker, while AdMutify is off it turns grey.
+- New icon: a white speaker on a violet tile. While an ad is muted the tray icon turns coral with an X beside the speaker, while AdMutify is off it turns grey. The tray icon fills its space for a larger symbol.
 - The reset button asks "Reset settings?" while it waits for the second click.
 
 ### Fixed

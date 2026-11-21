@@ -4,6 +4,7 @@
 #include "version.h"
 
 IDI_APP ICON "../assets/app.ico"
+IDI_TRAY_ACTIVE ICON "../assets/tray_active.ico"
 IDI_TRAY_MUTED ICON "../assets/tray_muted.ico"
 IDI_TRAY_OFF ICON "../assets/tray_off.ico"
 

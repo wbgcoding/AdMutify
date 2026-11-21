@@ -262,8 +262,8 @@ void Tray::Init(HWND hwnd, HINSTANCE inst) {
 }
 
 void Tray::ReloadIcons() {
-    // The "on" state uses the app icon itself.
-    const int ids[3] = {IDI_APP, IDI_TRAY_MUTED, IDI_TRAY_OFF};
+    // The tray set fills its square, unlike the app icon with its margin.
+    const int ids[3] = {IDI_TRAY_ACTIVE, IDI_TRAY_MUTED, IDI_TRAY_OFF};
     for (int i = 0; i < 3; ++i) {
         HICON icon = nullptr;
         if (SUCCEEDED(LoadIconMetric(inst_, MAKEINTRESOURCEW(ids[i]), LIM_SMALL, &icon))) {
