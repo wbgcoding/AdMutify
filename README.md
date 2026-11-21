@@ -21,6 +21,7 @@ AdMutify is a tiny Windows tray tool that mutes the Spotify desktop app while an
 - Restores the exact previous volume afterwards, even if AdMutify was closed or crashed in the middle of an ad.
 - If you change Spotify's volume yourself during an ad, AdMutify leaves it alone.
 - Tray menu with status line (for example "Ad: muted"), on/off switch, settings and "Hide from tray". Open AdMutify again to bring a hidden icon back; this also opens the settings.
+- The tray icon shows the state at a glance: violet while AdMutify is watching, coral with an X while it has muted, lowered or paused Spotify, grey when it is switched off.
 - Start with Windows, optionally without a tray icon. Open AdMutify again to bring the icon back. The setting stays in sync with the startup apps switch in Task Manager.
 - Finds Spotify even when it starts minimized to the tray.
 - Ten languages: English, German (Deutsch), Spanish (Español), Portuguese (Português, Brasil), Italian (Italiano), Dutch (Nederlands), Polish (Polski), Turkish (Türkçe), Japanese (日本語) and Simplified Chinese (简体中文). By default AdMutify follows the Windows display language; the installer speaks the same languages.

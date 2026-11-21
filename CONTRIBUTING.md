@@ -1,7 +1,5 @@
 # Contributing
 
-Thanks for your interest in AdMutify.
-
 ## Bugs and ideas
 
 Open an issue with the bug report or feature request form. For security problems, follow [SECURITY.md](SECURITY.md) instead.
