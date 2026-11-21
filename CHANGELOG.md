@@ -16,6 +16,7 @@ All notable changes to this project are documented here. The format follows Keep
 - Closing AdMutify (or updating it) while the music file or folder picker is open closes the picker first instead of risking a crash.
 - Choosing a very large folder without music no longer freezes AdMutify while it looks for a music file.
 - The music picker opens in the folder of a chosen file that has since been deleted, instead of in the Music folder.
+- If the crash helper could not start, a crash still restores Spotify's volume right away instead of only at the next start.
 - A portable copy installed silently while AdMutify was running starts with its own settings next to the exe instead of the installed copy's settings.
 
 ## [1.2.1] - 2026-11-14
