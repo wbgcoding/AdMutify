@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format follows Keep
 ### Changed
 - New icon: a white speaker on a violet tile. While an ad is muted the tray icon turns coral with an X beside the speaker, while AdMutify is off it turns grey. The tray icon fills its space for a larger symbol.
 - The reset button asks "Reset settings?" while it waits for the second click.
+- The ad counter in the settings window rolls up like an odometer when an ad is muted, and large numbers get thousands separators in the window's language (1.000 in German).
+- The tray menu shows the ad counter on the status line, shortened to 12K or 1,2M once it gets large.
+- "During videos in other apps" is now just "During videos"; its tooltip names the other apps. The settings window can be narrower.
+- The version line at the bottom of the settings window has no separator dot.
+- The icon in the title bar is sharp at every scaling, and the sound wave sits a little further from the speaker.
 
 ### Fixed
 - An ad titled only "Spotify" or "Spotify Free" that starts after a long pause is muted reliably, instead of sometimes being missed when its first moment was still silent.
@@ -17,6 +22,8 @@ All notable changes to this project are documented here. The format follows Keep
 - Choosing a very large folder without music no longer freezes AdMutify while it looks for a music file.
 - The music picker opens in the folder of a chosen file that has since been deleted, instead of in the Music folder.
 - If the crash helper could not start, a crash still restores Spotify's volume right away instead of only at the next start.
+- Moving the settings window to a monitor with different scaling resizes it once to the right size, instead of a broken layout with an unreachable Close button.
+- An ad is counted only once its mute reaches Spotify, and the counter file can no longer be changed with a text editor.
 - A portable copy installed silently while AdMutify was running starts with its own settings next to the exe instead of the installed copy's settings.
 
 ## [1.2.1] - 2026-11-14
