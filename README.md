@@ -81,6 +81,6 @@ AdMutify is an independent project and is not affiliated with, endorsed by or co
 
 ## License
 
-[MIT](LICENSE). © 2026 BGCoding
+Released under the [MIT](LICENSE) license.
 
 <p align="right">© 2026 BGCoding · Made with Claude</p>
