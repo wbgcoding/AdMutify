@@ -37,6 +37,8 @@ HANDLE g_crashEvent = nullptr;
 HANDLE g_restoreEvent = nullptr;  // audio restored and Spotify resumed, before the dump starts
 HANDLE g_doneEvent = nullptr;
 HANDLE g_dumpThread = nullptr;
+// Set only by the review tool, to run the crash path as if the dump thread could not be started.
+bool g_skipCrashThread = false;
 DWORD g_dumpThreadId = 0;
 EXCEPTION_POINTERS* g_exceptionPointers = nullptr;
 DWORD g_crashThreadId = 0;
@@ -183,7 +185,16 @@ DWORD WINAPI DumpThread(LPVOID) {
 
 // Hands the crash to the dump thread and waits for it. A fault inside the dump thread itself returns at once.
 void RunCrashPath(EXCEPTION_POINTERS* info) {
-    if (!g_dumpThread || !g_crashEvent || !g_restoreEvent || !g_doneEvent || GetCurrentThreadId() == g_dumpThreadId) return;
+    if (g_dumpThread && GetCurrentThreadId() == g_dumpThreadId) return;
+    if (!g_dumpThread || !g_crashEvent || !g_restoreEvent || !g_doneEvent) {
+        // No dump thread (it could not be started): restore on the crashing thread itself, so Spotify is not left
+        // muted. No dump then; the flag still tells the next start about the crash.
+        if (!g_crashing.exchange(true)) {
+            WriteCrashFlag(false);
+            if (RestoreAudioUnsafe()) WriteCrashFlag(true);
+        }
+        return;
+    }
     if (!g_crashing.exchange(true)) {
         g_exceptionPointers = info;
         g_crashThreadId = GetCurrentThreadId();
@@ -375,27 +386,13 @@ std::string CrashedRunTail(int n) {
     return TailBeforeLastStart(DropTraceLines(view), n);
 }
 
-std::string LastLogLines(int n) {
-    std::string text;
-    if (!ReadFileUtf8(LogFilePath(0), text)) return {};
-    size_t end = text.size();
-    int lines = 0;
-    size_t pos = end;
-    while (pos > 0) {
-        --pos;
-        if (text[pos] == '\n' && pos + 1 < end) {
-            if (++lines >= n) {
-                ++pos;
-                break;
-            }
-        }
-    }
-    return text.substr(pos);
-}
-
 bool CrashInProgress() { return g_crashing.load(); }
 
 void SetCrashInProgressForTests(bool on) { g_crashing = on; }
+
+#ifdef ADMUTIFY_REVIEW
+void SkipCrashThreadForReview() { g_skipCrashThread = true; }
+#endif
 
 void ReserveStackGuarantee() {
     ULONG size = 64 * 1024;
@@ -414,7 +411,8 @@ void InstallCrashHandler() {
         wcscpy_s(g_dumpDir, dir.c_str());
         wcscpy_s(g_flagPath, flag.c_str());
     }
-    g_dumpThread = CreateThread(nullptr, 0, &DumpThread, nullptr, 0, &g_dumpThreadId);
+    g_dumpThread = g_skipCrashThread ? nullptr : CreateThread(nullptr, 0, &DumpThread, nullptr, 0, &g_dumpThreadId);
+    if (!g_dumpThread) Log("crash_thread_failed err=%lu", GetLastError());
     SetUnhandledExceptionFilter(&CrashFilter);
     _set_invalid_parameter_handler(&OnInvalidParameter);
     std::set_terminate(&OnTerminate);

@@ -525,6 +525,9 @@ bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
             musicTest = true;
         } else if (a == L"--crash-test") {
             crash = true;
+        } else if (a == L"--crash-test-nothread") {
+            crash = true;
+            SkipCrashThreadForReview();
         }
     }
 

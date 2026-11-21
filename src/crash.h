@@ -21,8 +21,6 @@ bool PruneOldLogs();
 std::string DropLogLinesBefore(std::string_view text, std::string_view cutoff);
 // Pure part: removes the lines a --trace run adds (message starts with "trace "); they can hold titles and exe names.
 std::string DropTraceLines(std::string_view text);
-// Last n lines of the current log file.
-std::string LastLogLines(int n);
 // Pure part: the n lines that end right before the last "start version=" line (the tail of the run that
 // came before this one). Without such a line, the last n lines.
 std::string TailBeforeLastStart(std::string_view text, int n);
@@ -39,6 +37,10 @@ void SetCrashInProgressForTests(bool on);
 void ReserveStackGuarantee();
 // Installs the unhandled exception filter and its dump thread.
 void InstallCrashHandler();
+#ifdef ADMUTIFY_REVIEW
+// Review tool: the next InstallCrashHandler starts no dump thread, as when CreateThread fails.
+void SkipCrashThreadForReview();
+#endif
 // Spotify's main window while we hold a pause (nullptr otherwise): a crash gives the pause back by posting the
 // play/pause command to it. Plain atomic store, safe to read without the heap.
 void SetCrashResumeWindow(HWND spotify);
