@@ -207,6 +207,18 @@ TEST(media_merge_invalid_track_changes_nothing) {
         for (AdState s : states) CHECK(MergeMediaTrack(k, s, none, L"a - b", 0) == k);
 }
 
+TEST(media_merge_brand_survey_counts_as_ad) {
+    // Spotify's brand survey, as logged on a real PC: window title "Markenumfrage", session track like an ad.
+    MediaTrack survey;
+    survey.valid = true;
+    survey.title = L"Markenumfrage";
+    survey.artist = L"Markenumfrage";
+    CHECK(IsAdTrack(survey));
+    const TitleKind kind = ClassifyTitle(L"Markenumfrage");
+    CHECK(MergeMediaTrack(kind, AdState::Music, survey, L"Markenumfrage", kMediaSettleMs) == TitleKind::Ad);
+    CHECK(MergeMediaTrack(kind, AdState::Ad, survey, L"Markenumfrage", kMediaSettleMs) == TitleKind::Ad);
+}
+
 TEST(media_session_stop_without_start) {
     MediaSession s;
     CHECK(!s.Snapshot().valid);
