@@ -87,9 +87,6 @@ constexpr SettingsFields kAllSettingsFields = (1u << 12) - 1;
 SettingsFields SettingsDiff(const Settings& a, const Settings& b);
 // base with the given fields taken from changes.
 Settings ApplySettingsFields(const Settings& base, const Settings& changes, SettingsFields fields);
-// Three-way merge for the first change after a failed read: a field the user changed (current differs from
-// shown) takes the new value, every other field keeps the value from the file.
-Settings MergeSettingsChange(const Settings& fromFile, const Settings& shown, const Settings& current);
 // A file with a newer version, or one that could not be read at start, is never overwritten;
 // returns true without writing then.
 bool SaveSettings(const Settings& s, unsigned long* lastError = nullptr);

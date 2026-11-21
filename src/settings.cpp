@@ -426,7 +426,3 @@ Settings ApplySettingsFields(const Settings& base, const Settings& changes, Sett
     });
     return out;
 }
-
-Settings MergeSettingsChange(const Settings& fromFile, const Settings& shown, const Settings& current) {
-    return ApplySettingsFields(fromFile, current, SettingsDiff(shown, current));
-}

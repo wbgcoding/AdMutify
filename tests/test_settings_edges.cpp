@@ -7,6 +7,7 @@
 
 #include "settings.h"
 #include "test.h"
+#include "test_helpers.h"
 
 namespace {
 
