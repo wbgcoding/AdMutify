@@ -67,6 +67,21 @@ TEST(crash_flag_text_decides_the_dialog_body) {
     CHECK(!CrashFlagMeansNotRestored("garbage"));
 }
 
+TEST(crash_startup_plan_table) {
+    // Nothing left over: nothing to show.
+    CrashStartupPlan p = PlanCrashStartup(false, false);
+    CHECK(!p.showSeenNow && !p.deferSeen && !p.deferFlag);
+    // A fresh crash waits for the dialog after the volume restore.
+    p = PlanCrashStartup(false, true);
+    CHECK(!p.showSeenNow && !p.deferSeen && p.deferFlag);
+    // A report the last start never showed (no new crash) also waits; it used to block the restore.
+    p = PlanCrashStartup(true, false);
+    CHECK(!p.showSeenNow && p.deferSeen && !p.deferFlag);
+    // The last start crashed again before its dialog: the old report at once, the new one later.
+    p = PlanCrashStartup(true, true);
+    CHECK(p.showSeenNow && !p.deferSeen && p.deferFlag);
+}
+
 TEST(tail_before_last_start_table) {
     const std::string run1 =
         "2026-09-01 10:00:00.000 start version=1\r\n2026-09-01 10:00:01.000 state a\r\n2026-09-01 10:00:02.000 state b\r\n";

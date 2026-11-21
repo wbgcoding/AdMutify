@@ -46,9 +46,16 @@ bool CrashFlagExists();
 // Pure part: the crash marker says the volume restore did not fully succeed. An empty or unknown marker
 // (older versions wrote an empty file) does not.
 bool CrashFlagMeansNotRestored(std::string_view flagText);
-// Call at start, after the first log line. A dialog left over from a run that crashed again before reaching it
-// (crashed.seen) is shown now; a fresh crashed.flag is renamed to crashed.seen so a crash during the rest of the
-// start-up cannot hide the report for good.
+// Pure part of CrashStartupBegin: what happens to a leftover crashed.seen and a fresh crashed.flag.
+struct CrashStartupPlan {
+    bool showSeenNow = false;  // the last start crashed again before its dialog: show that report at once
+    bool deferSeen = false;    // the last start ended some other way before its dialog: show it at the normal place
+    bool deferFlag = false;    // a fresh crash: rename the flag to crashed.seen, show it at the normal place
+};
+CrashStartupPlan PlanCrashStartup(bool seenExists, bool flagExists);
+// Call at start, after the first log line. A report left over from a start that crashed again before reaching
+// its dialog is shown now; every other report waits for ShowCrashDialogIfNeeded, after the volume restore. A fresh
+// crashed.flag is renamed to crashed.seen so a crash during the rest of the start-up cannot hide the report.
 void CrashStartupBegin();
 // Shows the dialog for the crash found by CrashStartupBegin, once, and removes the marker. The "could not be
 // restored" text is used only when the crash-time restore failed and records are still pending after the

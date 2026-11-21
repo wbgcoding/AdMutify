@@ -460,15 +460,34 @@ void ShowCrashDialog(bool notRestored) {
 
 }  // namespace
 
+CrashStartupPlan PlanCrashStartup(bool seenExists, bool flagExists) {
+    CrashStartupPlan plan;
+    // Both markers: the last start crashed again before reaching its dialog. Waiting for the normal place could
+    // hide that report for good, so it is shown at once.
+    plan.showSeenNow = seenExists && flagExists;
+    // Only crashed.seen: the last start ended some other way before its dialog (killed, logoff). Its report waits
+    // for the normal place after the volume restore, so Spotify is not held muted behind a modal dialog.
+    plan.deferSeen = seenExists && !flagExists;
+    plan.deferFlag = flagExists;
+    return plan;
+}
+
 void CrashStartupBegin() {
-    // A run that crashed again before it could show the dialog left crashed.seen behind: show it first.
     std::string seen;
-    if (ReadFileUtf8(CrashSeenPath(), seen)) {
+    const bool seenExists = ReadFileUtf8(CrashSeenPath(), seen);
+    const CrashStartupPlan plan = PlanCrashStartup(seenExists, CrashFlagExists());
+    if (plan.showSeenNow) {
         PruneDumps();
         ShowCrashDialog(CrashFlagMeansNotRestored(seen));
         DeleteFileW(CrashSeenPath().c_str());
     }
-    if (!CrashFlagExists()) return;
+    if (plan.deferSeen) {
+        // crashed.seen stays on disk until ShowCrashDialogIfNeeded has shown it.
+        g_crashFlagText = seen;
+        g_crashPending = true;
+        return;
+    }
+    if (!plan.deferFlag) return;
     if (!ReadFileUtf8(CrashFlagPath(), g_crashFlagText)) g_crashFlagText.clear();
     g_crashPending = true;
     // Kept under another name until the dialog was shown, so the flag cannot be mistaken for a newer crash.
