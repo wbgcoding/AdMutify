@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows Keep a Changelog; versions follow semantic versioning.
 
+## [1.2.2] - unreleased
+
+### Fixed
+- After AdMutify was closed before it could show a crash report, the report no longer holds Spotify muted at the next start: the volume is restored first, and the report says whether that worked.
+- A portable copy installed silently while AdMutify was running starts with its own settings next to the exe instead of the installed copy's settings.
+
 ## [1.2.1] - 2026-11-14
 
 ### Changed
