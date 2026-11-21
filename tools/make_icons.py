@@ -78,9 +78,10 @@ def glyph_mask(S, small, mark, tray):
         for a in (-a0, a0):
             dot(d, cx + (r - w / 2) * math.cos(math.radians(a)), cy + (r - w / 2) * math.sin(math.radians(a)), w)
     else:
-        # The X keeps a clear gap to the speaker, so the two never touch at 16 px.
+        # The X follows the speaker shift, so speaker and X sit centred as a pair, and keeps a clear gap to the
+        # speaker, so the two never touch at 16 px.
         w = (84 if small else 66) * k
-        cx, cy, h = 775 * k, 512 * k, (92 if small else 96) * k
+        cx, cy, h = (775 + dx) * k, 512 * k, (80 if small else 88) * k
         for x0, y0, x1, y1 in ((cx - h, cy - h, cx + h, cy + h), (cx - h, cy + h, cx + h, cy - h)):
             d.line([x0, y0, x1, y1], fill=255, width=round(w))
             dot(d, x0, y0, w)
