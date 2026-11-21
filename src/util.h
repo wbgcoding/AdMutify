@@ -30,10 +30,11 @@ inline std::wstring ExePath() {
 
 // File name of a process image (no folder), empty when it cannot be queried.
 inline std::wstring ImageFileName(HANDLE process) {
-    wchar_t path[MAX_PATH * 2];
-    DWORD len = static_cast<DWORD>(sizeof(path) / sizeof(path[0]));
-    if (!QueryFullProcessImageNameW(process, 0, path, &len)) return {};
-    std::wstring_view p(path, len);
+    // Long path aware: an image path may exceed MAX_PATH.
+    std::wstring path(32768, L'\0');
+    DWORD len = static_cast<DWORD>(path.size());
+    if (!QueryFullProcessImageNameW(process, 0, path.data(), &len)) return {};
+    std::wstring_view p(path.data(), len);
     size_t slash = p.find_last_of(L"\\/");
     return std::wstring(slash == std::wstring_view::npos ? p : p.substr(slash + 1));
 }

@@ -315,9 +315,6 @@ int RunDpiTest(const std::wstring& outDir) {
     return failures ? 1 : 0;
 }
 
-// With every row shown (music folder, video level) and the longest language, the settings window is scaled to 150,
-// 175 and 200 % as after a move to such a monitor. It must fit the work area with the Close button on screen, and no
-// two visible controls may overlap.
 // The language box gets the arrow keys, a typed letter and the mouse wheel. None of them may change the choice on
 // its own (every change is applied at once); the down arrow opens the menu instead, which a timer closes again.
 bool g_menuSeen = false;
@@ -425,6 +422,9 @@ int RunMusicRadioTest() {
     return failures ? 1 : 0;
 }
 
+// With every row shown (music folder, video level) and the longest language, the settings window is scaled to 150,
+// 175 and 200 % as after a move to such a monitor. It must fit the work area with the Close button on screen, and no
+// two visible controls may overlap.
 int RunFitTest(const std::wstring& outDir) {
     SetThemeOverride(1);
     int failures = 0;
