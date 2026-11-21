@@ -13,6 +13,9 @@ All notable changes to this project are documented here. The format follows Keep
 - When Spotify was closed abruptly and then started straight into the system tray, ads are detected again without a restart of AdMutify.
 - When the settings file was locked at start, a change made during that time is no longer undone by the next change once the file can be read again. This now also holds for a value set back to its default and for "Reset settings", and the open settings window shows the values in use afterwards.
 - After AdMutify was closed before it could show a crash report, the report no longer holds Spotify muted at the next start: the volume is restored first, and the report says whether that worked.
+- Closing AdMutify (or updating it) while the music file or folder picker is open closes the picker first instead of risking a crash.
+- Choosing a very large folder without music no longer freezes AdMutify while it looks for a music file.
+- The music picker opens in the folder of a chosen file that has since been deleted, instead of in the Music folder.
 - A portable copy installed silently while AdMutify was running starts with its own settings next to the exe instead of the installed copy's settings.
 
 ## [1.2.1] - 2026-11-14

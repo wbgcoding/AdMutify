@@ -53,9 +53,12 @@ std::wstring MusicTypeList(Language language) {
 
 bool MusicNameLess(const std::wstring& a, const std::wstring& b) { return StrCmpLogicalW(a.c_str(), b.c_str()) < 0; }
 
-std::vector<std::wstring> ScanMusicFolder(const std::wstring& folder, size_t maxFiles) {
+std::vector<std::wstring> ScanMusicFolder(const std::wstring& folder, size_t maxFiles, size_t maxFolders,
+                                          bool* folderLimitHit) {
     std::vector<std::wstring> files;
+    if (folderLimitHit) *folderLimitHit = false;
     if (folder.empty()) return files;
+    size_t opened = 0;
     // Depth-limited walk; linked folders are skipped so a link loop cannot run forever.
     struct Dir {
         std::wstring path;
@@ -63,6 +66,11 @@ std::vector<std::wstring> ScanMusicFolder(const std::wstring& folder, size_t max
     };
     std::vector<Dir> pending{{folder, 0}};
     while (!pending.empty() && files.size() < maxFiles) {
+        if (opened >= maxFolders) {
+            if (folderLimitHit) *folderLimitHit = true;
+            break;
+        }
+        ++opened;
         Dir dir = std::move(pending.back());
         pending.pop_back();
         std::wstring base = dir.path;

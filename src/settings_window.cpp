@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <utility>
 
 namespace Gdiplus {
 using std::max;
@@ -34,6 +35,8 @@ namespace {
 constexpr wchar_t kClassName[] = L"AdMutify.Settings";
 constexpr UINT_PTR kResetTimer = 1;
 constexpr UINT kResetArmMs = 4000;
+// Folders the music picker looks through for a music file before it accepts the choice unchecked.
+constexpr size_t kPickerScanFolders = 2000;
 constexpr DWORD kCaptionColor = 35;
 constexpr COLORREF kDefaultCaptionColor = 0xFFFFFFFF;
 constexpr UINT kMsgOpenCombo = WM_APP + 20;
@@ -51,6 +54,10 @@ struct Win {
     int hotId = 0;
     // The reset button waits for a second click.
     bool resetArmed = false;
+    // The music picker while it is open, so an exit can cancel it before COM is shut down.
+    IFileOpenDialog* picker = nullptr;
+    bool pickerCancelled = false;
+    HWND closeAfterPicker = nullptr;
     // Control id of the box whose menu is open, 0 when none.
     int menuOpenId = 0;
     // A click on the box that closed its menu must not open it again.
@@ -839,6 +846,7 @@ std::wstring PickMusicPath(AdMusic mode, const std::wstring& current) {
     const bool folder = MusicIsFolder(mode);
     IFileOpenDialog* dlg = nullptr;
     if (FAILED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&dlg)))) return {};
+    w.picker = dlg;
     DWORD opts = 0;
     dlg->GetOptions(&opts);
     opts |= FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST | FOS_NOCHANGEDIR | (folder ? FOS_PICKFOLDERS : FOS_FILEMUSTEXIST);
@@ -851,7 +859,8 @@ std::wstring PickMusicPath(AdMusic mode, const std::wstring& current) {
     }
     // Start where the current choice is: its folder for a file, the folder itself for a folder.
     std::wstring start = current;
-    if (!start.empty() && !(GetFileAttributesW(start.c_str()) & FILE_ATTRIBUTE_DIRECTORY)) {
+    const DWORD startAttr = start.empty() ? INVALID_FILE_ATTRIBUTES : GetFileAttributesW(start.c_str());
+    if (!start.empty() && (startAttr == INVALID_FILE_ATTRIBUTES || !(startAttr & FILE_ATTRIBUTE_DIRECTORY))) {
         const size_t slash = start.find_last_of(L"\\/");
         start = slash == std::wstring::npos ? std::wstring() : start.substr(0, slash);
     }
@@ -866,20 +875,31 @@ std::wstring PickMusicPath(AdMusic mode, const std::wstring& current) {
     }
     std::wstring result;
     for (;;) {
-        if (FAILED(dlg->Show(w.hwnd))) break;
+        if (w.pickerCancelled || FAILED(dlg->Show(w.hwnd)) || w.pickerCancelled) break;
         IShellItem* chosen = nullptr;
         PWSTR path = nullptr;
         if (SUCCEEDED(dlg->GetResult(&chosen)) && SUCCEEDED(chosen->GetDisplayName(SIGDN_FILESYSPATH, &path)) && path)
             result = path;
         CoTaskMemFree(path);
         if (chosen) chosen->Release();
-        if (!folder || result.empty() || !ScanMusicFolder(result, 1).empty()) break;
+        // A huge folder tree without music is not walked to its end on the UI thread: past the folder limit the
+        // choice is accepted and the playback scan in the background decides.
+        bool tooLarge = false;
+        if (!folder || result.empty() || !ScanMusicFolder(result, 1, kPickerScanFolders, &tooLarge).empty() || tooLarge)
+            break;
         wchar_t text[512];
         swprintf_s(text, Str(StrId::ErrMusicEmpty), MusicTypeList(ResolveLanguage(CurrentSettings().language)).c_str());
         MessageBoxW(w.hwnd, text, Str(StrId::SettingsTitle), MB_OK | MB_ICONWARNING);
         result.clear();
     }
+    w.picker = nullptr;
     dlg->Release();
+    if (w.pickerCancelled) {
+        result.clear();
+        w.pickerCancelled = false;
+        // The exit that cancelled the picker goes on now that COM is no longer in use here.
+        if (w.closeAfterPicker) PostMessageW(std::exchange(w.closeAfterPicker, nullptr), WM_CLOSE, 0, 0);
+    }
     return result;
 }
 
@@ -1724,6 +1744,22 @@ HWND SettingsWindowHandle() { return w.hwnd; }
 
 void SettingsWindowUpdateCounter() {
     if (w.hwnd) UpdateCounterText();
+}
+
+bool SettingsWindowCancelPicker(HWND closeAfter) {
+    if (!w.picker) return false;
+    w.pickerCancelled = true;
+    w.closeAfterPicker = closeAfter;
+    // Close only works from inside the dialog's own callbacks; a Cancel command to its window works from anywhere.
+    IOleWindow* ole = nullptr;
+    HWND dialog = nullptr;
+    if (SUCCEEDED(w.picker->QueryInterface(IID_PPV_ARGS(&ole)))) {
+        if (FAILED(ole->GetWindow(&dialog))) dialog = nullptr;
+        ole->Release();
+    }
+    if (dialog) PostMessageW(dialog, WM_COMMAND, IDCANCEL, 0);
+    else w.picker->Close(HRESULT_FROM_WIN32(ERROR_CANCELLED));
+    return true;
 }
 
 void SettingsWindowReload() {

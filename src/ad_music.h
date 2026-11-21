@@ -25,7 +25,9 @@ std::wstring MusicTypeList(Language language);
 // Explorer-like name order (case folded, digit runs compared as numbers).
 bool MusicNameLess(const std::wstring& a, const std::wstring& b);
 // Playable files in a folder and its subfolders, in name order; stops at maxFiles.
-std::vector<std::wstring> ScanMusicFolder(const std::wstring& folder, size_t maxFiles = 5000);
+// maxFolders caps the folders opened; folderLimitHit (optional) tells whether the walk stopped there.
+std::vector<std::wstring> ScanMusicFolder(const std::wstring& folder, size_t maxFiles = 5000,
+                                          size_t maxFolders = SIZE_MAX, bool* folderLimitHit = nullptr);
 
 // The order the tracks are played in. Shuffle plays every track once per round in random order; a new round never
 // starts with the track that ended the last one.

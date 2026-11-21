@@ -607,6 +607,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (wParam) Shutdown(true);
             return 0;
         case WM_CLOSE:
+            // The open music picker runs its own message loop on COM: shutting down under it would tear COM down
+            // inside the dialog. Close the picker; it sends WM_CLOSE again once its loop has returned.
+            if (SettingsWindowCancelPicker(hwnd)) {
+                Log("exit_deferred reason=picker");
+                return 0;
+            }
             Shutdown();
             DestroyWindow(hwnd);
             return 0;
@@ -757,9 +763,15 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
     wc.lpfnWndProc = &WndProc;
     wc.hInstance = inst;
     wc.lpszClassName = ClassName();
-    if (!RegisterClassExW(&wc)) return 1;
+    if (!RegisterClassExW(&wc)) {
+        Log("start_failed step=register err=%lu", GetLastError());
+        return 1;
+    }
     g.hwnd = CreateWindowExW(0, ClassName(), L"AdMutify", WS_OVERLAPPED, 0, 0, 0, 0, nullptr, nullptr, inst, nullptr);
-    if (!g.hwnd) return 1;
+    if (!g.hwnd) {
+        Log("start_failed step=window err=%lu", GetLastError());
+        return 1;
+    }
     g.taskbarCreated = RegisterWindowMessageW(L"TaskbarCreated");
 
     Log("start version=%s portable=%d hide_tray=%d", ADMUTIFY_VERSION_STR, IsPortable() ? 1 : 0, g.settings.hideTray ? 1 : 0);

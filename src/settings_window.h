@@ -45,6 +45,9 @@ void SettingsWindowArmReset();
 HWND SettingsWindowHandle();
 // Shows the current ad counter in the open window (no-op when closed).
 void SettingsWindowUpdateCounter();
+// Closes the music picker when it is open and returns true; the picker then returns without a choice and posts
+// WM_CLOSE to closeAfter.
+bool SettingsWindowCancelPicker(HWND closeAfter);
 // Shows the current settings in every control of the open window (no-op when closed).
 void SettingsWindowReload();
 // Shows the current status and the on/off state in the open window (no-op when closed).

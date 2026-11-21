@@ -192,6 +192,16 @@ TEST(ad_music_scan_folder) {
     CHECK(ScanMusicFolder(root + L"\\missing").empty());
     CHECK(ScanMusicFolder(L"").empty());
     CHECK(Names(ScanMusicFolder(root + L"\\Album 2")) == std::vector<std::wstring>{L"01.m4a"});
+    // The folder limit stops the walk and says so; without reaching it the flag stays clear.
+    bool limitHit = true;
+    CHECK(ScanMusicFolder(root, 5000, SIZE_MAX, &limitHit).size() == want.size());
+    CHECK(!limitHit);
+    // Only the root folder may be opened: its own files are found, the albums are not reached.
+    std::vector<std::wstring> rootOnly = ScanMusicFolder(root, 5000, 1, &limitHit);
+    CHECK(limitHit);
+    CHECK(Names(rootOnly) == (std::vector<std::wstring>{L"a.wav", L"b.mp3", L"h\u00e4ndel.mp3"}));
+    CHECK(ScanMusicFolder(root, 5000, 0, &limitHit).empty());
+    CHECK(limitHit);
     RemoveTree(root);
 }
 
