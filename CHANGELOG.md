@@ -2,6 +2,8 @@
 
 All notable changes to this project are documented here. The format follows Keep a Changelog; versions follow semantic versioning.
 
+## [1.3.0] - unreleased
+
 ## [1.2.2] - 2026-11-22
 
 ### Changed
