@@ -65,7 +65,7 @@ enum class StrId {
     CrashBodyNotRestored,
     CrashCopy,
     CrashOpenLogs,
-    // Tray menu, right of the status line, with the compact count (FormatCountShort).
+    // Tray menu, the line above the status, with the compact count (FormatCountShort).
     TrayAdsCount,
     Count
 };
