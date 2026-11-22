@@ -8,8 +8,8 @@ All notable changes to this project are documented here. The format follows Keep
 - New icon: a white speaker on a violet tile. While an ad is muted the tray icon turns coral with an X beside the speaker, while AdMutify is off it turns grey. The tray icon fills its space for a larger symbol.
 - The reset button asks "Reset settings?" while it waits for the second click.
 - The ad counter in the settings window rolls up like an odometer when an ad is muted, and large numbers get thousands separators in the window's language (1.000 in German).
-- The tray menu shows the ad counter on the status line, shortened to 12K or 1,2M once it gets large.
-- "During videos in other apps" is now just "During videos"; its tooltip names the other apps. The settings window can be narrower.
+- The tray menu shows the ad counter on its own line above the status, shortened to 12K or 1,2M once it gets large.
+- "During videos in other apps" is now just "During videos"; its tooltip names the other apps. The settings window can be narrower, and choice boxes keep room for their longest entry.
 - The version line at the bottom of the settings window has no separator dot.
 - The icon in the title bar is sharp at every scaling, and the sound wave sits a little further from the speaker.
 
