@@ -70,11 +70,6 @@ struct Win {
     std::wstring countText;
     std::wstring countFrom;
     ULONGLONG countRollStart = 0;
-#ifdef ADMUTIFY_REVIEW
-    // Counter demo: a count of its own that the +1 button raises, the real counter stays untouched.
-    bool demo = false;
-    uint64_t demoCount = 0;
-#endif
     bool loading = false;
     bool classRegistered = false;
     // Title bar and Alt+Tab icons, loaded for the window's DPI.
@@ -221,6 +216,7 @@ void StrokeRounded(HDC dc, const RECT& rc, float radius, COLORREF color, float w
 }
 
 void SetComboHeights();
+int ComboChrome();
 
 // Loads the app icon in the sizes for the window's DPI. The icon file has its own drawing for every title bar
 // size (16, 20, 24 px ...); the class icon alone would be the 32 px one shrunk, which blurs the glyph.
@@ -266,7 +262,6 @@ void MakeFonts() {
     SendMessageW(Ctl(IDC_ADS_CAPTION), WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
     SendMessageW(Ctl(IDC_STATUS), WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
     SendMessageW(Ctl(IDC_ENABLED), WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
-    if (HWND plus = Ctl(IDC_DEMO_PLUS)) SendMessageW(plus, WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
     if (w.tip) {
         SendMessageW(w.tip, WM_SETFONT, reinterpret_cast<WPARAM>(w.font), TRUE);
         SendMessageW(w.tip, TTM_SETMAXTIPWIDTH, 0, Scale(320));
@@ -304,12 +299,6 @@ void CreateControls() {
     SetWindowSubclass(Make(L"BUTTON", IDC_ENABLED, BS_OWNERDRAW | WS_TABSTOP), FlatButtonProc, 1, 0);
     Make(L"STATIC", IDC_STATUS, SS_CENTER | SS_CENTERIMAGE | SS_ENDELLIPSIS | SS_NOPREFIX);
     SetWindowSubclass(Make(L"STATIC", IDC_ADS_COUNT, SS_CENTER | SS_NOPREFIX), CounterProc, 1, 0);
-#ifdef ADMUTIFY_REVIEW
-    if (w.demo) {
-        SetWindowSubclass(Make(L"BUTTON", IDC_DEMO_PLUS, BS_OWNERDRAW | WS_TABSTOP), FlatButtonProc, 1, 0);
-        SetText(IDC_DEMO_PLUS, L"+1");
-    }
-#endif
     Make(L"STATIC", IDC_ADS_CAPTION, SS_CENTER | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"STATIC", IDC_GROUP_ADS, SS_LEFT | SS_CENTERIMAGE | SS_NOPREFIX);
     Make(L"BUTTON", IDC_MODE_MUTE, BS_AUTORADIOBUTTON | BS_MULTILINE | WS_GROUP | WS_TABSTOP);
@@ -405,13 +394,6 @@ void UpdateMusicPath() {
     InvalidateRect(Ctl(IDC_MUSIC_PATH), nullptr, TRUE);
 }
 
-uint64_t ShownCount() {
-#ifdef ADMUTIFY_REVIEW
-    if (w.demo) return w.demoCount;
-#endif
-    return StatsAdsMuted();
-}
-
 constexpr UINT_PTR kRollTimer = 1;
 constexpr UINT kRollFrameMs = 15;
 // Each changed digit rolls for kRollMs; when several change, the next one to the left starts kRollStaggerMs later.
@@ -428,7 +410,7 @@ bool AnimationsOn() {
 // (the old digit moves up and out, the new one comes up from below); otherwise it shows at once.
 void UpdateCounterText(bool roll = false) {
     HWND ctl = Ctl(IDC_ADS_COUNT);
-    const std::wstring text = FormatCount(ShownCount());
+    const std::wstring text = FormatCount(StatsAdsMuted());
     if (text == w.countText && w.countRollStart == 0) return;
     if (roll && !w.countText.empty() && text != w.countText && IsWindowVisible(w.hwnd) && AnimationsOn()) {
         w.countFrom = w.countText;
@@ -710,7 +692,9 @@ SIZE Layout(Placement placement, int density = 0) {
     const int mediaItemsW = WidestItem(dc, w.font, kCombos[0]);
     const int languageItemsW = WidestItem(dc, w.font, kCombos[1]);
     const int musicItemsW = WidestItem(dc, w.font, kCombos[2]);
-    const int comboExtra = 3 * u;
+    // Beyond its longest entry a box needs its padding and chevron, plus a line height of air so no entry is cut,
+    // whatever the font rounds to.
+    const int comboExtra = ComboChrome() + u;
     // The on/off switch: a rounded track with its state word below, centred beside the three header lines.
     int toggleTextW = 0;
     {
@@ -790,10 +774,6 @@ SIZE Layout(Placement placement, int density = 0) {
         Place(IDC_ADS_COUNT, tx, y, tw, bigTm.tmAscent);
         y += bigTm.tmAscent + u / 6;
         Place(IDC_ADS_CAPTION, tx, y, tw, u);
-        if (HWND plus = Ctl(IDC_DEMO_PLUS); plus && !g_measuring) {
-            const int plusW = rowH * 3 / 2;
-            SetWindowPos(plus, nullptr, margin + cardW - plusW, top + (headerH - rowH) / 2, plusW, rowH, SWP_NOZORDER | SWP_NOACTIVATE);
-        }
         y = top + headerH + u / 2;
     }
 
@@ -1134,14 +1114,6 @@ void OnCommand(int id, int code) {
                 }
             }
             break;
-#ifdef ADMUTIFY_REVIEW
-        case IDC_DEMO_PLUS:
-            if (code == BN_CLICKED) {
-                ++w.demoCount;
-                UpdateCounterText(true);
-            }
-            break;
-#endif
         case IDC_ENABLED:
             if (code == BN_CLICKED) {
                 s.enabled = !s.enabled;
@@ -1322,6 +1294,13 @@ void ShowComboMenu(HWND combo) {
 }
 
 // A closed choice box is drawn as a rounded field.
+// Inner layout of a closed choice box: text padding on both sides and the chevron with its gap to the text.
+int ComboPadX() { return Scale(11); }
+int ComboChevronW() { return Scale(10); }
+int ComboChevronGap() { return Scale(6); }
+// Width a box needs beyond its text.
+int ComboChrome() { return 2 * ComboPadX() + ComboChevronW() + ComboChevronGap(); }
+
 void PaintCombo(HWND h, HDC target) {
     RECT rc;
     GetClientRect(h, &rc);
@@ -1338,8 +1317,8 @@ void PaintCombo(HWND h, HDC target) {
     const bool focus = GetFocus() == h && !(SendMessageW(h, WM_QUERYUISTATE, 0, 0) & UISF_HIDEFOCUS);
     if (focus) StrokeRounded(dc, rc, radius, ThemeText(), static_cast<float>(Scale(2)));
 
-    const int padX = Scale(11);
-    const int chevW = Scale(10);
+    const int padX = ComboPadX();
+    const int chevW = ComboChevronW();
     wchar_t text[256] = L"";
     int sel = static_cast<int>(SendMessageW(h, CB_GETCURSEL, 0, 0));
     if (sel >= 0 && SendMessageW(h, CB_GETLBTEXTLEN, sel, 0) < static_cast<LRESULT>(std::size(text)))
@@ -1347,7 +1326,7 @@ void PaintCombo(HWND h, HDC target) {
     HGDIOBJ oldFont = SelectObject(dc, w.font);
     SetBkMode(dc, TRANSPARENT);
     SetTextColor(dc, enabled ? ThemeText() : ThemeDisabledText());
-    RECT tr{rc.left + padX, rc.top, rc.right - padX - chevW - Scale(6), rc.bottom};
+    RECT tr{rc.left + padX, rc.top, rc.right - padX - chevW - ComboChevronGap(), rc.bottom};
     DrawTextW(dc, text, -1, &tr, DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_NOPREFIX | DT_END_ELLIPSIS);
     SelectObject(dc, oldFont);
 
@@ -1900,7 +1879,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 DrawToggle(di);
                 return TRUE;
             }
-            if (di->CtlID == IDC_RESET || di->CtlID == IDC_CLOSE || di->CtlID == IDC_MUSIC_PICK || di->CtlID == IDC_DEMO_PLUS) {
+            if (di->CtlID == IDC_RESET || di->CtlID == IDC_CLOSE || di->CtlID == IDC_MUSIC_PICK) {
                 DrawButton(di, di->CtlID == IDC_CLOSE);
                 return TRUE;
             }
@@ -2066,13 +2045,6 @@ bool SettingsWindowPreTranslate(MSG* msg) {
     }
     return IsDialogMessageW(w.hwnd, msg);
 }
-
-#ifdef ADMUTIFY_REVIEW
-void SettingsWindowStartCounterDemo(uint64_t start) {
-    w.demo = true;
-    w.demoCount = start;
-}
-#endif
 
 void SettingsWindowArmReset() {
     if (w.hwnd && !w.resetArmed) OnReset();

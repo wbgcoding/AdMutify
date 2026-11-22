@@ -501,8 +501,6 @@ bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
     bool fitTest = false;
     bool comboTest = false;
     bool musicTest = false;
-    bool counterDemo = false;
-    unsigned long long demoStart = 1097;
     for (int i = 1; i < argc; ++i) {
         std::wstring_view a = argv[i];
         if (a == L"--review" && i + 1 < argc && std::wstring_view(argv[i + 1]) == L"ids") {
@@ -520,10 +518,6 @@ bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
         } else if (a == L"--hold" && i + 1 < argc) {
             // Keeps the menu open longer so a screen grab of the desktop (VM) shows the real window shape.
             g_menuHoldMs = static_cast<UINT>(std::wcstoul(argv[++i], nullptr, 10));
-        } else if (a == L"--counter-demo") {
-            counterDemo = true;
-        } else if (a == L"--count" && i + 1 < argc) {
-            demoStart = std::wcstoull(argv[++i], nullptr, 10);
         } else if (a == L"--dpi-test") {
             dpiTest = true;
         } else if (a == L"--fit-test") {
@@ -576,30 +570,6 @@ bool RunReviewCommand(int argc, wchar_t** argv, int& exitCode) {
         CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
         SetAutostartKeyOverride(L"Software\\AdMutifyReview\\Run");
         exitCode = RunMusicRadioTest();
-        return true;
-    }
-
-    if (counterDemo) {
-        // The settings window with its own counter and a +1 button, to watch the counter roll. Nothing else of the
-        // app runs, so it never touches Spotify, the real counter or the settings file.
-        CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-        SetAutostartKeyOverride(L"Software\\AdMutifyReview\\Run");
-        Settings s;
-        if (!lang.empty()) s.language = LanguageFromCode(WideToUtf8(lang));
-        if (theme == L"dark" || theme == L"light") SetThemeOverride(theme == L"dark" ? 2 : 1);
-        AppUseInMemorySettings(s);
-        SetLanguage(s.language);
-        SettingsWindowStartCounterDemo(demoStart);
-        OpenSettingsWindow();
-        // A thread timer wakes the loop, so it ends soon after the window closes.
-        SetTimer(nullptr, 0, 250, nullptr);
-        MSG msg;
-        while (SettingsWindowHandle() && GetMessageW(&msg, nullptr, 0, 0) > 0) {
-            if (SettingsWindowPreTranslate(&msg)) continue;
-            TranslateMessage(&msg);
-            DispatchMessageW(&msg);
-        }
-        exitCode = 0;
         return true;
     }
 
