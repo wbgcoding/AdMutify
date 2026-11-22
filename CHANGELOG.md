@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows Keep a Changelog; versions follow semantic versioning.
 
-## [1.2.2] - unreleased
+## [1.2.2] - 2026-11-22
 
 ### Changed
 - New icon: a white speaker on a violet tile. While an ad is muted the tray icon turns coral with an X beside the speaker, while AdMutify is off it turns grey. The tray icon fills its space for a larger symbol.
@@ -23,7 +23,7 @@ All notable changes to this project are documented here. The format follows Keep
 - The music picker opens in the folder of a chosen file that has since been deleted, instead of in the Music folder.
 - If the crash helper could not start, a crash still restores Spotify's volume right away instead of only at the next start.
 - Moving the settings window to a monitor with different scaling resizes it once to the right size, instead of a broken layout with an unreachable Close button.
-- An ad is counted only once its mute reaches Spotify, and the counter file can no longer be changed with a text editor.
+- An ad is counted only once its mute reaches Spotify. The counter file is stored encoded with a check value, so a count edited by hand is not taken over.
 - A portable copy installed silently while AdMutify was running starts with its own settings next to the exe instead of the installed copy's settings.
 
 ## [1.2.1] - 2026-11-14
