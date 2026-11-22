@@ -7,6 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white" alt="Windows 10 and 11">
   <img src="https://img.shields.io/badge/C%2B%2B20-Win32-00599C?logo=cplusplus&logoColor=white" alt="C++20, Win32">
+  <a href="https://github.com/wbgcoding/AdMutify/releases/latest"><img src="https://img.shields.io/github/v/release/wbgcoding/AdMutify?label=download&color=7c3aed" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license">
 </p>
 
