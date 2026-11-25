@@ -23,6 +23,13 @@ inline std::wstring FormatText(const wchar_t* format, ...) {
     return out;
 }
 
+// Strips spaces, tabs and line breaks at both ends (ini lines).
+inline std::string_view Trim(std::string_view s) {
+    while (!s.empty() && (s.front() == ' ' || s.front() == '\t' || s.front() == '\r' || s.front() == '\n')) s.remove_prefix(1);
+    while (!s.empty() && (s.back() == ' ' || s.back() == '\t' || s.back() == '\r' || s.back() == '\n')) s.remove_suffix(1);
+    return s;
+}
+
 inline bool EqualsNoCase(std::wstring_view a, std::wstring_view b) {
     if (a.size() != b.size()) return false;
     for (size_t i = 0; i < a.size(); ++i)

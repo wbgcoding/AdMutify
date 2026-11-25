@@ -8,6 +8,8 @@ bool SystemUsesDarkApps();
 void SetThemeOverride(int mode);
 // The dark and high contrast flags are cached; call this when the system theme or colours changed.
 void RefreshThemeCache();
+// True for the WM_SETTINGCHANGE Windows sends when the light/dark mode or the accent colour changes.
+bool IsColorSetChange(LPARAM lParam);
 bool IsDarkTheme();
 // True while a Windows high contrast theme is active; colours then come from the system.
 bool IsHighContrast();

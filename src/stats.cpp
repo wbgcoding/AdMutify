@@ -6,6 +6,7 @@
 
 #include "crash.h"
 #include "settings.h"
+#include "util.h"
 
 uint64_t SipHash24(const uint8_t key[16], const uint8_t* data, size_t len) {
     auto rotl = [](uint64_t x, int b) { return (x << b) | (x >> (64 - b)); };
@@ -84,12 +85,6 @@ bool ParseHex16(std::string_view s, uint64_t& out) {
     }
     out = v;
     return true;
-}
-
-std::string_view Trim(std::string_view s) {
-    while (!s.empty() && (s.front() == ' ' || s.front() == '\t' || s.front() == '\r' || s.front() == '\n')) s.remove_prefix(1);
-    while (!s.empty() && (s.back() == ' ' || s.back() == '\t' || s.back() == '\r' || s.back() == '\n')) s.remove_suffix(1);
-    return s;
 }
 
 }  // namespace

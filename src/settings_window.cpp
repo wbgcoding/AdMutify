@@ -1913,8 +1913,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             return 0;
         }
         case WM_SETTINGCHANGE:
-            if (wParam == SPI_SETHIGHCONTRAST ||
-                (lParam && wcscmp(reinterpret_cast<const wchar_t*>(lParam), L"ImmersiveColorSet") == 0))
+            if (wParam == SPI_SETHIGHCONTRAST || IsColorSetChange(lParam))
                 RefreshTheme();
             else if (wParam == SPI_SETNONCLIENTMETRICS) {
                 // Text size or system font changed.

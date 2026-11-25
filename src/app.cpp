@@ -23,7 +23,7 @@
 
 namespace {
 
-constexpr UINT_PTR kTimerExit = 1;
+constexpr UINT_PTR kTimerDebounce = 1;
 constexpr UINT_PTR kTimerProbe = 2;
 constexpr UINT_PTR kTimerMedia = 3;
 constexpr UINT_PTR kTimerMusic = 4;
@@ -282,7 +282,8 @@ void ReevaluateOnce() {
     } else {
         KillTimer(g.hwnd, kTimerMediaSettle);
     }
-    // After the settle check, so a silent ad does not count as a held verdict. The session is only asked while an ad title is up; a silent player behind it means the ad has ended.
+    // Runs after the settle check, so a silent ad never counts as a held verdict.
+    // The session is asked only while an ad title is up; a silent player behind it means the ad has ended.
     const bool inAd = g.machine.Current() == AdState::Ad;
     const bool adTitle = kind == TitleKind::Ad;
     const bool adSessionActive = adTitle && (inAd || g.adGone) ? g.audio.IsSpotifyAudioActive() : true;
@@ -376,8 +377,8 @@ void ReevaluateOnce() {
     if (before != AdState::NoSpotify && after == AdState::NoSpotify) g.audio.UnwatchSessions();
 
     uint64_t pending = g.machine.PendingMs(now);
-    if (pending > 0) SetTimer(g.hwnd, kTimerExit, static_cast<UINT>(pending), nullptr);
-    else KillTimer(g.hwnd, kTimerExit);
+    if (pending > 0) SetTimer(g.hwnd, kTimerDebounce, static_cast<UINT>(pending), nullptr);
+    else KillTimer(g.hwnd, kTimerDebounce);
 
     if (kind == TitleKind::IdleOrAd) {
         if (!g.probeRunning && g.probes < kMaxProbes) {
@@ -427,7 +428,7 @@ void Shutdown(bool endSession = false) {
     if (g.closing) return;
     g.closing = true;
     g.closingEndSession = endSession;
-    KillTimer(g.hwnd, kTimerExit);
+    KillTimer(g.hwnd, kTimerDebounce);
     KillTimer(g.hwnd, kTimerProbe);
     KillTimer(g.hwnd, kTimerMedia);
     KillTimer(g.hwnd, kTimerMediaSettle);
@@ -541,8 +542,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             Reevaluate();
             return 0;
         case WM_TIMER:
-            if (wParam == kTimerExit) {
-                KillTimer(hwnd, kTimerExit);
+            if (wParam == kTimerDebounce) {
+                KillTimer(hwnd, kTimerDebounce);
                 Reevaluate();
             } else if (wParam == kTimerAdCheck) {
                 g.watch.RescanIfStale();
@@ -597,8 +598,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
             return TRUE;
         case WM_SETTINGCHANGE:
-            if (wParam == SPI_SETHIGHCONTRAST ||
-                (lParam && wcscmp(reinterpret_cast<const wchar_t*>(lParam), L"ImmersiveColorSet") == 0))
+            if (wParam == SPI_SETHIGHCONTRAST || IsColorSetChange(lParam))
                 RefreshThemeCache();
             break;
         case WM_SYSCOLORCHANGE:

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cwchar>
 
 namespace {
 
@@ -72,6 +73,10 @@ bool SystemUsesDarkApps() {
 void SetThemeOverride(int mode) { g_override = mode; }
 
 void RefreshThemeCache() { g_cacheValid = false; }
+
+bool IsColorSetChange(LPARAM lParam) {
+    return lParam && wcscmp(reinterpret_cast<const wchar_t*>(lParam), L"ImmersiveColorSet") == 0;
+}
 
 bool IsDarkTheme() {
     if (IsHighContrast()) return false;

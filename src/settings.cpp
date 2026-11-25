@@ -17,12 +17,6 @@ bool g_newerVersionSeen = false;
 // The file exists but could not be read this run; saving must not replace it with defaults.
 bool g_readFailedSeen = false;
 
-std::string_view Trim(std::string_view s) {
-    while (!s.empty() && (s.front() == ' ' || s.front() == '\t' || s.front() == '\r' || s.front() == '\n')) s.remove_prefix(1);
-    while (!s.empty() && (s.back() == ' ' || s.back() == '\t' || s.back() == '\r' || s.back() == '\n')) s.remove_suffix(1);
-    return s;
-}
-
 bool ParseInt(std::string_view s, int& out) {
     int v = 0;
     auto r = std::from_chars(s.data(), s.data() + s.size(), v);
