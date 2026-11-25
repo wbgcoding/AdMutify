@@ -140,21 +140,24 @@ void WriteCrashFlag(bool restored) {
     CloseHandle(flag);
 }
 
-DWORD WINAPI DumpThread(LPVOID) {
-    WaitForSingleObject(g_crashEvent, INFINITE);
-
-    // Not restored until proven otherwise: if the restore hangs, the next start still reports the crash.
-    WriteCrashFlag(false);
-    const bool restored = RestoreAudioUnsafe();
-
-    // Spotify must not stay paused because of us. PostMessageW does not allocate and does not wait for Spotify,
-    // so it fits the heap-free crash path (SendMessage could hang on a busy Spotify).
+// Spotify must not stay paused because of us. PostMessageW does not allocate and does not wait for Spotify,
+// so it fits the heap-free crash path (SendMessage could hang on a busy Spotify).
+void ResumeSpotifyUnsafe() {
     if (HWND spotify = g_resumeWindow.exchange(nullptr)) {
         // A track title ("artist - song") means the user already started playing again: no toggle then.
         wchar_t title[256] = {};
         GetWindowTextW(spotify, title, static_cast<int>(std::size(title)));
         if (!wcsstr(title, L" - ")) PostMessageW(spotify, WM_APPCOMMAND, 0, MAKELPARAM(0, APPCOMMAND_MEDIA_PLAY_PAUSE));
     }
+}
+
+DWORD WINAPI DumpThread(LPVOID) {
+    WaitForSingleObject(g_crashEvent, INFINITE);
+
+    // Not restored until proven otherwise: if the restore hangs, the next start still reports the crash.
+    WriteCrashFlag(false);
+    const bool restored = RestoreAudioUnsafe();
+    ResumeSpotifyUnsafe();
 
     SetEvent(g_restoreEvent);
 
@@ -192,6 +195,7 @@ void RunCrashPath(EXCEPTION_POINTERS* info) {
         if (!g_crashing.exchange(true)) {
             WriteCrashFlag(false);
             if (RestoreAudioUnsafe()) WriteCrashFlag(true);
+            ResumeSpotifyUnsafe();
         }
         return;
     }
@@ -241,10 +245,14 @@ bool CopyToClipboard(HWND owner, const std::wstring& text) {
 
 enum { kBtnCopy = 1001, kBtnOpen = 1002, kBtnClose = 1003 };
 
+// How many starts back the crashed run lies for the dialog on screen: a report left over from an earlier start
+// belongs to the run before the one that left it, whose own start line is already in the log.
+int g_reportRunsBack = 0;
+
 HRESULT CALLBACK CrashDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM, LONG_PTR) {
     if (msg == TDN_BUTTON_CLICKED) {
         if (wParam == kBtnCopy) {
-            std::string tail = "AdMutify " ADMUTIFY_VERSION_STR "\r\n" + CrashedRunTail(50);
+            std::string tail = "AdMutify " ADMUTIFY_VERSION_STR "\r\n" + CrashedRunTail(50, g_reportRunsBack);
             CopyToClipboard(hwnd, Utf8ToWide(tail));
             return S_FALSE;
         }
@@ -264,6 +272,9 @@ void Log(const char* fmt, ...) {
     va_start(args, fmt);
     vsnprintf(msg, sizeof(msg), fmt, args);
     va_end(args);
+    // One entry is one line: a title or tag with a line break must not forge or hide log lines.
+    for (char* c = msg; *c; ++c)
+        if (*c == '\r' || *c == '\n') *c = ' ';
 
     SYSTEMTIME st;
     GetLocalTime(&st);
@@ -329,28 +340,34 @@ std::string DropTraceLines(std::string_view text) {
     constexpr size_t kPrefix = 24;
     std::string out;
     size_t pos = 0;
+    bool dropping = false;
     while (pos < text.size()) {
         size_t nl = text.find('\n', pos);
         size_t end = nl == std::string_view::npos ? text.size() : nl + 1;
         std::string_view line = text.substr(pos, end - pos);
-        if (line.size() < kPrefix || line.compare(kPrefix, 6, "trace ") != 0) out.append(line);
+        // Only lines that start with a digit carry a timestamp; any other line follows the line before it.
+        const bool stamped = line[0] >= '0' && line[0] <= '9';
+        if (stamped || pos == 0) dropping = line.size() >= kPrefix && line.compare(kPrefix, 6, "trace ") == 0;
+        if (!dropping) out.append(line);
         pos = end;
     }
     return out;
 }
 
-std::string TailBeforeLastStart(std::string_view text, int n) {
+std::string TailBeforeLastStart(std::string_view text, int n, int runsBack) {
     // A line is "YYYY-MM-DD HH:MM:SS.mmm message": the message starts after 24 characters.
     constexpr size_t kPrefix = 24;
     constexpr std::string_view kStart = "start version=";
     size_t end = text.size();
     size_t pos = text.size();
+    int starts = 0;
     while (pos > 0) {
         size_t nl = text.rfind('\n', pos - 1);
         size_t lineStart = nl == std::string_view::npos ? 0 : nl + 1;
         if (text.size() - lineStart >= kPrefix + kStart.size() && text.compare(lineStart + kPrefix, kStart.size(), kStart) == 0) {
+            // With fewer start lines than asked for, the oldest one found ends the tail.
             end = lineStart;
-            break;
+            if (starts++ >= runsBack) break;
         }
         if (nl == std::string_view::npos) break;
         pos = nl;
@@ -373,7 +390,7 @@ std::string TailBeforeLastStart(std::string_view text, int n) {
     return std::string(head.substr(from));
 }
 
-std::string CrashedRunTail(int n) {
+std::string CrashedRunTail(int n, int runsBack) {
     std::string cur;
     if (!ReadFileUtf8(LogFilePath(0), cur)) cur.clear();
     std::string_view view = cur;
@@ -381,9 +398,9 @@ std::string CrashedRunTail(int n) {
     std::string older;
     if (ReadFileUtf8(LogFilePath(1), older) && !older.empty()) {
         // Trace lines are dropped first, so a trace run still leaves n plain lines.
-        return TailBeforeLastStart(DropTraceLines(older + cur), n);
+        return TailBeforeLastStart(DropTraceLines(older + cur), n, runsBack);
     }
-    return TailBeforeLastStart(DropTraceLines(view), n);
+    return TailBeforeLastStart(DropTraceLines(view), n, runsBack);
 }
 
 bool CrashInProgress() { return g_crashing.load(); }
@@ -400,7 +417,8 @@ void ReserveStackGuarantee() {
 }
 
 void InstallCrashHandler() {
-    if (g_dumpThread) return;
+    // Installed once: events exist even when no dump thread could be started.
+    if (g_dumpThread || g_crashEvent) return;
     g_crashEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     g_restoreEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     g_doneEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
@@ -474,6 +492,8 @@ void CrashStartupBegin() {
     std::string seen;
     const bool seenExists = ReadFileUtf8(CrashSeenPath(), seen);
     const CrashStartupPlan plan = PlanCrashStartup(seenExists, CrashFlagExists());
+    // The report in crashed.seen was left by the previous start, so its crashed run is one start further back.
+    g_reportRunsBack = 1;
     if (plan.showSeenNow) {
         PruneDumps();
         ShowCrashDialog(CrashFlagMeansNotRestored(seen));
@@ -485,6 +505,7 @@ void CrashStartupBegin() {
         g_crashPending = true;
         return;
     }
+    g_reportRunsBack = 0;
     if (!plan.deferFlag) return;
     if (!ReadFileUtf8(CrashFlagPath(), g_crashFlagText)) g_crashFlagText.clear();
     g_crashPending = true;

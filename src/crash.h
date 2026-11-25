@@ -22,10 +22,10 @@ std::string DropLogLinesBefore(std::string_view text, std::string_view cutoff);
 // Pure part: removes the lines a --trace run adds (message starts with "trace "); they can hold titles and exe names.
 std::string DropTraceLines(std::string_view text);
 // Pure part: the n lines that end right before the last "start version=" line (the tail of the run that
-// came before this one). Without such a line, the last n lines.
-std::string TailBeforeLastStart(std::string_view text, int n);
+// came before this one). Without such a line, the last n lines. runsBack skips that many further start lines.
+std::string TailBeforeLastStart(std::string_view text, int n, int runsBack = 0);
 // The crashed run's tail from the log files, without trace lines; reaches into admutify.log.1 after a rollover.
-std::string CrashedRunTail(int n);
+std::string CrashedRunTail(int n, int runsBack = 0);
 
 // True once a crash is being handled on any thread. The main thread may still run for a few seconds
 // meanwhile; audio changes must stop so they cannot undo the restore of the crash path.

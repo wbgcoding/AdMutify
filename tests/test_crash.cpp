@@ -109,6 +109,42 @@ TEST(copied_details_drop_trace_lines) {
     CHECK(DropTraceLines("short\r\n") == "short\r\n");
 }
 
+TEST(copied_details_drop_continuation_of_trace_lines) {
+    // A line without a timestamp belongs to the line before it, so a traced title with a line break cannot leak.
+    const std::string text =
+        "2026-09-01 10:00:00.000 start version=1\r\n2026-09-01 10:00:01.000 trace title \"a\r\nsecret part\"\r\n"
+        "2026-09-01 10:00:02.000 state Idle -> Music\r\ncontinued state text\r\n";
+    CHECK(DropTraceLines(text) ==
+          "2026-09-01 10:00:00.000 start version=1\r\n2026-09-01 10:00:02.000 state Idle -> Music\r\ncontinued state text\r\n");
+}
+
+TEST(log_lines_stay_single_lines) {
+    CleanLogs();
+    Log("trace title \"a\nsecret\r\npart\"");
+    Log("state next");
+    std::string data;
+    CHECK(ReadFileUtf8(LogDir() + L"\\admutify.log", data));
+    size_t lines = 0;
+    for (char c : data)
+        if (c == '\n') ++lines;
+    CHECK(lines == 2);
+    CHECK(data.find("trace title \"a secret  part\"") != std::string::npos);
+    CHECK(DropTraceLines(data).find("secret") == std::string::npos);
+    CleanLogs();
+}
+
+TEST(tail_before_an_earlier_start) {
+    const std::string a = "2026-09-01 09:00:00.000 start version=1\r\n2026-09-01 09:00:01.000 state a\r\n";
+    const std::string b = "2026-09-01 10:00:00.000 start version=1\r\n2026-09-01 10:00:01.000 state b\r\n";
+    const std::string c = "2026-09-01 11:00:00.000 start version=1\r\n";
+    // runsBack 1: the run before the one that came before this start.
+    CHECK(TailBeforeLastStart(a + b + c, 50, 1) == a);
+    CHECK(TailBeforeLastStart(a + b + c, 50, 0) == a + b);
+    // Fewer starts than asked for: the oldest start line ends the tail.
+    CHECK(TailBeforeLastStart(b + c, 50, 3) == "");
+    CHECK(TailBeforeLastStart(a + b + c, 1, 1) == "2026-09-01 09:00:01.000 state a\r\n");
+}
+
 TEST(log_drop_lines_before_cutoff) {
     const std::string text =
         "2026-09-01 10:00:00.000 start\r\n2026-09-02 11:00:00.000 exit\r\n2026-09-09 08:00:00.000 start\r\n";
