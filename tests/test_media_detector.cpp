@@ -79,10 +79,10 @@ TEST(media_gap_ends_run_even_without_silent_polls) {
 TEST(media_stays_active_through_short_silence) {
     MediaDetector d;
     CHECK(FeedSound(d, 0, 5000) == 4000);
-    // Last sound at 4000: 2.5 s of silence keeps it active, 3.1 s ends it.
-    CHECK(FeedSilence(d, 4100, 6501));
-    CHECK(d.Update(false, 6900));
-    CHECK(!d.Update(false, 7100));
+    // Last sound at 4000: 11.9 s of silence keeps it active, 12 s ends it.
+    CHECK(FeedSilence(d, 4100, 15901));
+    CHECK(d.Update(false, 15999));
+    CHECK(!d.Update(false, 16000));
     CHECK(!d.Active());
 }
 
@@ -139,6 +139,17 @@ TEST(pause_decision_full_cycle) {
     CHECK(step(true, AdState::Music) == PauseAction::None);
     CHECK(step(false, AdState::Music) == PauseAction::None);
     CHECK(step(true, AdState::Music) == PauseAction::Pause);
+}
+
+TEST(media_quiet_scene_keeps_video_active) {
+    // Quiet scenes of up to ten seconds are common in videos; Spotify must not come back during one.
+    MediaDetector d;
+    CHECK(FeedSound(d, 0, 6000) != 0);
+    CHECK(FeedSilence(d, 6000, 16000));
+    CHECK(FeedSound(d, 16000, 20000) == 16000);
+    // A video that really stopped still ends the detection.
+    CHECK(FeedSilence(d, 16100, 28000));
+    CHECK(!FeedSilence(d, 28000, 28100));
 }
 
 TEST(hold_suppresses_only_silent_ad_audio) {

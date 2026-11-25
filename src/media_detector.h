@@ -8,8 +8,8 @@
 // Sound has to be present this long before it counts as a video; gaps up to kMediaGapMs keep the run alive.
 constexpr uint64_t kMediaStartMs = 4000;
 constexpr uint64_t kMediaGapMs = 1500;
-// An active detection ends after this much silence.
-constexpr uint64_t kMediaStopMs = 3000;
+// An active detection ends after this much silence; quiet scenes in videos often run several seconds.
+constexpr uint64_t kMediaStopMs = 12000;
 
 // True for browsers and video players (file name only, case-insensitive).
 bool IsContentApp(std::wstring_view exeName);
