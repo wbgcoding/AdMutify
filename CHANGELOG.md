@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows Keep a Changelog; versions follow semantic versioning.
 
-## [1.3.0] - unreleased
+## [1.2.3] - 2026-11-25
 
 ### Fixed
 - A quiet scene in a video no longer brings Spotify back: the video reaction now ends after 12 seconds of silence instead of 3.
