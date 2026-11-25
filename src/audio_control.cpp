@@ -86,6 +86,7 @@ public:
     }
 
     STDMETHODIMP QueryInterface(REFIID riid, void** ppv) override {
+        if (!ppv) return E_POINTER;
         if (riid == __uuidof(IUnknown) || riid == __uuidof(IAudioSessionEvents)) {
             *ppv = static_cast<IAudioSessionEvents*>(this);
             AddRef();
@@ -132,6 +133,7 @@ public:
     explicit SessionNotify(HWND hwnd) : hwnd_(hwnd) {}
 
     STDMETHODIMP QueryInterface(REFIID riid, void** ppv) override {
+        if (!ppv) return E_POINTER;
         if (riid == __uuidof(IUnknown) || riid == __uuidof(IAudioSessionNotification)) {
             *ppv = static_cast<IAudioSessionNotification*>(this);
             AddRef();
@@ -162,6 +164,7 @@ public:
         : hwnd_(hwnd), dirty_(devicesDirty), posted_(posted) {}
 
     STDMETHODIMP QueryInterface(REFIID riid, void** ppv) override {
+        if (!ppv) return E_POINTER;
         if (riid == __uuidof(IUnknown) || riid == __uuidof(IMMNotificationClient)) {
             *ppv = static_cast<IMMNotificationClient*>(this);
             AddRef();
@@ -187,7 +190,8 @@ private:
     // A default device switch arrives once per role; one rescan covers them all.
     HRESULT Poke() {
         *dirty_ = true;
-        if (!posted_->exchange(true)) PostMessageW(hwnd_, WM_APP_SESSION_CREATED, 0, 0);
+        // A failed post must not leave the flag set, or every later notification would be dropped.
+        if (!posted_->exchange(true) && !PostMessageW(hwnd_, WM_APP_SESSION_CREATED, 0, 0)) *posted_ = false;
         return S_OK;
     }
     std::atomic<ULONG> ref_{1};
@@ -285,7 +289,7 @@ struct CrashSlot {
     SessionEvents* ev = nullptr;
 };
 
-AudioControl* g_active = nullptr;
+std::atomic<AudioControl*> g_active{nullptr};
 
 }  // namespace
 
@@ -841,14 +845,16 @@ bool AudioControl::Init(HWND notifyWindow) {
         impl_->deviceNotify.Reset();
     // New sessions are announced from the start, so a Spotify that starts hidden later is noticed.
     impl_->RegisterDeviceNotifications();
-    g_active = this;
+    g_active.store(this);
     return true;
 }
 
 void AudioControl::Shutdown() {
     if (!impl_) return;
-    if (g_active == this) g_active = nullptr;
+    AudioControl* self = this;
+    g_active.compare_exchange_strong(self, nullptr);
     UnwatchSessions();
+    impl_->devicePostQueued = false;
     for (auto& n : impl_->notifiedDevices)
         if (impl_->notify) n.mgr->UnregisterSessionNotification(impl_->notify.Get());
     impl_->notifiedDevices.clear();
@@ -884,8 +890,6 @@ int AudioControl::Apply(Mode mode, int percent) {
             e->appliedAt = NowUnix();
             e->appliedMode = mode;
             e->appliedVolume = mode == Mode::Mute ? e->oldVolume : LoweredVolume(e->oldVolume, percent);
-            if (mode == Mode::Mute) e->ev->Expect(mode, true, e->oldVolume);
-            else e->ev->Expect(mode, e->oldMute != FALSE, e->appliedVolume);
             fresh.push_back(e);
         }
     }
@@ -896,6 +900,10 @@ int AudioControl::Apply(Mode mode, int percent) {
     bool failed = false;
     for (Entry* e : fresh) {
         impl_->AddCrashSlot(*e);
+        // Expected right before the write, not before the state file: the session still reads its old values
+        // until then, and a callback in that gap would be taken for a user change.
+        if (mode == Mode::Mute) e->ev->Expect(mode, true, e->oldVolume);
+        else e->ev->Expect(mode, e->oldMute != FALSE, e->appliedVolume);
         HRESULT hr = mode == Mode::Mute ? e->vol->SetMute(TRUE, &kAdMutifyEventContext)
                                         : e->vol->SetMasterVolume(LoweredVolume(e->oldVolume, percent), &kAdMutifyEventContext);
         if (SUCCEEDED(hr)) {
@@ -1138,4 +1146,7 @@ bool AudioControl::RestoreUnsafe() {
     return allRestored && !impl_->crashSlotsFull && impl_->pending.empty();
 }
 
-bool RestoreAudioUnsafe() { return g_active ? g_active->RestoreUnsafe() : true; }
+bool RestoreAudioUnsafe() {
+    AudioControl* active = g_active.load();
+    return active ? active->RestoreUnsafe() : true;
+}
