@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows Keep
 
 ### Fixed
 - A quiet scene in a video no longer brings Spotify back: the video reaction now ends after 12 seconds of silence instead of 3.
+- Starting AdMutify a second time brings its settings window to the front instead of only flashing the taskbar.
+- The language list is sorted alphabetically after System and English.
+- When a song of your own ad music ends during the fade-out after an ad, no further song is opened in the background.
+- A volume change that arrives while AdMutify mutes or lowers Spotify is no longer mistaken for your own change, so the old volume comes back reliably after the ad.
+- The crash report copies the log of the crashed run, also after two crashes in a row.
 
 ## [1.2.2] - 2026-11-22
 
