@@ -354,7 +354,7 @@ TEST(settings_garbage_lines) {
     CHECK(s.language == Language::System);
 }
 
-TEST(settings_concurrent_writes) {
+TEST_INTEGRATION(settings_concurrent_writes) {
     RemoveSettingsFile();
     std::atomic<int> failures{0};
     auto writer = [&](char fill) {

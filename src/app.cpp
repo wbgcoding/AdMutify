@@ -433,6 +433,7 @@ void Shutdown(bool endSession = false) {
     KillTimer(g.hwnd, kTimerMedia);
     KillTimer(g.hwnd, kTimerMediaSettle);
     KillTimer(g.hwnd, kTimerAdCheck);
+    KillTimer(g.hwnd, kTimerTraceWindows);
     g.mediaTimerRunning = false;
     StopRestoreRetry();
     // Spotify must not stay paused because of AdMutify.

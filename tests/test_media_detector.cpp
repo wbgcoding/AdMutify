@@ -144,10 +144,11 @@ TEST(pause_decision_full_cycle) {
 }
 
 TEST(media_quiet_scene_keeps_video_active) {
-    // Quiet scenes of up to ten seconds are common in videos; Spotify must not come back during one.
+    // Quiet scenes of eight to ten seconds are common in videos; Spotify must not come back during one.
+    // FeedSound stops at the first active update (4000 ms), so the silence below lasts 11.9 s.
     MediaDetector d;
-    CHECK(FeedSound(d, 0, 6000) != 0);
-    CHECK(FeedSilence(d, 6000, 16000));
+    CHECK(FeedSound(d, 0, 6000) == 4000);
+    CHECK(FeedSilence(d, 4100, 16000));
     CHECK(FeedSound(d, 16000, 20000) == 16000);
     // A video that really stopped still ends the detection.
     CHECK(FeedSilence(d, 16100, 28000));

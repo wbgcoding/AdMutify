@@ -335,6 +335,21 @@ void SetTraceEnabled(bool enabled) { g_trace = enabled; }
 bool TraceEnabled() { return g_trace; }
 void SetLogLimitForTests(unsigned long bytes) { g_logLimit = bytes ? bytes : kDefaultLogLimit; }
 
+namespace {
+
+// "YYYY-MM-DD HH:MM:SS.mmm ": digits and separators at their fixed places.
+bool HasTimestamp(std::string_view line) {
+    constexpr std::string_view kShape = "0000-00-00 00:00:00.000 ";
+    if (line.size() < kShape.size()) return false;
+    for (size_t i = 0; i < kShape.size(); ++i) {
+        const char c = line[i];
+        if (kShape[i] == '0' ? (c < '0' || c > '9') : c != kShape[i]) return false;
+    }
+    return true;
+}
+
+}  // namespace
+
 std::string DropTraceLines(std::string_view text) {
     // A line is "YYYY-MM-DD HH:MM:SS.mmm message": the message starts after 24 characters.
     constexpr size_t kPrefix = 24;
@@ -345,8 +360,8 @@ std::string DropTraceLines(std::string_view text) {
         size_t nl = text.find('\n', pos);
         size_t end = nl == std::string_view::npos ? text.size() : nl + 1;
         std::string_view line = text.substr(pos, end - pos);
-        // Only lines that start with a digit carry a timestamp; any other line follows the line before it.
-        const bool stamped = line[0] >= '0' && line[0] <= '9';
+        // Only lines with the full timestamp shape start an entry; any other line follows the line before it.
+        const bool stamped = HasTimestamp(line);
         if (stamped || pos == 0) dropping = line.size() >= kPrefix && line.compare(kPrefix, 6, "trace ") == 0;
         if (!dropping) out.append(line);
         pos = end;

@@ -116,6 +116,9 @@ TEST(copied_details_drop_continuation_of_trace_lines) {
         "2026-09-01 10:00:02.000 state Idle -> Music\r\ncontinued state text\r\n";
     CHECK(DropTraceLines(text) ==
           "2026-09-01 10:00:00.000 start version=1\r\n2026-09-01 10:00:02.000 state Idle -> Music\r\ncontinued state text\r\n");
+    // A continuation that happens to start with a digit is still no timestamp.
+    const std::string digit = "2026-09-01 10:00:01.000 trace title \"a\r\n99 secret\"\r\n2026-09-01 10:00:02.000 exit\r\n";
+    CHECK(DropTraceLines(digit) == "2026-09-01 10:00:02.000 exit\r\n");
 }
 
 TEST(log_lines_stay_single_lines) {

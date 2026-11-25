@@ -172,9 +172,10 @@ bool ShootMenu(const std::wstring& id, const std::wstring& path) {
     languages[0] = Str(StrId::LangSystem);
     for (int i = 1; i < kLanguageCount; ++i) languages[i] = LanguageNativeName(kLanguageMenuOrder[i]);
     // A count of the size most users reach; the menu-ad shot shows the compact form of a large one.
-    wchar_t count[64];
-    swprintf_s(count, Str(StrId::TrayAdsCount), FormatCountShort(id == L"menu-ad" ? 1234567 : 1234).c_str());
-    HMENU menu = id == L"menu-lang" ? BuildChoiceMenu(languages, kLanguageCount, 1, 0, 0) : BuildTrayMenu(enabled, status, count);
+    const std::wstring count =
+        FormatText(Str(StrId::TrayAdsCount), FormatCountShort(id == L"menu-ad" ? 1234567 : 1234).c_str());
+    HMENU menu = id == L"menu-lang" ? BuildChoiceMenu(languages, kLanguageCount, 1, 0, 0)
+                                    : BuildTrayMenu(enabled, status, count.c_str());
     g_menuShot = MenuShot{path, 0, false};
     SetTimer(owner, 1, g_menuHoldMs, nullptr);
     SetForegroundWindow(owner);
