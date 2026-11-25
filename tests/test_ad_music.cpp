@@ -15,7 +15,7 @@
 #include "test.h"
 #include "test_helpers.h"
 
-TEST_FILE_GROUP(Integration);
+TEST_FILE_GROUP(Logic);
 
 namespace {
 
@@ -361,7 +361,7 @@ bool PumpUntil(Pred done, DWORD timeoutMs) {
 
 }  // namespace
 
-TEST(ad_music_player_plays_resumes_and_skips) {
+TEST_INTEGRATION(ad_music_player_plays_resumes_and_skips) {
     // Hosted CI runners have no audio output device, so the media engine cannot play anything there.
     if (GetEnvironmentVariableW(L"CI", nullptr, 0) != 0) {
         std::printf("note: CI run, real playback check skipped\n");
