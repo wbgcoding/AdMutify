@@ -28,6 +28,7 @@ using std::min;
 #include "strings.h"
 #include "theme.h"
 #include "tray.h"
+#include "util.h"
 #include "version.h"
 
 namespace {
@@ -363,9 +364,7 @@ void CreateControls() {
 void UpdatePercentLabels() {
     for (const SliderDef& slider : kSliders) {
         int pct = static_cast<int>(SendMessageW(Ctl(slider.track), TBM_GETPOS, 0, 0));
-        wchar_t buf[32];
-        swprintf_s(buf, Str(StrId::PercentValue), pct);
-        SetText(slider.value, buf);
+        SetText(slider.value, FormatText(Str(StrId::PercentValue), pct).c_str());
     }
 }
 
@@ -1085,9 +1084,9 @@ std::wstring PickMusicPath(AdMusic mode, const std::wstring& current) {
         bool tooLarge = false;
         if (!folder || result.empty() || !ScanMusicFolder(result, 1, kPickerScanFolders, &tooLarge).empty() || tooLarge)
             break;
-        wchar_t text[512];
-        swprintf_s(text, Str(StrId::ErrMusicEmpty), MusicTypeList(ResolveLanguage(CurrentSettings().language)).c_str());
-        MessageBoxW(w.hwnd, text, Str(StrId::SettingsTitle), MB_OK | MB_ICONWARNING);
+        const std::wstring text =
+            FormatText(Str(StrId::ErrMusicEmpty), MusicTypeList(ResolveLanguage(CurrentSettings().language)).c_str());
+        MessageBoxW(w.hwnd, text.c_str(), Str(StrId::SettingsTitle), MB_OK | MB_ICONWARNING);
         result.clear();
     }
     w.picker = nullptr;

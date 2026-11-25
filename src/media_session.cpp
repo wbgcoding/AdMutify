@@ -269,6 +269,7 @@ void MediaSession::Start(HWND notify, UINT message) {
         try {
             impl->Run();
         } catch (...) {
+            Log("media_session thread_failed");
         }
     });
 }

@@ -233,7 +233,7 @@ void HandlePause(AdState state, uint64_t now) {
             if (sent) {
                 g.pausedByUs = true;
                 g.pausedAt = now;
-                SetCrashResumeWindow(g.watch.MainWindow());
+                SetCrashResumeWindow(spotify);
                 Log("media pause");
             } else {
                 Log("media pause_failed");
@@ -455,9 +455,8 @@ void Shutdown(bool endSession = false) {
 }
 
 void ShowTrayMenu(POINT pt) {
-    wchar_t count[64];
-    swprintf_s(count, Str(StrId::TrayAdsCount), FormatCountShort(StatsAdsMuted()).c_str());
-    UINT cmd = g.tray.ShowMenu(pt, g.settings.enabled, g.status, count);
+    const std::wstring count = FormatText(Str(StrId::TrayAdsCount), FormatCountShort(StatsAdsMuted()).c_str());
+    UINT cmd = g.tray.ShowMenu(pt, g.settings.enabled, g.status, count.c_str());
     switch (cmd) {
         case IDM_TRAY_ENABLED: {
             Settings s = g.settings;
@@ -631,10 +630,7 @@ const std::wstring& CurrentStatus() { return g.status; }
 const Settings& CurrentSettings() { return g.settings; }
 
 static void ShowSaveError(HWND owner, unsigned long error, const std::wstring& path) {
-    // Sized by the path: long paths are allowed, and a fixed buffer would trip the CRT's invalid-parameter exit.
-    std::wstring tech(path.size() + 128, L'\0');
-    _snwprintf_s(tech.data(), tech.size(), _TRUNCATE, Str(StrId::ErrTechnical), error, path.c_str());
-    tech.resize(wcslen(tech.c_str()));
+    const std::wstring tech = FormatText(Str(StrId::ErrTechnical), error, path.c_str());
     std::wstring text = std::wstring(Str(StrId::ErrSettingsSave)) + L"\n\n" + tech;
     MessageBoxW(owner, text.c_str(), L"AdMutify", MB_OK | MB_ICONWARNING);
 }
@@ -739,7 +735,13 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
             Sleep(100);
             other = FindWindowW(ClassName(), nullptr);
         }
-        if (other) PostMessageW(other, WM_APP_SHOW, 0, 0);
+        if (other) {
+            // The running copy sits in the background; without this Windows refuses to bring its window forward.
+            DWORD otherPid = 0;
+            GetWindowThreadProcessId(other, &otherPid);
+            if (otherPid) AllowSetForegroundWindow(otherPid);
+            PostMessageW(other, WM_APP_SHOW, 0, 0);
+        }
         CloseHandle(mutex);
         return 0;
     }

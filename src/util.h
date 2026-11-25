@@ -2,9 +2,26 @@
 
 #include <windows.h>
 
+#include <cstdarg>
+#include <cstdio>
 #include <cwctype>
 #include <string>
 #include <string_view>
+
+// printf-style formatting into a string of the needed length, so a long translation never overflows a buffer.
+inline std::wstring FormatText(const wchar_t* format, ...) {
+    va_list args;
+    va_start(args, format);
+    const int length = _vscwprintf(format, args);
+    va_end(args);
+    if (length <= 0) return {};
+    std::wstring out(static_cast<size_t>(length) + 1, L'\0');
+    va_start(args, format);
+    _vsnwprintf_s(out.data(), out.size(), _TRUNCATE, format, args);
+    va_end(args);
+    out.resize(static_cast<size_t>(length));
+    return out;
+}
 
 inline bool EqualsNoCase(std::wstring_view a, std::wstring_view b) {
     if (a.size() != b.size()) return false;

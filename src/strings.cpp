@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <iterator>
 
+#include "util.h"
+
 namespace {
 
 constexpr const wchar_t* kEn[] = {
@@ -708,9 +710,7 @@ const wchar_t* StrFor(Language language, StrId id) {
 const wchar_t* Str(StrId id) { return StrFor(g_language, id); }
 
 std::wstring FormatPercent(StrId id, int percent) {
-    wchar_t buf[128];
-    swprintf_s(buf, Str(id), percent);
-    return buf;
+    return FormatText(Str(id), percent);
 }
 
 NumberSeparators SeparatorsFor(Language language) {

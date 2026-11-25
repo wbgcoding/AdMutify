@@ -72,3 +72,13 @@ TEST(util_exe_name_of_missing_process) {
     CHECK(ExeNameOfPid(0xFFFFFFF0u).empty());
     CHECK(ImageFileName(nullptr).empty());
 }
+
+TEST(util_format_text_fits_any_length) {
+    CHECK(FormatText(L"%d %%", 25) == L"25 %");
+    CHECK(FormatText(L"").empty());
+    // Longer than any fixed buffer the callers used before: nothing is cut and nothing aborts.
+    const std::wstring long_part(5000, L'x');
+    const std::wstring text = FormatText(L"[%s] %d", long_part.c_str(), 7);
+    CHECK(text.size() == 5000 + 4);
+    CHECK(text.front() == L'[' && text.substr(text.size() - 3) == L"] 7");
+}
