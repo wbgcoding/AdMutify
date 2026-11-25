@@ -100,10 +100,14 @@ constexpr ComboDef kCombos[] = {
     {IDC_MUSIC, 3, {StrId::MusicFile, StrId::MusicShuffle, StrId::MusicOrder}},
 };
 
-int LanguageIndex(Language language) { return static_cast<int>(language); }
+int LanguageIndex(Language language) {
+    for (int i = 0; i < kLanguageCount; ++i)
+        if (kLanguageMenuOrder[i] == language) return i;
+    return 0;
+}
 
 Language LanguageAt(int index) {
-    return index >= 0 && index < kLanguageCount ? static_cast<Language>(index) : Language::System;
+    return index >= 0 && index < kLanguageCount ? kLanguageMenuOrder[index] : Language::System;
 }
 
 const wchar_t* ComboItemText(const ComboDef& def, size_t i) {

@@ -10,6 +10,10 @@ enum class MediaMode { Off, Lower, Mute, Pause };
 enum class AdMusic { File, Shuffle, Order };
 enum class Language { System, English, German, Spanish, Portuguese, Italian, Dutch, Polish, Turkish, Japanese, Chinese };
 constexpr int kLanguageCount = 11;
+// Order of the language choice: System, English, then the others alphabetically by their own name.
+constexpr Language kLanguageMenuOrder[kLanguageCount] = {
+    Language::System, Language::English, Language::German,  Language::Spanish,  Language::Italian, Language::Dutch,
+    Language::Polish, Language::Portuguese, Language::Turkish, Language::Japanese, Language::Chinese};
 // ini code of a language ("system", "en", "de", ...) and the reverse; unknown text gives System.
 const char* LanguageCode(Language language);
 Language LanguageFromCode(std::string_view code);

@@ -131,3 +131,12 @@ TEST(strings_edges_tooltip_length_limits) {
         }
     }
 }
+
+TEST(strings_edges_language_menu_order) {
+    // System and English first, the rest alphabetically by their own name; every language exactly once.
+    const char* const expected[] = {"system", "en", "de", "es", "it", "nl", "pl", "pt", "tr", "ja", "zh"};
+    for (int i = 0; i < kLanguageCount; ++i) CHECK(std::string(LanguageCode(kLanguageMenuOrder[i])) == expected[i]);
+    // Latin-script names (Deutsch to Türkçe) are sorted; Japanese and Chinese follow them.
+    for (int i = 2; i < 8; ++i)
+        CHECK(_wcsicmp(LanguageNativeName(kLanguageMenuOrder[i]), LanguageNativeName(kLanguageMenuOrder[i + 1])) < 0);
+}

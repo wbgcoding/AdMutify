@@ -170,7 +170,7 @@ bool ShootMenu(const std::wstring& id, const std::wstring& path) {
                                                 : Str(StrId::StatusActive);
     const wchar_t* languages[kLanguageCount];
     languages[0] = Str(StrId::LangSystem);
-    for (int i = 1; i < kLanguageCount; ++i) languages[i] = LanguageNativeName(static_cast<Language>(i));
+    for (int i = 1; i < kLanguageCount; ++i) languages[i] = LanguageNativeName(kLanguageMenuOrder[i]);
     // A count of the size most users reach; the menu-ad shot shows the compact form of a large one.
     wchar_t count[64];
     swprintf_s(count, Str(StrId::TrayAdsCount), FormatCountShort(id == L"menu-ad" ? 1234567 : 1234).c_str());
