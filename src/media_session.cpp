@@ -134,7 +134,9 @@ struct MediaSession::Impl {
     static MediaTrack Read(const wmc::GlobalSystemMediaTransportControlsSession& s) {
         MediaTrack t;
         // Both calls may hand back null while a session is going away; calling into null would crash.
-        auto props = s.TryGetMediaPropertiesAsync().get();
+        auto op = s.TryGetMediaPropertiesAsync();
+        if (!op) return t;
+        auto props = op.get();
         auto info = s.GetPlaybackInfo();
         wmc::GlobalSystemMediaTransportControlsSessionPlaybackControls controls{nullptr};
         if (info) controls = info.Controls();
@@ -150,12 +152,16 @@ struct MediaSession::Impl {
     }
 
     static void Unwatch(Watched& w) {
-        try {
-            if (w.session) {
+        // Each handler is revoked on its own: a failure on the first must not leave the second behind.
+        if (w.session) {
+            try {
                 w.session.MediaPropertiesChanged(w.props);
-                w.session.PlaybackInfoChanged(w.playback);
+            } catch (...) {
             }
-        } catch (...) {
+            try {
+                w.session.PlaybackInfoChanged(w.playback);
+            } catch (...) {
+            }
         }
         w.session = nullptr;
     }
@@ -163,8 +169,9 @@ struct MediaSession::Impl {
     void Refresh(const wmc::GlobalSystemMediaTransportControlsSessionManager& manager, std::vector<Watched>& watched) {
         const HANDLE wakeLocal = wake;
         std::vector<wmc::GlobalSystemMediaTransportControlsSession> spotify;
-        for (auto const& s : manager.GetSessions())
-            if (IsSpotify(s)) spotify.push_back(s);
+        if (auto sessions = manager.GetSessions())
+            for (auto const& s : sessions)
+                if (s && IsSpotify(s)) spotify.push_back(s);
 
         // Drop watches of sessions that are gone, add the new ones.
         for (size_t i = watched.size(); i-- > 0;) {
@@ -184,8 +191,9 @@ struct MediaSession::Impl {
             Watched w;
             w.session = s;
             w.props = s.MediaPropertiesChanged([wakeLocal](auto&&, auto&&) { SetEvent(wakeLocal); });
-            w.playback = s.PlaybackInfoChanged([wakeLocal](auto&&, auto&&) { SetEvent(wakeLocal); });
+            // Listed before the second registration, so a failure there still gets the first handler revoked.
             watched.push_back(std::move(w));
+            watched.back().playback = s.PlaybackInfoChanged([wakeLocal](auto&&, auto&&) { SetEvent(wakeLocal); });
         }
 
         if (spotify.empty()) {
@@ -226,6 +234,8 @@ struct MediaSession::Impl {
         const HANDLE handles[2] = {stop, wake};
         bool first = true;
         while (manager) {
+            // A stop that came in while the manager was requested must not start another blocking read.
+            if (WaitForSingleObject(stop, 0) == WAIT_OBJECT_0) break;
             if (!first) {
                 DWORD w = WaitForMultipleObjects(2, handles, FALSE, INFINITE);
                 if (w != WAIT_OBJECT_0 + 1) break;
