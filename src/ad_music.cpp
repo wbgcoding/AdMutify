@@ -117,19 +117,24 @@ const std::wstring& Playlist::Current() const {
 bool Playlist::Next() {
     if (order_.empty()) return false;
     if (++pos_ < order_.size()) return false;
+    StartRound();
+    return true;
+}
+
+void Playlist::StartRound() {
     pos_ = 0;
     if (shuffle_ && order_.size() > 1) {
         const size_t last = order_.back();
         Shuffle();
         if (order_[0] == last) std::swap(order_[0], order_[1 + rng_ % (order_.size() - 1)]);
     }
-    return true;
 }
 
 void Playlist::RemoveCurrent() {
     if (order_.empty()) return;
     order_.erase(order_.begin() + static_cast<ptrdiff_t>(pos_));
-    if (pos_ >= order_.size()) pos_ = 0;
+    // The failed track ended the round: the next round gets a fresh order like any other round end.
+    if (pos_ >= order_.size()) StartRound();
 }
 
 void Playlist::Shuffle() {
@@ -355,6 +360,8 @@ struct AdMusicPlayer::Impl {
         if (FAILED(hr)) {
             engine = nullptr;
             Log("music engine_failed hr=0x%08lx", static_cast<unsigned long>(hr));
+            // Nothing will release Media Foundation later when no engine exists.
+            ReleaseEngine(false);
             return false;
         }
         return true;
@@ -515,6 +522,12 @@ void AdMusicPlayer::OnEvent(WPARAM wParam, LPARAM lParam) {
                 }
                 m.StartScan(true);
             }
+            if (!m.active) {
+                // The track ended while the music faded out after the ad: no next one is opened.
+                m.ReleaseEngine(false);
+                Log("music stop");
+                break;
+            }
             Log("music next");
             m.Load();
             break;
@@ -561,6 +574,7 @@ void AdMusicPlayer::Shutdown() {
     Impl& m = *impl_;
     m.active = false;
     m.ReleaseEngine(false);
+    m.CancelScan();
 }
 
 bool AdMusicPlayer::IsPlaying() const { return impl_->engine && impl_->loaded; }

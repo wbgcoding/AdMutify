@@ -44,6 +44,7 @@ public:
 
 private:
     void Shuffle();
+    void StartRound();
     std::vector<std::wstring> files_;
     std::vector<size_t> order_;
     size_t pos_ = 0;

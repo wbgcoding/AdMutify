@@ -185,3 +185,27 @@ TEST(music_edges_shuffle_remove_keeps_every_other_track) {
     std::sort(seen.begin(), seen.end());
     CHECK(std::unique(seen.begin(), seen.end()) == seen.end());
 }
+
+TEST(music_edges_shuffle_reshuffles_when_the_round_ends_on_a_failed_track) {
+    for (uint32_t seed : {1u, 2u, 3u, 5u, 7u}) {
+        std::vector<std::wstring> files;
+        for (int i = 0; i < 8; ++i) files.push_back(L"t" + std::to_wstring(i));
+        Playlist list;
+        list.Reset(files, true, seed);
+        std::vector<std::wstring> first;
+        for (int i = 0; i < 7; ++i) {
+            first.push_back(list.Current());
+            list.Next();
+        }
+        // The last track of the round cannot be played.
+        list.RemoveCurrent();
+        CHECK(list.Size() == 7);
+        std::vector<std::wstring> second;
+        for (int i = 0; i < 7; ++i) {
+            second.push_back(list.Current());
+            list.Next();
+        }
+        CHECK(second != first);
+        CHECK(second.front() != first.back());
+    }
+}
