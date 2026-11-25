@@ -11,6 +11,8 @@
 #include "settings.h"
 #include "test.h"
 
+TEST_FILE_GROUP(Logic);
+
 namespace {
 
 std::wstring EdgeRoot() { return DataDir() + L"\\music-edge"; }

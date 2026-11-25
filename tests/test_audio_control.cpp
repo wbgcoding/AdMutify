@@ -7,6 +7,8 @@
 #include "spotify_watch.h"
 #include "test.h"
 
+TEST_FILE_GROUP(Logic);
+
 TEST(audio_user_override_only_counts_for_controlled_property) {
     // Mute mode: moving the volume slider during a muted ad is not an override, unmuting is.
     CHECK(!UserOverrode(Mode::Mute, true, 0.8f, true, 0.5f));
@@ -169,7 +171,7 @@ TEST(audio_state_file_skips_bad_lines) {
     }
 }
 
-TEST(audio_apply_without_spotify) {
+TEST_INTEGRATION(audio_apply_without_spotify) {
     // A process name that cannot exist keeps this test away from a running Spotify.
     SetTargetProcessName(L"AdMutifyNoSuchProcess.exe");
     {
@@ -189,7 +191,7 @@ TEST(audio_apply_without_spotify) {
     SetTargetProcessName(L"Spotify.exe");
 }
 
-TEST(audio_changes_stop_while_crash_in_progress) {
+TEST_INTEGRATION(audio_changes_stop_while_crash_in_progress) {
     // Aimed at a process that cannot exist: a broken guard must never reach a running Spotify.
     SetTargetProcessName(L"AdMutifyNoSuchProcess.exe");
     {
@@ -208,7 +210,7 @@ TEST(audio_changes_stop_while_crash_in_progress) {
     SetTargetProcessName(L"Spotify.exe");
 }
 
-TEST(audio_content_poll_smoke) {
+TEST_INTEGRATION(audio_content_poll_smoke) {
     // Smoke run: what the host plays decides the result, so only the shape of the answer is checked.
     SetTargetProcessName(L"AdMutifyNoSuchProcess.exe");
     {

@@ -4,6 +4,8 @@
 #include "test.h"
 #include "util.h"
 
+TEST_FILE_GROUP(Logic);
+
 TEST(util_equals_no_case) {
     CHECK(EqualsNoCase(L"", L""));
     CHECK(EqualsNoCase(L"Spotify.exe", L"SPOTIFY.EXE"));

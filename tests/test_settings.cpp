@@ -9,6 +9,8 @@
 #include "test.h"
 #include "test_helpers.h"
 
+TEST_FILE_GROUP(Logic);
+
 namespace {
 
 void RemoveSettingsFile() {

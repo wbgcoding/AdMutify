@@ -5,6 +5,8 @@
 #include "ad_detector.h"
 #include "test.h"
 
+TEST_FILE_GROUP(Logic);
+
 TEST(classify_title_table) {
     struct Row {
         const wchar_t* title;

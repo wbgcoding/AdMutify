@@ -8,6 +8,8 @@
 #include "settings.h"
 #include "test.h"
 
+TEST_FILE_GROUP(Integration);
+
 namespace {
 
 const wchar_t kTestKey[] = L"Software\\AdMutifyTest\\Run";

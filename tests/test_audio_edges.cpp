@@ -9,6 +9,8 @@
 #include "audio_control.h"
 #include "test.h"
 
+TEST_FILE_GROUP(Logic);
+
 namespace {
 
 SavedSession Rec(Mode mode, float oldVol, float appliedVol) {

@@ -15,6 +15,8 @@
 #include "test.h"
 #include "test_helpers.h"
 
+TEST_FILE_GROUP(Integration);
+
 namespace {
 
 std::wstring MusicRoot() { return DataDir() + L"\\music-test"; }

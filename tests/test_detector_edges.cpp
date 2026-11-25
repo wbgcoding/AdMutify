@@ -8,6 +8,8 @@
 #include "media_session.h"
 #include "test.h"
 
+TEST_FILE_GROUP(Logic);
+
 namespace {
 
 MediaTrack SongTrack() {

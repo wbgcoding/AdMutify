@@ -7,6 +7,8 @@
 #include "test.h"
 #include "test_helpers.h"
 
+TEST_FILE_GROUP(Logic);
+
 namespace {
 
 bool Exists(const std::wstring& p) { return GetFileAttributesW(p.c_str()) != INVALID_FILE_ATTRIBUTES; }

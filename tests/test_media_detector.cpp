@@ -1,6 +1,8 @@
 #include "media_detector.h"
 #include "test.h"
 
+TEST_FILE_GROUP(Logic);
+
 namespace {
 
 // Feeds sound for [from, to) in 100 ms steps and returns the first time the detector became active (0 = never).

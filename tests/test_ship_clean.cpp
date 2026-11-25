@@ -9,6 +9,8 @@
 #include "test.h"
 #include "util.h"
 
+TEST_FILE_GROUP(Logic);
+
 namespace {
 
 // Em and en dash, as bytes. Every other needle (tool names, developer path and mail fragments) lives in the

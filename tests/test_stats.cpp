@@ -7,6 +7,8 @@
 #include "stats.h"
 #include "test.h"
 
+TEST_FILE_GROUP(Logic);
+
 TEST(stats_siphash_reference_vector) {
     // Official SipHash-2-4 test vector: key 00..0f, message 00..07.
     uint8_t key[16], msg[8];

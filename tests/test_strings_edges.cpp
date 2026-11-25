@@ -9,6 +9,8 @@
 #include "strings.h"
 #include "test.h"
 
+TEST_FILE_GROUP(Ui);
+
 namespace {
 
 constexpr Language kLangs[] = {Language::English,  Language::German, Language::Spanish, Language::Portuguese,

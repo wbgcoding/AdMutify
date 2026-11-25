@@ -6,6 +6,8 @@
 #include "media_session.h"
 #include "test.h"
 
+TEST_FILE_GROUP(Logic);
+
 namespace {
 
 MediaTrack Ad(const wchar_t* title, const wchar_t* artist) {
@@ -219,14 +221,14 @@ TEST(media_merge_brand_survey_counts_as_ad) {
     CHECK(MergeMediaTrack(kind, AdState::Ad, survey, L"Markenumfrage", kMediaSettleMs) == TitleKind::Ad);
 }
 
-TEST(media_session_stop_without_start) {
+TEST_INTEGRATION(media_session_stop_without_start) {
     MediaSession s;
     CHECK(!s.Snapshot().valid);
     s.Stop();
     CHECK(!s.Snapshot().valid);
 }
 
-TEST(media_session_start_stop_is_clean) {
+TEST_INTEGRATION(media_session_start_stop_is_clean) {
     // Whatever the system reports (Spotify running or not), the thread must start and stop cleanly.
     HWND w = CreateWindowExW(0, L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, nullptr, nullptr);
     CHECK(w != nullptr);

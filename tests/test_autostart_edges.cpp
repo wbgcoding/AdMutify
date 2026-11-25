@@ -10,6 +10,8 @@
 #include "test.h"
 #include "util.h"
 
+TEST_FILE_GROUP(Integration);
+
 namespace {
 
 const wchar_t kEdgeKey[] = L"Software\\AdMutifyTest\\Run";

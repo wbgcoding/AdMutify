@@ -1,6 +1,8 @@
 #include "spotify_watch.h"
 #include "test.h"
 
+TEST_FILE_GROUP(Logic);
+
 TEST(spotify_process_name_match) {
     CHECK(IsSpotifyProcessName(L"C:\\x\\SPOTIFY.EXE"));
     CHECK(IsSpotifyProcessName(L"Spotify.exe"));

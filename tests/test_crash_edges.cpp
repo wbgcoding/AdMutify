@@ -9,6 +9,8 @@
 #include "test_helpers.h"
 #include "util.h"
 
+TEST_FILE_GROUP(Logic);
+
 namespace {
 
 void CleanLogs() {

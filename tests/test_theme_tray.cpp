@@ -11,6 +11,8 @@
 #include "theme.h"
 #include "tray.h"
 
+TEST_FILE_GROUP(Ui);
+
 namespace {
 
 double Channel(int v) {

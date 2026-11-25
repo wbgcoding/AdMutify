@@ -8,6 +8,8 @@
 #include "stats.h"
 #include "test.h"
 
+TEST_FILE_GROUP(Logic);
+
 TEST(stats_edges_count_limits_and_roundtrip) {
     uint64_t v = 7;
     const uint64_t big = UINT64_MAX;
