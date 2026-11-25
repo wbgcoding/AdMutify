@@ -676,6 +676,11 @@ void ApplyCommit(const Settings& requested, bool replaceAll) {
     }
     g.settings = s;
     SetLanguage(s.language);
+    // A file that was unreadable at the start can turn out to ask for the trace; it starts without a restart.
+    if (s.trace && !TraceEnabled()) {
+        SetTraceEnabled(true);
+        SetTimer(g.hwnd, kTimerTraceWindows, kTraceWindowsMs, nullptr);
+    }
     if (g.inMemory) return;
 
     // The box is modal to the settings window when it is open, so it cannot start another change meanwhile.
@@ -814,11 +819,13 @@ int RunApp(HINSTANCE inst, const AppOptions& options) {
     Reevaluate();
 
     // The message window exists and a leftover mute is already undone: the dialogs may wait for the user now.
+    // A close or sign-out that arrived during one box has shut everything down already: no further boxes then.
     ShowCrashDialogIfNeeded(g.audio.PendingCount());
-    if (loaded.newerVersion) MessageBoxW(nullptr, Str(StrId::ErrSettingsNewer), L"AdMutify", MB_OK | MB_ICONWARNING);
-    if (loaded.saveFailed) ShowSaveError(nullptr, loaded.saveError, SettingsPath());
+    if (loaded.newerVersion && !g.closing)
+        MessageBoxW(nullptr, Str(StrId::ErrSettingsNewer), L"AdMutify", MB_OK | MB_ICONWARNING);
+    if (loaded.saveFailed && !g.closing) ShowSaveError(nullptr, loaded.saveError, SettingsPath());
 
-    MSG msg;
+    MSG msg{};
     while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
         if (!SettingsWindowPreTranslate(&msg)) {
             TranslateMessage(&msg);
