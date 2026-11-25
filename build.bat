@@ -27,6 +27,11 @@ if not exist "%BS%" goto :bs_start
 for /f "usebackq delims=" %%A in (`powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Check -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%"`) do set "BSFRESH=%%A"
 if defined BSFRESH goto :bs_uptodate
 :bs_start
+rem fingerprint of the sources at build start: an edit during the build keeps the next build from counting as fresh
+set "BSFP="
+if exist "%BS%" for /f "usebackq delims=" %%A in (`powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Fingerprint -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%"`) do set "BSFP=%%A"
+set "BSEXPECT="
+if defined BSFP set "BSEXPECT=-Expect !BSFP!"
 
 rem --- toolchain
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -155,7 +160,8 @@ for %%f in ("dist\AdMutify.exe") do echo AdMutify.exe: %%~zf bytes
 rem === build freshness: save (every final file in dist) ===
 set "BSART=dist\AdMutify.exe"
 for %%f in ("dist\*.exe" "dist\SHA256SUMS.txt") do if /i not "%%~nxf"=="AdMutify.exe" set "BSART=!BSART!,dist\%%~nxf"
-if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "!BSART!" >nul 2>&1
+if exist "%BS%" powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%BS%" -Save -Project "%~dp0." -Key "%BSKEY%" -Extra "%BSEXTRA%" -Artifact "!BSART!" !BSEXPECT! >nul 2>&1
+if errorlevel 1 echo Sources changed during the build: the next build runs again.
 echo Build %VER% done.
 
 :end
