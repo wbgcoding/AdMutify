@@ -234,7 +234,11 @@ TEST_INTEGRATION(media_session_start_stop_is_clean) {
     CHECK(w != nullptr);
     MediaSession s;
     s.Start(w, WM_APP + 6);
-    Sleep(800);
+    // Give the thread time to reach Spotify's session; a first snapshot ends the wait early.
+    const ULONGLONG until = GetTickCount64() + 800;
+    MSG msg;
+    while (GetTickCount64() < until && !PeekMessageW(&msg, w, WM_APP + 6, WM_APP + 6, PM_REMOVE))
+        MsgWaitForMultipleObjects(0, nullptr, FALSE, 50, QS_POSTMESSAGE);
     s.Stop();
     CHECK(!s.Snapshot().valid);
     s.Start(w, WM_APP + 6);

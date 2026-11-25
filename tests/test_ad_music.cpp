@@ -421,7 +421,7 @@ TEST(ad_music_player_plays_resumes_and_skips) {
         player.Init(hwnd, 9);
         player.Configure(AdMusic::File, root + L"\\1 broken.mp3", 0);
         player.SetActive(true);
-        PumpUntil([] { return false; }, 1500);
+        CHECK(PumpUntil([&] { return player.TrackCount() == 0; }, 5000));
         CHECK(!player.IsPlaying());
         player.SetActive(false);
         player.Configure(AdMusic::File, root + L"\\missing.mp3", 0);
